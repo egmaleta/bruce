@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "bruce"
+version = "0.0.1"
+description = "A HULK compiler"
+authors = [
+    "Mauro Bolado Vizoso <e@mail.com>",
+    "José Luis Leiva Fleitas <e@mail.com>",
+    "Eduardo García Maleta <egmaleta@proton.me>",
+]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/egmaleta/bruce"
+
+[tool.poetry.dependencies]
+python = "3.11.8"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.2.0"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.poetry.scripts]
+format = 'black:patched_main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
