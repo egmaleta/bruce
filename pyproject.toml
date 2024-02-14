@@ -3,7 +3,7 @@ name = "bruce"
 version = "0.0.1"
 description = "A HULK compiler"
 authors = [
-    "Mauro Bolado Vizoso <e@mail.com>",
+    "Aldair Alfonso Pérez <e@mail.com>",
     "José Luis Leiva Fleitas <e@mail.com>",
     "Eduardo García Maleta <egmaleta@proton.me>",
 ]
