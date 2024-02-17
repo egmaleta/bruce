@@ -1,11 +1,12 @@
 from re import Pattern
-from dataclasses import dataclass
+
+from grammar import Terminal
 
 
-@dataclass
 class Token:
-    lexeme: str
-    type: str
+    def __init__(self, lexeme: str, type: Terminal):
+        self.lexeme = lexeme
+        self.type = type
 
 
 def _match(prefix: Pattern | str, code: str):
@@ -17,10 +18,10 @@ def _match(prefix: Pattern | str, code: str):
 
 
 def create_lexer(
-    prefixes: list[tuple[Pattern | str, str]],
+    prefixes: list[tuple[Pattern | str, Terminal]],
     ignored_prefixes: list[Pattern | str],
 ):
-    all_prefixes: list[tuple[Pattern | str, str | None]] = prefixes + [
+    all_prefixes: list[tuple[Pattern | str, Terminal | None]] = prefixes + [
         (pattern, None) for pattern in ignored_prefixes
     ]
 
@@ -45,6 +46,3 @@ def create_lexer(
         return tokens
 
     return lexer
-
-
-defualt_lexer = create_lexer([], [])
