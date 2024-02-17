@@ -41,11 +41,6 @@ class NonTerminal(Symbol):
         return False
 
     def __imod__(self, other):
-        if isinstance(other, Sentence):
-            p = Production(self, other)
-            self.grammar.add_production(p)
-            return self
-
         if isinstance(other, tuple):
             assert len(other) > 1
 
@@ -58,23 +53,11 @@ class NonTerminal(Symbol):
             # assert len(other) == 2, "Tiene que ser una Tupla de 2 elementos (sentence, attribute)"
 
             if isinstance(other[0], Symbol) or isinstance(other[0], Sentence):
-                p = AttributeProduction(self, other[0], other[1:])
-            else:
-                raise Exception("")
-
-            self.grammar.add_production(p)
-            return self
-
-        if isinstance(other, Symbol):
-            p = Production(self, Sentence(other))
-            self.grammar.add_production(p)
-            return self
-
-        if isinstance(other, SentenceList):
-            for s in other:
-                p = Production(self, s)
+                p = Production(self, other[0], other[1:])
                 self.grammar.add_production(p)
-            return self
+                return self
+
+            raise Exception("")
 
         raise TypeError(other)
 
@@ -188,9 +171,18 @@ class Epsilon(Terminal, Sentence):
 
 
 class Production:
-    def __init__(self, nt: NonTerminal, sentence: Sentence):
+    def __init__(
+        self, nt: NonTerminal, sentence_or_symbol: Sentence | Symbol, attributes
+    ):
+        sentence = (
+            sentence_or_symbol
+            if isinstance(sentence_or_symbol, Sentence)
+            else Sentence(sentence_or_symbol)
+        )
+
         self.left = nt
         self.right = sentence
+        self.attributes = attributes
 
     @property
     def is_epsilon(self):
@@ -209,15 +201,6 @@ class Production:
 
     def __hash__(self):
         return hash((self.left, self.right))
-
-
-class AttributeProduction(Production):
-    def __init__(self, nt: NonTerminal, sentence: Sentence | Symbol, attributes):
-        if not isinstance(sentence, Sentence) and isinstance(sentence, Symbol):
-            sentence = Sentence(sentence)
-        super().__init__(nt, sentence)
-
-        self.attributes = attributes
 
 
 class Grammar:
