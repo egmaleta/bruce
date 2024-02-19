@@ -334,4 +334,33 @@ number, string, identifier = BRUCE_GRAMMAR.add_terminals("number string id")
 
 # region NON TERMINALS
 
+EPSILON = BRUCE_GRAMMAR.Epsilon
+
+EXPR = BRUCE_GRAMMAR.add_non_terminal("expr", True)
+
+DISJ, MORE_DISJS = BRUCE_GRAMMAR.add_non_terminals("disj more_disjs")
+CONJ, MORE_CONJS = BRUCE_GRAMMAR.add_non_terminals("conj more_conjs")
+NEG = BRUCE_GRAMMAR.add_non_terminal("neg")
+
+COMP = BRUCE_GRAMMAR.add_non_terminal("comp")
+
 # endregion
+
+#region PRODUCTIONS
+
+EXPR %= DISJ + MORE_DISJS, None, None, None
+
+MORE_DISJS %= disj + DISJ + MORE_DISJS, None, None, None, None
+MORE_DISJS %= EPSILON, None
+
+DISJ %= CONJ + MORE_CONJS, None, None, None
+
+MORE_CONJS %= conj + CONJ + MORE_CONJS, None, None, None, None
+MORE_CONJS %= EPSILON, None
+
+NEG %= neg, None, None
+NEG %= EPSILON, None
+
+CONJ %= NEG + COMP, None, None, None
+
+#endregion
