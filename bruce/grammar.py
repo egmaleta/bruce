@@ -239,7 +239,7 @@ class Grammar:
 
         self.symbol_dict: dict[str, Symbol] = {self.EOF.name: self.EOF}
 
-    def non_terminal(self, name: str, is_start_symbol=False):
+    def add_non_terminal(self, name: str, is_start_symbol=False):
         name = name.strip()
         if not name:
             raise Exception("Empty name")
@@ -256,14 +256,17 @@ class Grammar:
         self.symbol_dict[name] = nt
         return nt
 
-    def non_terminals(self, names: list[str]):
-        return tuple(self.non_terminal(name) for name in names)
+    def add_non_terminals(self, names: list[str] | str):
+        if isinstance(names, str):
+            names = names.strip().split()
+
+        return tuple(self.add_non_terminal(name) for name in names)
 
     def add_production(self, production: Production):
         production.left.productions.append(production)
         self.productions.append(production)
 
-    def terminal(self, name: str):
+    def add_terminal(self, name: str):
         name = name.strip()
         if not name:
             raise Exception("Empty name")
@@ -273,8 +276,11 @@ class Grammar:
         self.symbol_dict[name] = t
         return t
 
-    def terminals(self, names: list[str]):
-        return tuple(self.terminal(name) for name in names)
+    def add_terminals(self, names: list[str] | str):
+        if isinstance(names, str):
+            names = names.strip().split()
+
+        return tuple(self.add_terminal(name) for name in names)
 
     def __getitem__(self, name: str):
         return self.symbol_dict.get(name)
