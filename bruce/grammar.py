@@ -297,3 +297,38 @@ class Grammar:
         ans += str(self.productions)
 
         return ans
+
+
+BRUCE_GRAMMAR = Grammar()
+
+# region TERMINALS
+
+## KEYWORDS
+let, in_k = BRUCE_GRAMMAR.add_terminals("let in")
+if_k, else_k, elif_k = BRUCE_GRAMMAR.add_terminals("if else elif")
+while_k, for_k = BRUCE_GRAMMAR.add_terminals("while for")
+func = BRUCE_GRAMMAR.add_terminal("function")
+type_k, new, inherits, is_k, as_k = BRUCE_GRAMMAR.add_terminals(
+    "type new inherits is as"
+)
+protocol, extends = BRUCE_GRAMMAR.add_terminals("protocol extends")
+
+# OPERATORS
+plus, minus, times, div, mod, power = BRUCE_GRAMMAR.add_terminals("+ - * / % ^")
+lt, gt, le, ge, eq, neq = BRUCE_GRAMMAR.add_terminals("< > <= >= == !=")
+concat, concat_space = BRUCE_GRAMMAR.add_terminals("@ @@")
+conj, disj, neg = BRUCE_GRAMMAR.add_terminals("& | !")
+
+# PUNCTUATION
+lparen, rparen, lbrace, rbrace, lbracket, rbracket = BRUCE_GRAMMAR.add_terminals(
+    "( ) { } [ ]"
+)
+colon, semicolon, dot, comma = BRUCE_GRAMMAR.add_terminals(": ; . ,")
+then = BRUCE_GRAMMAR.add_terminal("=>")
+bind, mut = BRUCE_GRAMMAR.add_terminals("= :=")
+
+# endregion
+
+# region NON TERMINALS
+
+# endregion
