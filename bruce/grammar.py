@@ -327,6 +327,9 @@ colon, semicolon, dot, comma = BRUCE_GRAMMAR.add_terminals(": ; . ,")
 then = BRUCE_GRAMMAR.add_terminal("=>")
 bind, mut = BRUCE_GRAMMAR.add_terminals("= :=")
 
+# STRINGS
+number, string, identifier = BRUCE_GRAMMAR.add_terminals("number string id")
+
 # endregion
 
 # region NON TERMINALS
