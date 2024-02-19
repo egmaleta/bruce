@@ -22,6 +22,12 @@ class Symbol:
     def __len__(self):
         return 1
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return repr(self.name)
+
 
 class NonTerminal(Symbol):
     def __init__(self, name: str, grammar: "Grammar"):
@@ -123,6 +129,12 @@ class Sentence:
     def __len__(self):
         return len(self.symbols)
 
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return ("%s " * len(self.symbols) % tuple(self.symbols)).strip()
+
 
 class SentenceList(object):
     def __init__(self, *args: Sentence):
@@ -169,6 +181,12 @@ class Epsilon(Terminal, Sentence):
     def __len__(self):
         return 0
 
+    def __str__(self):
+        return "e"
+
+    def __repr__(self):
+        return "epsilon"
+
 
 class Production:
     def __init__(
@@ -201,6 +219,12 @@ class Production:
 
     def __hash__(self):
         return hash((self.left, self.right))
+
+    def __str__(self):
+        return "%s := %s" % (self.left, self.right)
+
+    def __repr__(self):
+        return "%s -> %s" % (self.left, self.right)
 
 
 class Grammar:
@@ -254,3 +278,16 @@ class Grammar:
 
     def __getitem__(self, name: str):
         return self.symbol_dict.get(name)
+
+    def __str__(self):
+        mul = "%s, "
+        ans = "Non-Terminals:\n\t"
+        nonterminals = mul * (len(self.non_terminals) - 1) + "%s\n"
+        ans += nonterminals % tuple(self.non_terminals)
+        ans += "Terminals:\n\t"
+        terminals = mul * (len(self.terminals) - 1) + "%s\n"
+        ans += terminals % tuple(self.terminals)
+        ans += "Productions:\n\t"
+        ans += str(self.productions)
+
+        return ans
