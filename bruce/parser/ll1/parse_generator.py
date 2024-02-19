@@ -1,18 +1,30 @@
-from utils import ContainerSet, Symbol, NonTerminal,Terminal, EOF, Sentence, SentenceList, Epsilon, Production,Grammar
+from utils import (
+    ContainerSet,
+    Symbol,
+    NonTerminal,
+    Terminal,
+    EOF,
+    Sentence,
+    SentenceList,
+    Epsilon,
+    Production,
+    Grammar,
+)
 
 
-#Firsts
+# Firsts
 
-# Computes First(alpha), given First(Vt) and First(Vn) 
+
+# Computes First(alpha), given First(Vt) and First(Vn)
 # alpha in (Vt U Vn)*
 def compute_local_first(firsts, alpha):
     first_alpha = ContainerSet()
-    
+
     try:
         alpha_is_epsilon = alpha.IsEpsilon
     except:
         alpha_is_epsilon = False
-    
+
     ###################################################
     # alpha == epsilon ? First(alpha) = { epsilon }
     ###################################################
@@ -38,7 +50,7 @@ def compute_local_first(firsts, alpha):
                 e = firsts[sy].contains_epsilon
             else:
                 break
-            
+
         if e:
             first_alpha.set_epsilon()
 
@@ -51,42 +63,41 @@ def compute_local_first(firsts, alpha):
 def compute_firsts(G):
     firsts = {}
     change = True
-    
+
     # init First(Vt)
     for terminal in G.terminals:
         firsts[terminal] = ContainerSet(terminal)
-        
+
     # init First(Vn)
     for nonterminal in G.nonTerminals:
         firsts[nonterminal] = ContainerSet()
-    
+
     while change:
         change = False
-        
+
         # P: X -> alpha
         for production in G.Productions:
             X = production.Left
             alpha = production.Right
-            
+
             # get current First(X)
             first_X = firsts[X]
-                
+
             # init First(alpha)
             try:
                 first_alpha = firsts[alpha]
             except KeyError:
                 first_alpha = firsts[alpha] = ContainerSet()
-            
+
             # CurrentFirst(alpha)???
             local_first = compute_local_first(firsts, alpha)
-            
+
             # update First(X) and First(alpha) from CurrentFirst(alpha)
             change |= first_alpha.hard_update(local_first)
             change |= first_X.hard_update(local_first)
-                    
+
     # First(Vt) + First(Vt) + First(RightSides)
     return firsts
-
 
 
 # Follows
@@ -95,26 +106,26 @@ from itertools import islice
 
 
 def compute_follows(G, firsts):
-    follows = { }
+    follows = {}
     change = True
-    
+
     local_firsts = {}
-    
+
     # init Follow(Vn)
     for nonterminal in G.nonTerminals:
         follows[nonterminal] = ContainerSet()
     follows[G.startSymbol] = ContainerSet(G.EOF)
-    
+
     while change:
         change = False
-        
+
         # P: X -> alpha
         for production in G.Productions:
             X = production.Left
             alpha = production.Right
-            
+
             follow_X = follows[X]
-            
+
             ###################################################
             # X -> zeta Y beta
             # First(beta) - { epsilon } subset of Follow(Y)
@@ -130,7 +141,7 @@ def compute_follows(G, firsts):
                     if beta:
                         if beta not in local_firsts:
                             local_firsts[beta] = compute_local_first(firsts, beta)
-                        
+
                         fb = local_firsts[beta]
                         change |= follows[Y].update(fb)
 
@@ -138,22 +149,23 @@ def compute_follows(G, firsts):
                             change |= follows[Y].update(follow_X)
                     else:
                         change |= follows[Y].update(follow_X)
-    
+
     # Follow(Vn)
     return follows
 
 
-# Tabla LL1    
+# Tabla LL1
+
 
 def build_parsing_table(G, firsts, follows):
     # init parsing table
     M = {}
-    
+
     # P: X -> alpha
     for production in G.Productions:
         X = production.Left
         alpha = production.Right
-        
+
         ###################################################
         # working with symbols on First(alpha) ...
         ###################################################
@@ -164,7 +176,7 @@ def build_parsing_table(G, firsts, follows):
                 M[X, terminal].append(production)
             else:
                 M[X, terminal] = [production]
-        
+
         ###################################################
         # working with epsilon...
         ###################################################
@@ -176,13 +188,13 @@ def build_parsing_table(G, firsts, follows):
                     M[X, terminal].append(production)
                 else:
                     M[X, terminal] = [production]
-    
+
     # parsing table is ready!!!
-    return M            
+    return M
 
 
 def metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
-    
+
     # checking table...
     if M is None:
         if firsts is None:
@@ -190,11 +202,10 @@ def metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
         if follows is None:
             follows = compute_follows(G, firsts)
         M = build_parsing_table(G, firsts, follows)
-    
-    
+
     # parser construction...
     def parser(w):
-        
+
         ###################################################
         # w ends with $ (G.EOF)
         ###################################################
@@ -207,12 +218,12 @@ def metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
         p = M[G.startSymbol, w[cursor]][0]
         output = [p]
         stack = [*reversed(p.Right)]
-        
+
         # parsing w...
         while True:
             top = stack.pop()
             a = w[cursor]
-            
+
             ###################################################
             #                   <CODE_HERE>                   #
             ###################################################
@@ -227,15 +238,13 @@ def metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
                 if top == a:
                     cursor += 1
                 else:
-                    raise Exception('Parsing Error: Malformed Expression!')
-            
+                    raise Exception("Parsing Error: Malformed Expression!")
+
             if not stack:
                 break
 
-
         # left parse is ready!!!
         return output
-    
+
     # parser is ready!!!
     return parser
-        
