@@ -35,25 +35,47 @@ number, string, identifier = GRAMMAR.add_terminals("number string id")
 # region NON TERMINALS
 
 Expr = GRAMMAR.add_non_terminal("expr", True)
-
 LetExpr = GRAMMAR.add_non_terminal("let_expr")
-
 BranchExpr, ElseBlock = GRAMMAR.add_non_terminals("if_expr else_block")
-
 Disj, MoreDisjs = GRAMMAR.add_non_terminals("disj more_disjs")
 Conj, MoreConjs = GRAMMAR.add_non_terminals("conj more_conjs")
-Neg = GRAMMAR.add_non_terminal("neg")
-
 Comp = GRAMMAR.add_non_terminal("comp")
 
 # endregion
 
 # region PRODUCTIONS
 
-LetExpr %= let + identifier + bind + Expr + in_k + Expr, None, None, None, None, None, None, None
+LetExpr %= (
+    let + identifier + bind + Expr + in_k + Expr,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 
-BranchExpr %= if_k + lparen + Expr + rparen + Expr + ElseBlock, None, None, None, None, None, None, None
-ElseBlock %= elif_k + lparen + Expr + rparen + Expr + ElseBlock, None, None, None, None, None, None, None
+BranchExpr %= (
+    if_k + lparen + Expr + rparen + Expr + ElseBlock,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+ElseBlock %= (
+    elif_k + lparen + Expr + rparen + Expr + ElseBlock,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 ElseBlock %= else_k + Expr, None, None, None
 
 Expr %= LetExpr, None, None
@@ -68,9 +90,7 @@ Disj %= Conj + MoreConjs, None, None, None
 MoreConjs %= conj + Conj + MoreConjs, None, None, None, None
 MoreConjs %= GRAMMAR.Epsilon, None
 
-Neg %= neg, None, None
-Neg %= GRAMMAR.Epsilon, None
-
-Conj %= Neg + Comp, None, None, None
+Conj %= neg + Conj, None, None, None
+Conj %= Comp, None, None
 
 # endregion
