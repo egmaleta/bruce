@@ -314,7 +314,9 @@ type_k, new, inherits, is_k, as_k = BRUCE_GRAMMAR.add_terminals(
 protocol, extends = BRUCE_GRAMMAR.add_terminals("protocol extends")
 
 # OPERATORS
-plus, minus, times, div, mod, power, power_alt = BRUCE_GRAMMAR.add_terminals("+ - * / % ^ **")
+plus, minus, times, div, mod, power, power_alt = BRUCE_GRAMMAR.add_terminals(
+    "+ - * / % ^ **"
+)
 lt, gt, le, ge, eq, neq = BRUCE_GRAMMAR.add_terminals("< > <= >= == !=")
 concat, concat_space = BRUCE_GRAMMAR.add_terminals("@ @@")
 conj, disj, neg = BRUCE_GRAMMAR.add_terminals("& | !")
@@ -346,7 +348,7 @@ COMP = BRUCE_GRAMMAR.add_non_terminal("comp")
 
 # endregion
 
-#region PRODUCTIONS
+# region PRODUCTIONS
 
 EXPR %= DISJ + MORE_DISJS, None, None, None
 
@@ -363,4 +365,4 @@ NEG %= EPSILON, None
 
 CONJ %= NEG + COMP, None, None, None
 
-#endregion
+# endregion
