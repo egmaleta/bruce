@@ -4,6 +4,14 @@ class Symbol:
         self.grammar = grammar
 
     @property
+    def is_terminal(self):
+        return False
+
+    @property
+    def is_non_terminal(self):
+        return False
+
+    @property
     def is_epsilon(self):
         return False
 
@@ -35,16 +43,8 @@ class NonTerminal(Symbol):
         self.productions: list["Production"] = []
 
     @property
-    def is_terminal(self):
-        return False
-
-    @property
     def is_non_terminal(self):
         return True
-
-    @property
-    def is_epsilon(self):
-        return False
 
     def __imod__(self, other):
         if isinstance(other, tuple):
@@ -72,14 +72,6 @@ class Terminal(Symbol):
     @property
     def is_terminal(self):
         return True
-
-    @property
-    def is_non_terminal(self):
-        return False
-
-    @property
-    def is_epsilon(self):
-        return False
 
 
 class EOF(Terminal):
@@ -136,7 +128,7 @@ class Sentence:
         return ("%s " * len(self.symbols) % tuple(self.symbols)).strip()
 
 
-class SentenceList(object):
+class SentenceList:
     def __init__(self, *args: Sentence):
         self.sentences = list(args)
 
