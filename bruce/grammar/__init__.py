@@ -36,6 +36,10 @@ number, string, identifier = GRAMMAR.add_terminals("number string id")
 
 Expr = GRAMMAR.add_non_terminal("expr", True)
 
+LetExpr = GRAMMAR.add_non_terminal("let_expr")
+
+BranchExpr, ElseBlock = GRAMMAR.add_non_terminals("if_expr else_block")
+
 Disj, MoreDisjs = GRAMMAR.add_non_terminals("disj more_disjs")
 Conj, MoreConjs = GRAMMAR.add_non_terminals("conj more_conjs")
 Neg = GRAMMAR.add_non_terminal("neg")
@@ -46,6 +50,14 @@ Comp = GRAMMAR.add_non_terminal("comp")
 
 # region PRODUCTIONS
 
+LetExpr %= let + identifier + bind + Expr + in_k + Expr, None, None, None, None, None, None, None
+
+BranchExpr %= if_k + lparen + Expr + rparen + Expr + ElseBlock, None, None, None, None, None, None, None
+ElseBlock %= elif_k + lparen + Expr + rparen + Expr + ElseBlock, None, None, None, None, None, None, None
+ElseBlock %= else_k + Expr, None, None, None
+
+Expr %= LetExpr, None, None
+Expr %= BranchExpr, None, None
 Expr %= Disj + MoreDisjs, None, None, None
 
 MoreDisjs %= disj + Disj + MoreDisjs, None, None, None, None
