@@ -1,6 +1,6 @@
 from re import Pattern
 
-from ..grammar.utils import Terminal
+from .grammar import Terminal
 
 
 class Token:
