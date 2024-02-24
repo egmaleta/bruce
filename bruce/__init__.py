@@ -37,6 +37,8 @@ number, string, identifier = GRAMMAR.add_terminals("number string id")
 Expr = GRAMMAR.add_non_terminal("expr", True)
 LetExpr = GRAMMAR.add_non_terminal("let_expr")
 BranchExpr, ElseBlock = GRAMMAR.add_non_terminals("if_expr else_block")
+LoopExpr = GRAMMAR.add_non_terminal("loop_expr")
+BlockExpr, MoreExprs = GRAMMAR.add_non_terminals("block_expr more_exprs")
 Disj, MoreDisjs = GRAMMAR.add_non_terminals("disj more_disjs")
 Conj, MoreConjs = GRAMMAR.add_non_terminals("conj more_conjs")
 Comp = GRAMMAR.add_non_terminal("comp")
@@ -44,6 +46,12 @@ Comp = GRAMMAR.add_non_terminal("comp")
 # endregion
 
 # region PRODUCTIONS
+
+Expr %= LetExpr, None, None
+Expr %= BranchExpr, None, None
+Expr %= LoopExpr, None, None
+Expr %= BlockExpr, None, None
+Expr %= Disj + MoreDisjs, None, None, None
 
 LetExpr %= (
     let + identifier + bind + Expr + in_k + Expr,
@@ -78,9 +86,22 @@ ElseBlock %= (
 )
 ElseBlock %= else_k + Expr, None, None, None
 
-Expr %= LetExpr, None, None
-Expr %= BranchExpr, None, None
-Expr %= Disj + MoreDisjs, None, None, None
+LoopExpr %= while_k + lparen + Expr + rparen + Expr, None, None, None, None, None, None
+LoopExpr %= (
+    for_k + lparen + identifier + in_k + Expr + rparen + Expr,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+
+BlockExpr %= lbrace + Expr + MoreExprs + rbrace, None, None, None, None, None
+MoreExprs %= semicolon + Expr + MoreExprs, None, None, None, None
+MoreExprs %= GRAMMAR.Epsilon, None
 
 MoreDisjs %= disj + Disj + MoreDisjs, None, None, None, None
 MoreDisjs %= GRAMMAR.Epsilon, None
