@@ -53,7 +53,7 @@ Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
 Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
 Base, Powers = GRAMMAR.add_non_terminals("base powers")
 Args, MoreArgs = GRAMMAR.add_non_terminals("args more_args")
-Atom, Action = GRAMMAR.add_non_terminals("atom action")
+Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
 
 # endregion
 
@@ -169,7 +169,7 @@ Atom %= number, None
 Atom %= string, None
 Atom %= true_k, None
 Atom %= false_k, None
-Atom %= identifier, None
+Atom %= identifier + Mutation, None, None
 Atom %= lbracket + Args + rbracket, None, None, None, None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
@@ -181,6 +181,9 @@ Atom %= (
     None,
 )
 Atom %= lparen + Expr + rparen, None, None, None, None
+
+Mutation %= mut + Expr, None, None, None
+Mutation %= GRAMMAR.Epsilon, None
 
 Args %= Expr + MoreArgs, None, None, None
 Args %= GRAMMAR.Epsilon, None
@@ -194,4 +197,4 @@ Action %= GRAMMAR.Epsilon, None
 
 # endregion
 
-# TODO: 'as' expr, mut expr
+# TODO: 'as' expr
