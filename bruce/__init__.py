@@ -39,7 +39,9 @@ number, string, identifier, type_identifier = GRAMMAR.add_terminals(
 
 TypeAnnotation = GRAMMAR.add_non_terminal("type_annotation")
 Expr = GRAMMAR.add_non_terminal("expr", True)
-LetExpr = GRAMMAR.add_non_terminal("let_expr")
+LetExpr, Binding, MoreBindings = GRAMMAR.add_non_terminals(
+    "let_expr binding more_bindings"
+)
 BranchExpr, ElseBlock = GRAMMAR.add_non_terminals("if_expr else_block")
 LoopExpr = GRAMMAR.add_non_terminal("loop_expr")
 BlockExpr, MoreExprs = GRAMMAR.add_non_terminals("block_expr more_exprs")
@@ -67,9 +69,7 @@ Expr %= BlockExpr, None, None
 Expr %= Disj + MoreDisjs, None, None, None
 
 LetExpr %= (
-    let + identifier + TypeAnnotation + bind + Expr + in_k + Expr,
-    None,
-    None,
+    let + Binding + MoreBindings + in_k + Expr,
     None,
     None,
     None,
@@ -77,6 +77,9 @@ LetExpr %= (
     None,
     None,
 )
+Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
+MoreBindings %= comma + Binding + MoreBindings, None, None, None, None
+MoreBindings %= GRAMMAR.Epsilon, None
 
 BranchExpr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBlock,
