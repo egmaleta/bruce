@@ -37,6 +37,7 @@ number, string, identifier, type_identifier = GRAMMAR.add_terminals(
 
 # region NON TERMINALS
 
+TypeAnnotation = GRAMMAR.add_non_terminal("type_annotation")
 Expr = GRAMMAR.add_non_terminal("expr", True)
 LetExpr = GRAMMAR.add_non_terminal("let_expr")
 BranchExpr, ElseBlock = GRAMMAR.add_non_terminals("if_expr else_block")
@@ -56,6 +57,9 @@ Atom, Action = GRAMMAR.add_non_terminals("atom action")
 
 # region PRODUCTIONS
 
+TypeAnnotation %= colon + type_identifier, None, None, None
+TypeAnnotation %= GRAMMAR.Epsilon, None
+
 Expr %= LetExpr, None, None
 Expr %= BranchExpr, None, None
 Expr %= LoopExpr, None, None
@@ -63,7 +67,8 @@ Expr %= BlockExpr, None, None
 Expr %= Disj + MoreDisjs, None, None, None
 
 LetExpr %= (
-    let + identifier + bind + Expr + in_k + Expr,
+    let + identifier + TypeAnnotation + bind + Expr + in_k + Expr,
+    None,
     None,
     None,
     None,
