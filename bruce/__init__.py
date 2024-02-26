@@ -193,8 +193,7 @@ MoreArgs %= GRAMMAR.Epsilon, None
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
 Action %= lparen + Args + rparen + Action, None, None, None, None, None
+Action %= as_k + type_identifier + Action, None, None, None, None
 Action %= GRAMMAR.Epsilon, None
 
 # endregion
-
-# TODO: 'as' expr
