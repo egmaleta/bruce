@@ -36,9 +36,15 @@ number, string, identifier, type_identifier, constant = GRAMMAR.add_terminals(
 # endregion
 
 # region NON TERMINALS
-
+Program = GRAMMAR.add_non_terminal("program", True)
+TypeDecl, TypeDeclList = GRAMMAR.add_non_terminals("type_decl type_decls")
+MemberDecl, MemberDeclList, Member = GRAMMAR.add_non_terminals(
+    "member_decl member_decls member"
+)
+Params, MoreParams = GRAMMAR.add_non_terminals("params more_params")
+MethodBody = GRAMMAR.add_non_terminal("method_body")
 TypeAnnotation = GRAMMAR.add_non_terminal("type_annotation")
-Expr = GRAMMAR.add_non_terminal("expr", True)
+Expr = GRAMMAR.add_non_terminal("expr")
 LetExpr, Binding, MoreBindings = GRAMMAR.add_non_terminals(
     "let_expr binding more_bindings"
 )
@@ -59,8 +65,37 @@ Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
 
 # region PRODUCTIONS
 
+Program %= TypeDeclList + Expr, None, None, None
+
+TypeDeclList %= TypeDecl + TypeDeclList, None, None, None
+TypeDeclList %= GRAMMAR.Epsilon, None
+
+TypeDecl %= type_k + lbrace + MemberDeclList + rbrace, None, None, None, None, None
+
+MemberDeclList %= MemberDecl + semicolon + MemberDeclList, None, None, None, None
+MemberDeclList %= GRAMMAR.Epsilon, None
+
+MemberDecl %= identifier + Member, None, None, None
+Member %= bind + TypeAnnotation + Expr, None, None, None, None
+Member %= lparen + Params + rparen + MethodBody, None, None, None, None, None
+
 TypeAnnotation %= colon + type_identifier, None, None, None
 TypeAnnotation %= GRAMMAR.Epsilon, None
+
+Params %= identifier + TypeAnnotation + MoreParams, None, None, None, None
+Params %= GRAMMAR.Epsilon, None
+MoreParams %= (
+    comma + identifier + TypeAnnotation + MoreParams,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+MoreParams %= GRAMMAR.Epsilon, None
+
+MethodBody %= BlockExpr, None, None
+MethodBody %= then + Expr, None, None, None
 
 Expr %= LetExpr, None, None
 Expr %= BranchExpr, None, None
