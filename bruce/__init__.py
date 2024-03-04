@@ -29,8 +29,8 @@ then = GRAMMAR.add_terminal("=>")
 bind, mut = GRAMMAR.add_terminals("= :=")
 
 # STRINGS
-number, string, identifier, type_identifier = GRAMMAR.add_terminals(
-    "number string id type_id"
+number, string, identifier, type_identifier, constant = GRAMMAR.add_terminals(
+    "number string id type_id constant"
 )
 
 # endregion
@@ -169,6 +169,7 @@ Atom %= number, None
 Atom %= string, None
 Atom %= true_k, None
 Atom %= false_k, None
+Atom %= constant, None
 Atom %= identifier + Mutation, None, None
 Atom %= lbracket + Args + rbracket, None, None, None, None
 Atom %= (
