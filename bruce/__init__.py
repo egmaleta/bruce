@@ -29,9 +29,7 @@ then = GRAMMAR.add_terminal("=>")
 bind, mut = GRAMMAR.add_terminals("= :=")
 
 # STRINGS
-number, string, identifier, type_identifier, constant = GRAMMAR.add_terminals(
-    "number string id type_id constant"
-)
+number, string, identifier = GRAMMAR.add_terminals("number string id")
 
 # endregion
 
@@ -79,7 +77,7 @@ MemberDecl %= identifier + Member, None, None, None
 Member %= bind + TypeAnnotation + Expr, None, None, None, None
 Member %= lparen + Params + rparen + MethodBody, None, None, None, None, None
 
-TypeAnnotation %= colon + type_identifier, None, None, None
+TypeAnnotation %= colon + identifier, None, None, None
 TypeAnnotation %= GRAMMAR.Epsilon, None
 
 Params %= identifier + TypeAnnotation + MoreParams, None, None, None, None
@@ -167,7 +165,7 @@ Conj %= not_t + Conj, None, None, None
 Conj %= Comparison, None, None
 
 Comparison %= Arith + Comparer + Arith, None, None, None, None
-Comparison %= Arith + is_k + type_identifier, None, None, None, None
+Comparison %= Arith + is_k + identifier, None, None, None, None
 
 Comparer %= lt, None, None
 Comparer %= gt, None, None
@@ -204,11 +202,10 @@ Atom %= number, None
 Atom %= string, None
 Atom %= true_k, None
 Atom %= false_k, None
-Atom %= constant, None
 Atom %= identifier + Mutation, None, None
 Atom %= lbracket + Args + rbracket, None, None, None, None
 Atom %= (
-    new + type_identifier + lparen + Args + rparen,
+    new + identifier + lparen + Args + rparen,
     None,
     None,
     None,
@@ -229,7 +226,7 @@ MoreArgs %= GRAMMAR.Epsilon, None
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
 Action %= lparen + Args + rparen + Action, None, None, None, None, None
-Action %= as_k + type_identifier + Action, None, None, None, None
+Action %= as_k + identifier + Action, None, None, None, None
 Action %= GRAMMAR.Epsilon, None
 
 # endregion
