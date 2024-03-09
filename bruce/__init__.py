@@ -29,8 +29,8 @@ then, given = GRAMMAR.add_terminals("=> ||")
 bind, mut = GRAMMAR.add_terminals("= :=")
 
 # STRINGS
-number, string, identifier, type_identifier, builtin_value, builtin_func = (
-    GRAMMAR.add_terminals("number string id type_id builtin_val builtin_func")
+number, string, identifier, type_identifier, builtin_identifier = GRAMMAR.add_terminals(
+    "number string id type_id builtin_id"
 )
 
 # endregion
@@ -232,8 +232,7 @@ Atom %= number, None, None
 Atom %= string, None, None
 Atom %= true_k, None, None
 Atom %= false_k, None, None
-Atom %= builtin_value, None, None
-Atom %= builtin_func + lparen + Args + rparen, None, None, None, None, None
+Atom %= builtin_identifier, None, None
 Atom %= identifier + Mutation, None, None, None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
