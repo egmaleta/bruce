@@ -44,11 +44,7 @@ Params, MoreParams = GRAMMAR.add_non_terminals("params more_params")
 Args, MoreArgs = GRAMMAR.add_non_terminals("args more_args")
 
 Program = GRAMMAR.add_non_terminal("program", True)
-TypeDecl, TypeDeclList = GRAMMAR.add_non_terminals("type_decl type_decls")
-MemberDecl, MemberDeclList, Member = GRAMMAR.add_non_terminals(
-    "member_decl member_decls member"
-)
-MethodBody = GRAMMAR.add_non_terminal("method_body")
+Function, FunctionBody = GRAMMAR.add_non_terminals("function_decl function_body")
 
 Expr = GRAMMAR.add_non_terminal("expr")
 Binding, MoreBindings = GRAMMAR.add_non_terminals("binding more_bindings")
@@ -255,6 +251,20 @@ Vector %= Expr + VectorStructure, None, None, None
 Vector %= GRAMMAR.Epsilon, None
 VectorStructure %= given + identifier + in_k + Expr, None, None, None, None, None
 VectorStructure %= MoreArgs, None, None
+
+Function %= (
+    func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+FunctionBody %= then + Stmt, None, None, None
+FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
 
 Program %= TypeDeclList + Expr, None, None, None
 
