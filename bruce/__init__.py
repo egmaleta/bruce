@@ -44,7 +44,11 @@ Params, MoreParams = GRAMMAR.add_non_terminals("params more_params")
 Args, MoreArgs = GRAMMAR.add_non_terminals("args more_args")
 
 Program = GRAMMAR.add_non_terminal("program", True)
-Function, FunctionBody = GRAMMAR.add_non_terminals("function_decl function_body")
+Decl, Declarations = GRAMMAR.add_non_terminals("decl decls")
+FunctionBody = GRAMMAR.add_non_terminal("function_body")
+MethodSpec, MoreMethodSpecs, Extension = GRAMMAR.add_non_terminals(
+    "method_spec more_method_specs extension"
+)
 
 Expr = GRAMMAR.add_non_terminal("expr")
 Binding, MoreBindings = GRAMMAR.add_non_terminals("binding more_bindings")
@@ -252,7 +256,12 @@ Vector %= GRAMMAR.Epsilon, None
 VectorStructure %= given + identifier + in_k + Expr, None, None, None, None, None
 VectorStructure %= MoreArgs, None, None
 
-Function %= (
+Program %= Declarations + Expr + OptionalSemicolon, None, None, None, None
+
+Declarations %= Decl + Declarations, None, None, None
+Declarations %= GRAMMAR.Epsilon, None
+
+Decl %= (
     func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,
     None,
     None,
@@ -263,24 +272,44 @@ Function %= (
     None,
     None,
 )
+Decl %= (
+    protocol
+    + type_identifier
+    + Extension
+    + lbrace
+    + MethodSpec
+    + MoreMethodSpecs
+    + rbrace
+    + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+
 FunctionBody %= then + Stmt, None, None, None
 FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
 
-Program %= TypeDeclList + Expr, None, None, None
+Extension %= extends + type_identifier, None, None, None
+Extension %= GRAMMAR.Epsilon, None
 
-TypeDeclList %= TypeDecl + TypeDeclList, None, None, None
-TypeDeclList %= GRAMMAR.Epsilon, None
-
-TypeDecl %= type_k + lbrace + MemberDeclList + rbrace, None, None, None, None, None
-
-MemberDeclList %= MemberDecl + semicolon + MemberDeclList, None, None, None, None
-MemberDeclList %= GRAMMAR.Epsilon, None
-
-MemberDecl %= identifier + Member, None, None, None
-Member %= bind + TypeAnnotation + Expr, None, None, None, None
-Member %= lparen + Params + rparen + MethodBody, None, None, None, None, None
-
-MethodBody %= BlockExpr, None, None
-MethodBody %= then + Expr, None, None, None
+MethodSpec %= (
+    identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, None, None, None
+MoreMethodSpecs %= GRAMMAR.Epsilon, None
 
 # endregion
