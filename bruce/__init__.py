@@ -29,7 +29,9 @@ then = GRAMMAR.add_terminal("=>")
 bind, mut = GRAMMAR.add_terminals("= :=")
 
 # STRINGS
-number, string, identifier = GRAMMAR.add_terminals("number string id")
+number, string, identifier, type_identifier, builtin_value, builtin_func = (
+    GRAMMAR.add_terminals("number string id type_id builtin_val builtin_func")
+)
 
 # endregion
 
@@ -66,7 +68,7 @@ Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
 
 # region PRODUCTIONS
 
-TypeAnnotation %= colon + identifier, None, None, None
+TypeAnnotation %= colon + type_identifier, None, None, None
 TypeAnnotation %= GRAMMAR.Epsilon, None
 
 OptionalSemicolon %= semicolon, None, None
@@ -193,7 +195,7 @@ Comparison %= le + Arith, None, None, None
 Comparison %= ge + Arith, None, None, None
 Comparison %= eq + Arith, None, None, None
 Comparison %= neq + Arith, None, None, None
-Comparison %= is_k + identifier, None, None, None
+Comparison %= is_k + type_identifier, None, None, None
 Comparison %= GRAMMAR.Epsilon, None
 
 Arith %= Term + MoreTerms, None, None, None
@@ -220,14 +222,16 @@ Powers %= GRAMMAR.Epsilon, None
 
 Base %= Atom + Action, None, None, None
 
-Atom %= number, None
-Atom %= string, None
-Atom %= true_k, None
-Atom %= false_k, None
-Atom %= identifier + Mutation, None, None
+Atom %= number, None, None
+Atom %= string, None, None
+Atom %= true_k, None, None
+Atom %= false_k, None, None
+Atom %= builtin_value, None, None
+Atom %= builtin_func + lparen + Args + rparen, None, None, None, None, None
+Atom %= identifier + Mutation, None, None, None
 Atom %= lbracket + Args + rbracket, None, None, None, None
 Atom %= (
-    new + identifier + lparen + Args + rparen,
+    new + type_identifier + lparen + Args + rparen,
     None,
     None,
     None,
@@ -244,7 +248,7 @@ Mutation %= GRAMMAR.Epsilon, None
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
 Action %= lparen + Args + rparen + Action, None, None, None, None, None
-Action %= as_k + identifier + Action, None, None, None, None
+Action %= as_k + type_identifier + Action, None, None, None, None
 Action %= GRAMMAR.Epsilon, None
 
 Program %= TypeDeclList + Expr, None, None, None
