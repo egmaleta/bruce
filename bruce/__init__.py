@@ -40,14 +40,19 @@ number, string, identifier, type_identifier, builtin_value, builtin_func = (
 TypeAnnotation, OptionalSemicolon = GRAMMAR.add_non_terminals(
     "type_annotation opt_semicolon"
 )
-Params, MoreParams = GRAMMAR.add_non_terminals("params more_params")
-Args, MoreArgs = GRAMMAR.add_non_terminals("args more_args")
+Params, MoreParams, OptionalParams = GRAMMAR.add_non_terminals(
+    "params more_params opt_params"
+)
+Args, MoreArgs, OptionalArgs = GRAMMAR.add_non_terminals("args more_args opt_args")
 
 Program = GRAMMAR.add_non_terminal("program", True)
 Decl, Declarations = GRAMMAR.add_non_terminals("decl decls")
 FunctionBody = GRAMMAR.add_non_terminal("function_body")
 MethodSpec, MoreMethodSpecs, Extension = GRAMMAR.add_non_terminals(
     "method_spec more_method_specs extension"
+)
+Member, MemberStructure, MoreMembers, Inheritance = GRAMMAR.add_non_terminals(
+    "member member_structure more_members inheritance"
 )
 
 Expr = GRAMMAR.add_non_terminal("expr")
@@ -291,6 +296,27 @@ Decl %= (
     None,
     None,
 )
+Decl %= (
+    type_k
+    + type_identifier
+    + OptionalParams
+    + Inheritance
+    + lbrace
+    + Member
+    + MoreMembers
+    + rbrace
+    + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 
 FunctionBody %= then + Stmt, None, None, None
 FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
@@ -311,5 +337,26 @@ MethodSpec %= (
 )
 MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, None, None, None
 MoreMethodSpecs %= GRAMMAR.Epsilon, None
+
+OptionalParams %= lparen + Params + rparen, None, None, None, None
+OptionalParams %= GRAMMAR.Epsilon, None
+
+Inheritance %= inherits + type_identifier + OptionalArgs, None, None, None, None
+Inheritance %= GRAMMAR.Epsilon, None
+
+OptionalArgs %= lparen + Args + rparen, None, None, None, None
+OptionalArgs %= GRAMMAR.Epsilon, None
+
+Member %= identifier + MemberStructure, None, None, None
+MemberStructure %= TypeAnnotation + bind + Stmt, None, None, None, None
+MemberStructure %= (
+    lparen + Params + rparen + TypeAnnotation + FunctionBody,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 
 # endregion
