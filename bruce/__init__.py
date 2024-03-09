@@ -25,7 +25,7 @@ lparen, rparen, lbrace, rbrace, lbracket, rbracket = GRAMMAR.add_terminals(
     "( ) { } [ ]"
 )
 colon, semicolon, dot, comma = GRAMMAR.add_terminals(": ; . ,")
-then = GRAMMAR.add_terminal("=>")
+then, given = GRAMMAR.add_terminals("=> ||")
 bind, mut = GRAMMAR.add_terminals("= :=")
 
 # STRINGS
@@ -63,6 +63,7 @@ Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
 Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
 Base, Powers = GRAMMAR.add_non_terminals("base powers")
 Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
+Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
 
 # endregion
 
@@ -229,7 +230,6 @@ Atom %= false_k, None, None
 Atom %= builtin_value, None, None
 Atom %= builtin_func + lparen + Args + rparen, None, None, None, None, None
 Atom %= identifier + Mutation, None, None, None
-Atom %= lbracket + Args + rbracket, None, None, None, None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
     None,
@@ -240,16 +240,21 @@ Atom %= (
     None,
 )
 Atom %= lparen + Expr + rparen, None, None, None, None
+Atom %= lbracket + Vector + rbracket, None, None, None, None
 
 Mutation %= mut + Expr, None, None, None
 Mutation %= GRAMMAR.Epsilon, None
-
 
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
 Action %= lparen + Args + rparen + Action, None, None, None, None, None
 Action %= as_k + type_identifier + Action, None, None, None, None
 Action %= GRAMMAR.Epsilon, None
+
+Vector %= Expr + VectorStructure, None, None, None
+Vector %= GRAMMAR.Epsilon, None
+VectorStructure %= given + identifier + in_k + Expr, None, None, None, None, None
+VectorStructure %= MoreArgs, None, None
 
 Program %= TypeDeclList + Expr, None, None, None
 
