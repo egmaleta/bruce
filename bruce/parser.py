@@ -206,7 +206,7 @@ def create_parser(
                 if not p.is_epsilon:
                     stack.extend(reversed(p.right))
             else:
-                if isinstance(top, G.EOF):
+                if isinstance(top, type(G.EOF)):
                     break
                 if top == a:
                     cursor += 1
@@ -248,17 +248,14 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
     inherited[0] = inherited_value
 
     for i, symbol in enumerate(body, 1):
-        if symbol.IsTerminal:
+        if symbol.is_terminal:
             assert inherited[i] is None
             # Insert your code here ...
             token = next(tokens)
-            if token.token_type == "num":
-                synteticed[i] = float(token.lex)
-            else:
-                synteticed[i] = token.lex
+            synteticed[i] = token.lex
         else:
             next_production = next(left_parse)
-            assert symbol == next_production.Left
+            assert symbol == next_production.left
             # Insert your code here ...
             if not attributes[i] is None:
                 inherited[i] = attributes[i](inherited, synteticed)
