@@ -1,7 +1,52 @@
 from itertools import islice
 
 from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production, EOF
-from bruce.utils import ContainerSet
+
+
+class ContainerSet:
+    def __init__(self, *values: Symbol, contains_epsilon=False):
+        self.set = set(values)
+        self.contains_epsilon = contains_epsilon
+
+    def add(self, value: Symbol):
+        n = len(self.set)
+        self.set.add(value)
+        return n != len(self.set)
+
+    def set_epsilon(self, value=True):
+        last = self.contains_epsilon
+        self.contains_epsilon = value
+        return last != self.contains_epsilon
+
+    def update(self, other: set[Symbol]):
+        n = len(self.set)
+        self.set.update(other.set)
+        return n != len(self.set)
+
+    def epsilon_update(self, other: set[Symbol]):
+        return self.set_epsilon(self.contains_epsilon | other.contains_epsilon)
+
+    def hard_update(self, other: set[Symbol]):
+        return self.update(other) | self.epsilon_update(other)
+
+    def __len__(self):
+        return len(self.set) + int(self.contains_epsilon)
+
+    def __str__(self):
+        return "%s-%s" % (str(self.set), self.contains_epsilon)
+
+    def __repr__(self):
+        return str(self)
+
+    def __iter__(self):
+        return iter(self.set)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContainerSet)
+            and self.set == other.set
+            and self.contains_epsilon == other.contains_epsilon
+        )
 
 
 def compute_local_first(firsts: dict[Symbol, ContainerSet], alpha: Sentence):
@@ -176,22 +221,23 @@ def create_parser(
 
     return parser
 
+
 def evaluate_parse(left_parse, tokens):
     if not left_parse or not tokens:
         return
-    
+
     left_parse = iter(left_parse)
     tokens = iter(tokens)
     result = evaluate(next(left_parse), left_parse, tokens)
-    
+
     assert isinstance(next(tokens).token_type, EOF)
     return result
-    
+
 
 def evaluate(production, left_parse, tokens, inherited_value=None):
     head, body = production
     attributes = production.attributes
-    
+
     # Insert your code here ...
     # > synteticed = ...
     # > inherited = ...
@@ -206,7 +252,7 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
             assert inherited[i] is None
             # Insert your code here ...
             token = next(tokens)
-            if token.token_type == 'num':
+            if token.token_type == "num":
                 synteticed[i] = float(token.lex)
             else:
                 synteticed[i] = token.lex
@@ -217,5 +263,5 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
             if not attributes[i] is None:
                 inherited[i] = attributes[i](inherited, synteticed)
             synteticed[i] = evaluate(next_production, left_parse, tokens, inherited[i])
-    
+
     return attributes[0](inherited, synteticed)

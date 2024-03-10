@@ -1,6 +1,7 @@
 from re import Pattern
 
 from .grammar import Terminal
+from .token import Token
 
 
 def _match(prefix: Pattern | str, code: str):
