@@ -1,6 +1,6 @@
 from itertools import islice
 
-from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production
+from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production, EOF
 from bruce.utils import ContainerSet
 
 
@@ -175,3 +175,47 @@ def create_parser(
         return output
 
     return parser
+
+def evaluate_parse(left_parse, tokens):
+    if not left_parse or not tokens:
+        return
+    
+    left_parse = iter(left_parse)
+    tokens = iter(tokens)
+    result = evaluate(next(left_parse), left_parse, tokens)
+    
+    assert isinstance(next(tokens).token_type, EOF)
+    return result
+    
+
+def evaluate(production, left_parse, tokens, inherited_value=None):
+    head, body = production
+    attributes = production.attributes
+    
+    # Insert your code here ...
+    # > synteticed = ...
+    # > inherited = ...
+    # Anything to do with inherited_value?
+    synteticed = [None] * (len(body) + 1)
+    inherited = [None] * (len(body) + 1)
+
+    inherited[0] = inherited_value
+
+    for i, symbol in enumerate(body, 1):
+        if symbol.IsTerminal:
+            assert inherited[i] is None
+            # Insert your code here ...
+            token = next(tokens)
+            if token.token_type == 'num':
+                synteticed[i] = float(token.lex)
+            else:
+                synteticed[i] = token.lex
+        else:
+            next_production = next(left_parse)
+            assert symbol == next_production.Left
+            # Insert your code here ...
+            if not attributes[i] is None:
+                inherited[i] = attributes[i](inherited, synteticed)
+            synteticed[i] = evaluate(next_production, left_parse, tokens, inherited[i])
+    
+    return attributes[0](inherited, synteticed)
