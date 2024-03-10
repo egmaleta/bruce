@@ -1,6 +1,7 @@
-from ..parser import Grammar, evaluate_parse, create_parser
+from ..grammar import Grammar
+from ..parser import evaluate_parse, create_parser
+from ..token import Token
 from .ast import UnionNode, ConcatNode, ClosureNode, SymbolNode, EpsilonNode
-from ..utils import Token
 from .automata import nfa_to_dfa 
 
 G = Grammar()

@@ -1,5 +1,5 @@
-from bruce.regex.automata import NFA, DFA, nfa_to_dfa
-from bruce.regex.automata import automata_union, automata_concatenation, automata_closure, automata_minimization
+from .automata import NFA, DFA, nfa_to_dfa
+from .automata import automata_union, automata_concatenation, automata_closure, automata_minimization
 
 EPSILON = 'ε'
 
