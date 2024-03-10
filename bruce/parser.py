@@ -2,6 +2,7 @@ from itertools import islice
 
 from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production, EOF
 
+
 class ContainerSet:
     def __init__(self, *values: Symbol, contains_epsilon=False):
         self.set = set(values)
@@ -220,22 +221,23 @@ def create_parser(
 
     return parser
 
+
 def evaluate_parse(left_parse, tokens):
     if not left_parse or not tokens:
         return
-    
+
     left_parse = iter(left_parse)
     tokens = iter(tokens)
     result = evaluate(next(left_parse), left_parse, tokens)
-    
+
     assert isinstance(next(tokens).token_type, EOF)
     return result
-    
+
 
 def evaluate(production, left_parse, tokens, inherited_value=None):
     head, body = production
     attributes = production.attributes
-    
+
     # Insert your code here ...
     # > synteticed = ...
     # > inherited = ...
@@ -250,7 +252,7 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
             assert inherited[i] is None
             # Insert your code here ...
             token = next(tokens)
-            if token.token_type == 'num':
+            if token.token_type == "num":
                 synteticed[i] = float(token.lex)
             else:
                 synteticed[i] = token.lex
@@ -261,5 +263,5 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
             if not attributes[i] is None:
                 inherited[i] = attributes[i](inherited, synteticed)
             synteticed[i] = evaluate(next_production, left_parse, tokens, inherited[i])
-    
+
     return attributes[0](inherited, synteticed)
