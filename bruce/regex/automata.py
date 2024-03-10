@@ -3,6 +3,8 @@ try:
 except:
     pass
 
+from bruce.utils import ContainerSet, DisjointSet
+
 
 class State:
     def __init__(self, state, final=False, formatter=lambda x: str(x), shape='circle'):
@@ -290,3 +292,214 @@ class DFA(NFA):
             if self.current == -1:
                 return False
         return self.current in self.finals
+
+def move(automaton, states, symbol):
+    moves = set()
+    for state in states:
+        try:
+            moves.update(automaton.transitions[state][symbol])
+        except KeyError:
+            pass
+    return moves
+
+def epsilon_closure(automaton, states):
+    pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
+    closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
+    
+    while pending:
+        state = pending.pop()
+        for dest in automaton.epsilon_transitions(state):
+            if dest not in closure:
+                closure.add(dest)
+                pending.append(dest)
+                
+    return ContainerSet(*closure)
+
+def nfa_to_dfa(automaton):
+    transitions = {}
+    
+    start = epsilon_closure(automaton, [automaton.start])
+    start.id = 0
+    start.is_final = any(s in automaton.finals for s in start)
+    states = [ start ]
+
+    pending = [ start ]
+    while pending:
+        state = pending.pop()
+        
+        for symbol in automaton.vocabulary:
+            destinations = move(automaton, state, symbol)
+            destinations = epsilon_closure(automaton, destinations)
+            if len(destinations) == 0:
+                continue
+            if destinations not in states:
+                destinations.is_final = any(
+                    s in automaton.finals for s in destinations)
+                destinations.id = len(states)
+                states.append(destinations)
+                pending.append(destinations)
+            else:
+                destinations = states[states.index(destinations)]
+
+            try:
+                transitions[state.id, symbol]
+                assert False, 'Invalid DFA!!!'
+            except KeyError:
+                transitions[state.id, symbol] = destinations.id
+            except AssertionError:
+                pass
+    
+    finals = [ state.id for state in states if state.is_final ]
+    dfa = DFA(len(states), finals, transitions)
+    return dfa
+
+def automata_union(a1, a2):
+    transitions = {}
+    
+    start = 0
+    d1 = 1
+    d2 = a1.states + d1
+    final = a2.states + d2
+    
+    for (origin, symbol), destinations in a1.map.items():
+        ## Relocate a1 transitions ...
+        transitions[(origin + d1, symbol)] = { destination + d1 for destination in destinations }
+
+    for (origin, symbol), destinations in a2.map.items():
+        ## Relocate a2 transitions ...
+        transitions[(origin + d2, symbol)] = { destination + d2 for destination in destinations }
+    
+    ## Add transitions from start state ...
+    transitions[(start, '')] = { d1, d2 }
+    
+    ## Add transitions to final state ...
+    transitions[(final - 1, '')] = { final }
+            
+    states = a1.states + a2.states + 2
+    finals = { final }
+    
+    return NFA(states, finals, transitions, start)
+
+def automata_concatenation(a1, a2):
+    transitions = {}
+    
+    start = 0
+    d1 = 0
+    d2 = a1.states + d1
+    final = a2.states + d2
+    
+    for (origin, symbol), destinations in a1.map.items():
+        ## Relocate a1 transitions ...
+        transitions[(origin + d1, symbol)] = { destination + d1 for destination in destinations }
+
+    for (origin, symbol), destinations in a2.map.items():
+        ## Relocate a2 transitions ...
+        transitions[(origin + d2, symbol)] = { destination + d2 for destination in destinations }
+    
+    ## Add transitions to final state ...
+    for destination in a1.finals:
+        transitions[(destination + d1, '')] = { d2 }
+            
+    states = a1.states + a2.states + 1
+    finals = { final - 1}
+    
+    return NFA(states, finals, transitions, start)
+
+def automata_closure(a1):
+    transitions = {}
+    
+    start = 0
+    d1 = 1
+    final = a1.states + d1
+    
+    for (origin, symbol), destinations in a1.map.items():
+        ## Relocate automaton transitions ...
+        transitions[(origin + d1, symbol)] = { destination + d1 for destination in destinations }
+    
+    ## Add transitions from start state ...
+    transitions[(start, '')] = { d1 }
+    
+    ## Add transitions to final state and to start state ...
+    for state in a1.finals:
+        transitions[(state + d1, '')] = { start }
+            
+    states = a1.states +  2
+    finals = { start }
+
+    return NFA(states, finals, transitions, start)
+
+def distinguish_states(group, automaton, partition):
+    split = {}
+    vocabulary = tuple(automaton.vocabulary)
+    
+    marks = [False] * len(group)
+
+    for i, member in enumerate(group):
+        if marks[i]:
+            continue
+        split[member.value] = [member.value]
+        marks[i] = True
+        for j, other in enumerate(group):
+            if member != other:
+                t1 = automaton.transitions[member.value]
+                t2 = automaton.transitions[other.value]
+                all_equal = True
+                for symbol in vocabulary:
+                    ## Compare transitions ...
+                    if partition[t1[symbol][0]] != partition[t2[symbol][0]]:
+                        all_equal = False
+                        break
+                if all_equal:
+                    split[member.value].append(other.value)
+                    marks[j] = True
+        
+    if len(split) == 0:
+        return [element.value for element in group]
+
+    return [ group for group in split.values()]
+            
+def state_minimization(automaton):
+    partition = DisjointSet(*range(automaton.states))
+    
+    ## partition = { NON-FINALS | FINALS }
+    partition.merge(automaton.finals)
+    partition.merge([state for state in range(automaton.states) if state not in automaton.finals])
+    
+    while True:
+        new_partition = DisjointSet(*range(automaton.states))
+        
+        ## Split each group if needed (use distinguish_states(group, automaton, partition))
+        for group in partition.groups:
+            new_groups = distinguish_states(group, automaton, partition)
+            for new_group in new_groups:
+                new_partition.merge(new_group)
+
+        if len(new_partition) == len(partition):
+            break
+
+        partition = new_partition
+        
+    return partition
+
+def automata_minimization(automaton):
+    partition = state_minimization(automaton)
+    
+    states = [s for s in partition.representatives]
+    
+    transitions = {}
+    for i, state in enumerate(states):
+        origin = partition[state.value].representative
+        for symbol, destinations in automaton.transitions[origin.value].items():
+            t = partition[destinations[0]].representative
+            transitions[i, symbol] = states.index(t)
+            
+            try:
+                transitions[i,symbol]
+                # assert False
+            except KeyError:
+                pass
+    
+    finals = [states.index(partition[final].representative) for final in automaton.finals if partition[final].representative in states]
+    start = partition[automaton.start].representative.value
+    
+    return DFA(len(states), finals, transitions, start)
