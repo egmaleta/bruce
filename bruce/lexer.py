@@ -3,12 +3,6 @@ from re import Pattern
 from .grammar import Terminal
 
 
-class Token:
-    def __init__(self, lexeme: str, type: Terminal):
-        self.lexeme = lexeme
-        self.type = type
-
-
 def _match(prefix: Pattern | str, code: str):
     if isinstance(prefix, str):
         return prefix if code.startswith(prefix) else None
