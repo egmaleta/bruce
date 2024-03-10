@@ -1,3 +1,5 @@
+from bruce.grammar import Production, Sentence, Symbol, EOF, Epsilon
+
 class ContainerSet:
     def __init__(self, *values: Symbol, contains_epsilon=False):
         self.set = set(values)
@@ -42,6 +44,32 @@ class ContainerSet:
             and self.set == other.set
             and self.contains_epsilon == other.contains_epsilon
         )
+        
+class Token:
+    """
+    Basic token class.
+
+    Parameters
+    ----------
+    lex : str
+        Token's lexeme.
+    token_type : Enum
+        Token's type.
+    """
+
+    def __init__(self, lex, token_type):
+        self.lex = lex
+        self.token_type = token_type
+
+    def __str__(self):
+        return f'{self.token_type}: {self.lex}'
+
+    def __repr__(self):
+        return str(self)
+
+    @property
+    def is_valid(self):
+        return True
         
 class DisjointSet:
     def __init__(self, *items):
