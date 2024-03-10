@@ -3,6 +3,7 @@ try:
 except:
     pass
 
+
 class State:
     def __init__(self, state, final=False, formatter=lambda x: str(x), shape='circle'):
         self.state = state
@@ -54,20 +55,21 @@ class State:
         closure = self.epsilon_closure
         start = State(tuple(closure), any(s.final for s in closure), formatter)
 
-        closures = [ closure ]
-        states = [ start ]
-        pending = [ start ]
+        closures = [closure]
+        states = [start]
+        pending = [start]
 
         while pending:
             state = pending.pop()
-            symbols = { symbol for s in state.state for symbol in s.transitions }
+            symbols = {symbol for s in state.state for symbol in s.transitions}
 
             for symbol in symbols:
                 move = self.move_by_state(symbol, *state.state)
                 closure = self.epsilon_closure_by_state(*move)
 
                 if closure not in closures:
-                    new_state = State(tuple(closure), any(s.final for s in closure), formatter)
+                    new_state = State(tuple(closure), any(
+                        s.final for s in closure), formatter)
                     closures.append(closure)
                     states.append(new_state)
                     pending.append(new_state)
@@ -88,7 +90,7 @@ class State:
 
         for (origin, symbol), destinations in nfa.map.items():
             origin = states[origin]
-            origin[symbol] = [ states[d] for d in destinations ]
+            origin[symbol] = [states[d] for d in destinations]
 
         if get_states:
             return states[nfa.start], states
@@ -96,11 +98,11 @@ class State:
 
     @staticmethod
     def move_by_state(symbol, *states):
-        return { s for state in states if state.has_transition(symbol) for s in state[symbol]}
+        return {s for state in states if state.has_transition(symbol) for s in state[symbol]}
 
     @staticmethod
     def epsilon_closure_by_state(*states):
-        closure = { state for state in states }
+        closure = {state for state in states}
 
         l = 0
         while l != len(closure):
@@ -108,7 +110,7 @@ class State:
             tmp = [s for s in closure]
             for s in tmp:
                 for epsilon_state in s.epsilon_transitions:
-                        closure.add(epsilon_state)
+                    closure.add(epsilon_state)
         return closure
 
     @property
@@ -167,21 +169,26 @@ class State:
 
     def graph(self):
         G = pydot.Dot(rankdir='LR', margin=0.1)
-        G.add_node(pydot.Node('start', shape='plaintext', label='', width=0, height=0))
+        G.add_node(pydot.Node('start', shape='plaintext',
+                   label='', width=0, height=0))
 
         visited = set()
+
         def visit(start):
             ids = id(start)
             if ids not in visited:
                 visited.add(ids)
-                G.add_node(pydot.Node(ids, label=start.name, shape=self.shape, style='bold' if start.final else ''))
+                G.add_node(pydot.Node(ids, label=start.name,
+                           shape=self.shape, style='bold' if start.final else ''))
                 for tran, destinations in start.transitions.items():
                     for end in destinations:
                         visit(end)
-                        G.add_edge(pydot.Edge(ids, id(end), label=tran, labeldistance=2))
+                        G.add_edge(pydot.Edge(
+                            ids, id(end), label=tran, labeldistance=2))
                 for end in start.epsilon_transitions:
                     visit(end)
-                    G.add_edge(pydot.Edge(ids, id(end), label='ε', labeldistance=2))
+                    G.add_edge(pydot.Edge(
+                        ids, id(end), label='ε', labeldistance=2))
 
         visit(self)
         G.add_edge(pydot.Edge('start', id(self), label='', style='dashed'))
@@ -197,11 +204,89 @@ class State:
     def write_to(self, fname):
         return self.graph().write_svg(fname)
 
+
 def multiline_formatter(state):
     return '\n'.join(str(item) for item in state)
+
 
 def lr0_formatter(state):
     try:
         return '\n'.join(str(item)[:-4] for item in state)
     except TypeError:
         return str(state)[:-4]
+
+
+class NFA:
+    def __init__(self, states, finals, transitions, start=0):
+        self.states = states
+        self.start = start
+        self.finals = set(finals)
+        self.map = transitions
+        self.vocabulary = set()
+        self.transitions = {state: {} for state in range(states)}
+
+        for (origin, symbol), destinations in transitions.items():
+            assert hasattr(
+                destinations, '__iter__'), 'Invalid collection of states'
+            self.transitions[origin][symbol] = destinations
+            self.vocabulary.add(symbol)
+
+        self.vocabulary.discard('')
+
+    def epsilon_transitions(self, state):
+        assert state in self.transitions, 'Invalid state'
+        try:
+            return self.transitions[state]['']
+        except KeyError:
+            return ()
+
+    def graph(self):
+        G = pydot.Dot(rankdir='LR', margin=0.1)
+        G.add_node(pydot.Node('start', shape='plaintext',
+                   label='', width=0, height=0))
+
+        for (start, tran), destinations in self.map.items():
+            tran = 'ε' if tran == '' else tran
+            G.add_node(pydot.Node(start, shape='circle',
+                       style='bold' if start in self.finals else ''))
+            for end in destinations:
+                G.add_node(pydot.Node(end, shape='circle',
+                           style='bold' if end in self.finals else ''))
+                G.add_edge(pydot.Edge(start, end, label=tran, labeldistance=2))
+
+        G.add_edge(pydot.Edge('start', self.start, label='', style='dashed'))
+        return G
+
+    def _repr_svg_(self):
+        try:
+            return self.graph().create_svg().decode('utf8')
+        except:
+            pass
+
+
+class DFA(NFA):
+
+    def __init__(self, states, finals, transitions, start=0):
+        assert all(isinstance(value, int) for value in transitions.values())
+        assert all(len(symbol) > 0 for origin, symbol in transitions)
+
+        transitions = {key: [value] for key, value in transitions.items()}
+        NFA.__init__(self, states, finals, transitions, start)
+        self.current = start
+
+    def _move(self, symbol):
+        try:
+            self.current = self.transitions[self.current][symbol][0]
+        except KeyError:
+            self.current = -1
+
+    def _reset(self):
+        self.current = self.start
+
+    def recognize(self, string):
+        self._reset()
+        for symbol in string:
+            self._move(symbol)
+            if self.current == -1:
+                return False
+        return self.current in self.finals
