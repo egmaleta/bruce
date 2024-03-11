@@ -78,7 +78,6 @@ class Regex:
     def __init__(self, text):
         tokens = regex_tokenizer(text, G, False)
         parser = create_parser(G)
-        # print(tokens)
         left_parser = parser([token.token_type for token in tokens])
         ast = evaluate_parse(left_parser, tokens)
         nfa = ast.evaluate()
