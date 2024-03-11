@@ -55,14 +55,14 @@ A %= opar + E + cpar, lambda h, s: s[2], None, None, None
 def regex_tokenizer(text, G, skip_whitespaces=True):
     tokens = []
     fixed_tokens = "| * ( ) ε".split()
-    
+
     double_bslash = False
 
     for char in text:
         if skip_whitespaces and char.isspace():
             continue
         elif char == "\\":
-            double_bslash = True 
+            double_bslash = True
         elif not double_bslash and char in fixed_tokens:
             tokens.append(Token(char, G.symbol_dict[char]))
         else:

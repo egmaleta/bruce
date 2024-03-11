@@ -1,5 +1,5 @@
-from .grammar import Grammar
-from .lexer import create_lexer
+from .tools.grammar import Grammar
+from .tools.lexer import create_lexer
 
 
 GRAMMAR = Grammar()
