@@ -2,6 +2,7 @@ from .token import Token
 from .regex.automata import State
 from .regex import Regex
 
+
 class Lexer:
     def __init__(self, table, eof):
         self.eof = eof
@@ -23,7 +24,7 @@ class Lexer:
         return regexs
 
     def _build_automaton(self):
-        start = State('start')
+        start = State("start")
         for state in self.regexs:
             start.add_epsilon_transition(state)
         return start.to_deterministic()
@@ -31,7 +32,7 @@ class Lexer:
     def _walk(self, string):
         state = self.automaton
         final = state if state.final else None
-        final_lex = lex = ''
+        final_lex = lex = ""
 
         for symbol in string:
             lex += symbol
@@ -51,13 +52,13 @@ class Lexer:
 
     def _tokenize(self, text):
         index = 0
-        
+
         while index < len(text):
             final, lex = self._walk(text[index:])
             index += len(lex)
             yield lex, final
-            
-        yield '$', self.eof
+
+        yield "$", self.eof
 
     def __call__(self, text):
         return [Token(lex, ttype) for lex, ttype in self._tokenize(text)]

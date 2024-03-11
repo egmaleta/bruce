@@ -19,8 +19,7 @@ E %= T + X, lambda h, s: s[2], None, lambda h, s: s[1]
 #                                                                         #
 # =================== { X --> '|' T X | epsilon } ======================= #
 #                                                                         #
-X %= pipe + T + \
-    X, lambda h, s: s[3], None, None, lambda h, s: UnionNode(h[0], s[2])
+X %= pipe + T + X, lambda h, s: s[3], None, None, lambda h, s: UnionNode(h[0], s[2])
 X %= G.Epsilon, lambda h, s: h[0]
 #                                                                         #
 # ============================ { T --> F Y } ============================ #
