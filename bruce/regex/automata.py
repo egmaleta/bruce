@@ -317,7 +317,7 @@ def move(automaton, states, symbol):
 def epsilon_closure(automaton, states):
     pending = list(states)
     closure = set(states)
-    
+
     while pending:
         state = pending.pop()
         closure.add(state)
@@ -325,7 +325,7 @@ def epsilon_closure(automaton, states):
         new_states = move(automaton, [state], '')
         pending.extend(new_states - closure)
         closure.update(new_states)
-        
+
     return ContainerSet(*closure)
 
 
@@ -368,34 +368,26 @@ def nfa_to_dfa(automaton):
     return dfa
 
 
-def automata_union(a1:NFA, a2:NFA):
+def automata_union(a1: NFA, a2: NFA):
     transitions = {}
-    
+
     start = 0
-    d1 = 1 # displacement of a1 ?
-    d2 = a1.states + d1 # displacement of a2 ?
-    final = a2.states + d2 # final state ?
+    d1 = 1 
+    d2 = a1.states + d1
+    final = a2.states + d2
 
     for (origin, symbol), destinations in a1.map.items():
-        ## Relocate a1 transitions ...
-        # Your code here
         transitions[(origin + d1, symbol)] = []
         for destination in destinations:
             transitions[(origin + d1, symbol)].append(destination + d1)
 
     for (origin, symbol), destinations in a2.map.items():
-        ## Relocate a2 transitions ...
-        # Your code here
         transitions[(origin + d2, symbol)] = []
         for destination in destinations:
             transitions[(origin + d2, symbol)].append(destination + d2)
-    
-    ## Add transitions from start state ...
-    # Your code here
+
     transitions[(0, '')] = [d1, d2]
     
-    ## Add transitions to final state ...
-    # Your code here
     for final_state in a1.finals:
         try:
             transitions[(final_state + d1, '')] += [final]
@@ -408,35 +400,29 @@ def automata_union(a1:NFA, a2:NFA):
             transitions[(final_state + d2, '')] = [final]
 
     states = a1.states + a2.states + 2
-    finals = { final }
-    
+    finals = {final}
+
     return NFA(states, finals, transitions, start)
 
 
 def automata_concatenation(a1, a2):
     transitions = {}
-    
+
     start = 0
     d1 = 0
     d2 = a1.states + d1
     final = a2.states + d2
-    
+
     for (origin, symbol), destinations in a1.map.items():
-        ## Relocate a1 transitions ...
-        # Your code here
         transitions[(origin + d1, symbol)] = []
         for destination in destinations:
             transitions[(origin + d1, symbol)].append(destination + d1)
 
     for (origin, symbol), destinations in a2.map.items():
-        ## Relocate a2 transitions ...
-        # Your code here
         transitions[(origin + d2, symbol)] = []
         for destination in destinations:
             transitions[(origin + d2, symbol)].append(destination + d2)
-    
-    ## Add transitions to final state ...
-    # Your code here
+
     for final_state in a1.finals:
         try:
             transitions[(final_state + d1, '')] += [a2.start + d2]
@@ -448,44 +434,38 @@ def automata_concatenation(a1, a2):
             transitions[(final_state + d2, '')] += [final]
         except KeyError:
             transitions[(final_state + d2, '')] = [final]
-    
+
     states = a1.states + a2.states + 1
-    finals = { final }
-    
+    finals = {final}
+
     return NFA(states, finals, transitions, start)
 
 
 def automata_closure(a1):
     transitions = {}
-    
+
     start = 0
     d1 = 1
     final = a1.states + d1
-    
+
     for (origin, symbol), destinations in a1.map.items():
-        ## Relocate automaton transitions ...
-        # Your code here
         transitions[(origin + d1, symbol)] = []
         for destination in destinations:
             transitions[(origin + d1, symbol)].append(destination + d1)
-    
-    ## Add transitions from start state ...
-    # Your code here
+
     transitions[(start, '')] = [a1.start + d1, final]
-    
-    ## Add transitions to final state and to start state ...
-    # Your code here
+
     for final_state in a1.finals:
         try:
             transitions[(final_state + d1, '')] = [final]
         except KeyError:
             transitions[(final_state + d1, '')] += [final]
-        
+
     transitions[(final, '')] = [start]
-            
-    states = a1.states +  2
-    finals = { final }
-    
+
+    states = a1.states + 2
+    finals = {final}
+
     return NFA(states, finals, transitions, start)
 
 
@@ -523,7 +503,6 @@ def distinguish_states(group, automaton, partition):
 def state_minimization(automaton):
     partition = DisjointSet(*range(automaton.states))
 
-    # partition = { NON-FINALS | FINALS }
     partition.merge(automaton.finals)
     partition.merge(
         [state for state in range(automaton.states)
@@ -533,7 +512,6 @@ def state_minimization(automaton):
     while True:
         new_partition = DisjointSet(*range(automaton.states))
 
-        # Split each group if needed (use distinguish_states(group, automaton, partition))
         for group in partition.groups:
             new_groups = distinguish_states(group, automaton, partition)
             for new_group in new_groups:
@@ -561,7 +539,6 @@ def automata_minimization(automaton):
 
             try:
                 transitions[i, symbol]
-                # assert False
             except KeyError:
                 pass
 

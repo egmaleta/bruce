@@ -55,7 +55,6 @@ A %= opar + E + cpar, lambda h, s: s[2], None, None, None
 
 def regex_tokenizer(text, G, skip_whitespaces=True):
     tokens = []
-    # > fixed_tokens = ???
     fixed_tokens = "| * ( ) ε".split()
 
     for char in text:
