@@ -381,7 +381,6 @@ capital_letters = "|".join(chr(n) for n in range(ord("A"), ord("Z") + 1))
 
 lexer = create_lexer(
     [
-        ("number", f"({nonzero_digits})(0|{nonzero_digits})*"),
         ("for", "for"),
         ("foreach", "foreach"),
         ("let", "let"),
@@ -398,6 +397,9 @@ lexer = create_lexer(
         ("as", "as"),
         ("protocol", "protocol"),
         ("extends", "extends"),
+        ("type_id", f"({capital_letters})(_|{letters}|{capital_letters})*"),
+        ("id", f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*"),
+        ("number", f"({nonzero_digits})(0|{nonzero_digits})*|0"),
         ("true", "true"),
         ("false", "false"),
         ("plus", "\\+"),
@@ -433,6 +435,7 @@ lexer = create_lexer(
         ("bind", "="),
         ("mut", ":="),
         ("space", "  *"),
+        ("newline", "\n"),
     ],
     "eof",
 )
