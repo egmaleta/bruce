@@ -60,6 +60,7 @@ class Lexer:
     def __call__(self, text):
         return [Token(lex, ttype) for lex, ttype in self._tokenize(text)]
 
+
 def create_lexer(table, eof):
     l = Lexer(table, eof)
     return lambda text: l(text)

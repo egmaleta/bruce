@@ -1,5 +1,5 @@
 from .grammar import Grammar
-from .lexer import create_lexxer
+from .lexer import create_lexer
 
 
 GRAMMAR = Grammar()
@@ -384,15 +384,36 @@ keywords = "|".join(
 operators = "|".join(
     operator.name
     for operator in GRAMMAR.terminals
-    if operator.name in ("+", "-", "*", "/", "%", "^", "**", "<", ">", "<=", ">=", "==", "!=", "@", "@@", "&", "|", "!")
+    if operator.name
+    in (
+        "+",
+        "-",
+        "*",
+        "/",
+        "%",
+        "^",
+        "**",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "==",
+        "!=",
+        "@",
+        "@@",
+        "&",
+        "|",
+        "!",
+    )
 )
 punctuation = "|".join(
     punct.name
     for punct in GRAMMAR.terminals
-    if punct.name in ("(", ")", "{", "}", "[", "]", ":", ";", ".", ",", "=>", "||", "=", ":=")
+    if punct.name
+    in ("(", ")", "{", "}", "[", "]", ":", ";", ".", ",", "=>", "||", "=", ":=")
 )
 
-lexer = create_lexxer(
+lexer = create_lexer(
     [
         ("number", f"({nonzero_digits})(0|{nonzero_digits})*"),
         ("for", "for"),
