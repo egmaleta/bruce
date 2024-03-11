@@ -55,14 +55,20 @@ A %= opar + E + cpar, lambda h, s: s[2], None, None, None
 def regex_tokenizer(text, G, skip_whitespaces=True):
     tokens = []
     fixed_tokens = "| * ( ) ε".split()
+    
+    double_bslash = False
 
     for char in text:
         if skip_whitespaces and char.isspace():
             continue
-        elif char in fixed_tokens:
+        elif char == "\\":
+            double_bslash = True 
+        elif not double_bslash and char in fixed_tokens:
             tokens.append(Token(char, G.symbol_dict[char]))
         else:
             tokens.append(Token(char, G.symbol_dict["symbol"]))
+            if double_bslash:
+                double_bslash = False
 
     tokens.append(Token("$", G.EOF))
     return tokens
@@ -72,6 +78,7 @@ class Regex:
     def __init__(self, text):
         tokens = regex_tokenizer(text, G, False)
         parser = create_parser(G)
+        # print(tokens)
         left_parser = parser([token.token_type for token in tokens])
         ast = evaluate_parse(left_parser, tokens)
         nfa = ast.evaluate()

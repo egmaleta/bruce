@@ -15,8 +15,8 @@ class Node:
 
 
 class AtomicNode(Node):
-    def __init__(self, lex):
-        self.lex = lex
+    def __init__(self, symbol):
+        self.lex = symbol.lex
 
 
 class UnaryNode(Node):

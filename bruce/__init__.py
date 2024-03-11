@@ -1,5 +1,5 @@
 from .grammar import Grammar
-from .lexer import create_lexxer
+from .lexer import create_lexer
 
 
 GRAMMAR = Grammar()
@@ -378,24 +378,12 @@ MemberStructure %= (
 nonzero_digits = "|".join(str(n) for n in range(1, 10))
 letters = "|".join(chr(n) for n in range(ord("a"), ord("z") + 1))
 capital_letters = "|".join(chr(n) for n in range(ord("A"), ord("Z") + 1))
-keywords = "|".join(
-    keyword.name for keyword in GRAMMAR.terminals if keyword.name.islower()
-)
-operators = "|".join(
-    operator.name
-    for operator in GRAMMAR.terminals
-    if operator.name in ("+", "-", "*", "/", "%", "^", "**", "<", ">", "<=", ">=", "==", "!=", "@", "@@", "&", "|", "!")
-)
-punctuation = "|".join(
-    punct.name
-    for punct in GRAMMAR.terminals
-    if punct.name in ("(", ")", "{", "}", "[", "]", ":", ";", ".", ",", "=>", "||", "=", ":=")
-)
 
-lexer = create_lexxer(
+lexer = create_lexer(
     [
         ("number", f"({nonzero_digits})(0|{nonzero_digits})*"),
         ("for", "for"),
+        ("foreach", "foreach"),
         ("let", "let"),
         ("in", "in"),
         ("if", "if"),
@@ -412,16 +400,13 @@ lexer = create_lexxer(
         ("extends", "extends"),
         ("true", "true"),
         ("false", "false"),
-        ("string", '"[^"]*"'),
-        ("id", f"({letters}|{capital_letters})(\\w)*"),
-        ("type_id", f"({capital_letters})(\\w)*"),
         ("+", "\\+"),
         ("-", "-"),
-        # ("*", "*"),
+        ("*", "\\*"),
         ("/", "/"),
         ("%", "%"),
         ("^", "\\^"),
-        # ("**", "\\*\\*"),
+        ("**", "\\*\\*"),
         ("<", "<"),
         (">", ">"),
         ("<=", "<="),
@@ -431,10 +416,10 @@ lexer = create_lexxer(
         ("@", "@"),
         ("@@", "@@"),
         ("&", "&"),
-        # ("|", "\\|"),
+        ("|", "\\|"),
         ("!", "!"),
-        # ("(", "\\("),
-        # (")", "\\)"),
+        ("(", "\\("),
+        (")", "\\)"),
         ("{", "\\{"),
         ("}", "\\}"),
         ("[", "\\["),
@@ -444,7 +429,7 @@ lexer = create_lexxer(
         (".", "\\."),
         (",", ","),
         ("=>", "=>"),
-        # ("||", "\\||"),
+        ("||", "\\|\\|"),
         ("=", "="),
         (":=", ":="),
         ("space", "  *"),
