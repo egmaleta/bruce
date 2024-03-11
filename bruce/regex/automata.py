@@ -124,8 +124,7 @@ class State:
 
                 if closure not in closures:
                     new_state = State(
-                        tuple(closure), any(
-                            s.final for s in closure), formatter
+                        tuple(closure), any(s.final for s in closure), formatter
                     )
                     closures.append(closure)
                     states.append(new_state)
@@ -257,8 +256,7 @@ class NFA:
         self.transitions = {state: {} for state in range(states)}
 
         for (origin, symbol), destinations in transitions.items():
-            assert hasattr(
-                destinations, "__iter__"), "Invalid collection of states"
+            assert hasattr(destinations, "__iter__"), "Invalid collection of states"
             self.transitions[origin][symbol] = destinations
             self.vocabulary.add(symbol)
 
@@ -322,7 +320,7 @@ def epsilon_closure(automaton, states):
         state = pending.pop()
         closure.add(state)
 
-        new_states = move(automaton, [state], '')
+        new_states = move(automaton, [state], "")
         pending.extend(new_states - closure)
         closure.update(new_states)
 
@@ -347,8 +345,7 @@ def nfa_to_dfa(automaton):
             if len(destinations) == 0:
                 continue
             if destinations not in states:
-                destinations.is_final = any(
-                    s in automaton.finals for s in destinations)
+                destinations.is_final = any(s in automaton.finals for s in destinations)
                 destinations.id = len(states)
                 states.append(destinations)
                 pending.append(destinations)
@@ -357,7 +354,7 @@ def nfa_to_dfa(automaton):
 
             try:
                 transitions[state.id, symbol]
-                assert False, 'Invalid DFA!!!'
+                assert False, "Invalid DFA!!!"
             except KeyError:
                 transitions[state.id, symbol] = destinations.id
             except AssertionError:
@@ -372,7 +369,7 @@ def automata_union(a1: NFA, a2: NFA):
     transitions = {}
 
     start = 0
-    d1 = 1 
+    d1 = 1
     d2 = a1.states + d1
     final = a2.states + d2
 
@@ -386,18 +383,18 @@ def automata_union(a1: NFA, a2: NFA):
         for destination in destinations:
             transitions[(origin + d2, symbol)].append(destination + d2)
 
-    transitions[(0, '')] = [d1, d2]
-    
+    transitions[(0, "")] = [d1, d2]
+
     for final_state in a1.finals:
         try:
-            transitions[(final_state + d1, '')] += [final]
+            transitions[(final_state + d1, "")] += [final]
         except KeyError:
-            transitions[(final_state + d1, '')] = [final]
+            transitions[(final_state + d1, "")] = [final]
     for final_state in a2.finals:
         try:
-            transitions[(final_state + d2, '')] += [final]
+            transitions[(final_state + d2, "")] += [final]
         except KeyError:
-            transitions[(final_state + d2, '')] = [final]
+            transitions[(final_state + d2, "")] = [final]
 
     states = a1.states + a2.states + 2
     finals = {final}
@@ -425,15 +422,15 @@ def automata_concatenation(a1, a2):
 
     for final_state in a1.finals:
         try:
-            transitions[(final_state + d1, '')] += [a2.start + d2]
+            transitions[(final_state + d1, "")] += [a2.start + d2]
         except KeyError:
-            transitions[(final_state + d1, '')] = [a2.start + d2]
+            transitions[(final_state + d1, "")] = [a2.start + d2]
 
     for final_state in a2.finals:
         try:
-            transitions[(final_state + d2, '')] += [final]
+            transitions[(final_state + d2, "")] += [final]
         except KeyError:
-            transitions[(final_state + d2, '')] = [final]
+            transitions[(final_state + d2, "")] = [final]
 
     states = a1.states + a2.states + 1
     finals = {final}
@@ -453,15 +450,15 @@ def automata_closure(a1):
         for destination in destinations:
             transitions[(origin + d1, symbol)].append(destination + d1)
 
-    transitions[(start, '')] = [a1.start + d1, final]
+    transitions[(start, "")] = [a1.start + d1, final]
 
     for final_state in a1.finals:
         try:
-            transitions[(final_state + d1, '')] = [final]
+            transitions[(final_state + d1, "")] = [final]
         except KeyError:
-            transitions[(final_state + d1, '')] += [final]
+            transitions[(final_state + d1, "")] += [final]
 
-    transitions[(final, '')] = [start]
+    transitions[(final, "")] = [start]
 
     states = a1.states + 2
     finals = {final}
@@ -505,8 +502,7 @@ def state_minimization(automaton):
 
     partition.merge(automaton.finals)
     partition.merge(
-        [state for state in range(automaton.states)
-         if state not in automaton.finals]
+        [state for state in range(automaton.states) if state not in automaton.finals]
     )
 
     while True:
