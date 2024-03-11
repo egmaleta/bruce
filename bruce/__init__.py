@@ -74,28 +74,34 @@ Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
 
 # region PRODUCTIONS
 
-TypeAnnotation %= colon + type_identifier, None, None, None
-TypeAnnotation %= GRAMMAR.Epsilon, None
+TypeAnnotation %= colon + type_identifier, lambda h, s: s[2], None, None
+TypeAnnotation %= GRAMMAR.Epsilon, lambda h, s: None
 
 OptionalSemicolon %= semicolon, None, None
 OptionalSemicolon %= GRAMMAR.Epsilon, None
 
-Args %= Expr + MoreArgs, None, None, None
-Args %= GRAMMAR.Epsilon, None
-MoreArgs %= comma + Expr + MoreArgs, None, None, None, None
-MoreArgs %= GRAMMAR.Epsilon, None
+Args %= Expr + MoreArgs, lambda h, s: (s[1], *s[2]), None, None
+Args %= GRAMMAR.Epsilon, lambda h, s: ()
+MoreArgs %= comma + Expr + MoreArgs, lambda h, s: (s[2], *s[3]), None, None, None
+MoreArgs %= GRAMMAR.Epsilon, lambda h, s: ()
 
-Params %= identifier + TypeAnnotation + MoreParams, None, None, None, None
-Params %= GRAMMAR.Epsilon, None
+Params %= (
+    identifier + TypeAnnotation + MoreParams,
+    lambda h, s: ((s[1], s[2]), *s[3]),
+    None,
+    None,
+    None,
+)
+Params %= GRAMMAR.Epsilon, lambda h, s: ()
 MoreParams %= (
     comma + identifier + TypeAnnotation + MoreParams,
-    None,
+    lambda h, s: ((s[2], s[3]), *s[4]),
     None,
     None,
     None,
     None,
 )
-MoreParams %= GRAMMAR.Epsilon, None
+MoreParams %= GRAMMAR.Epsilon, lambda h, s: ()
 
 Expr %= let + Binding + MoreBindings + in_k + Expr, None, None, None, None, None, None
 Expr %= (
@@ -124,8 +130,14 @@ Expr %= BlockExpr, None, None
 Expr %= Disj + MoreDisjs, None, None, None
 
 Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
-MoreBindings %= comma + Binding + MoreBindings, None, None, None, None
-MoreBindings %= GRAMMAR.Epsilon, None
+MoreBindings %= (
+    comma + Binding + MoreBindings,
+    lambda h, s: (s[2], *s[3]),
+    None,
+    None,
+    None,
+)
+MoreBindings %= GRAMMAR.Epsilon, lambda h, s: ()
 
 ElseBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseBranch,
@@ -169,8 +181,8 @@ Stmt %= (
 Stmt %= BlockExpr + OptionalSemicolon, None, None, None
 Stmt %= Disj + MoreDisjs + semicolon, None, None, None, None
 
-MoreStmts %= Stmt + MoreStmts, None, None, None
-MoreStmts %= GRAMMAR.Epsilon, None
+MoreStmts %= Stmt + MoreStmts, lambda h, s: (s[1], *s[2]), None, None
+MoreStmts %= GRAMMAR.Epsilon, lambda h, s: ()
 
 ElseStmtBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
