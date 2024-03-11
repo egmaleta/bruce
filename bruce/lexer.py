@@ -11,9 +11,6 @@ class Lexer:
     def _build_regexs(self, table):
         regexs = []
         for n, (token_type, regex) in enumerate(table):
-            # Your code here!!!
-            # - Remember to tag the final states with the token_type and priority.
-            # - <State>.tag might be useful for that purpose ;-)
             r = Regex(regex)
             automata = r.automaton
             start_state, states = State.from_nfa(automata, get_states=True)
@@ -61,3 +58,6 @@ class Lexer:
 
     def __call__(self, text):
         return [Token(lex, ttype) for lex, ttype in self._tokenize(text)]
+    
+def create_lexxer(table, eof):
+    return Lexer(table, eof)
