@@ -245,7 +245,12 @@ Atom %= string, lambda h, s: ast.String(s[1]), None
 Atom %= true_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= false_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= builtin_identifier, lambda h, s: ast.Identifier(s[1], True), None
-Atom %= identifier + Mutation, None, None, None
+Atom %= (
+    identifier + Mutation,
+    lambda h, s: s[2],
+    None,
+    lambda h, s: ast.Identifier(s[1]),
+)
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
     None,
@@ -258,8 +263,8 @@ Atom %= (
 Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
 Atom %= lbracket + Vector + rbracket, None, None, None, None
 
-Mutation %= mut + Expr, None, None, None
-Mutation %= GRAMMAR.Epsilon, None
+Mutation %= mut + Expr, lambda h, s: ast.Mutation(h[0], s[2]), None, None
+Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
