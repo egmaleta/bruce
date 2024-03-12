@@ -239,7 +239,7 @@ Powers %= power + Factor, None, None, None
 Powers %= power_alt + Factor, None, None, None
 Powers %= GRAMMAR.Epsilon, None
 
-Base %= Atom + Action, None, None, None
+Base %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Atom %= number, lambda h, s: ast.Number(s[1]), None
 Atom %= string, lambda h, s: ast.String(s[1]), None
@@ -279,11 +279,37 @@ VectorStructure %= (
 )
 VectorStructure %= MoreArgs, lambda h, s: ast.Vector([h[0], *s[1]]), None
 
-Action %= dot + identifier + Action, None, None, None, None
-Action %= lbracket + number + rbracket + Action, None, None, None, None, None
-Action %= lparen + Args + rparen + Action, None, None, None, None, None
-Action %= as_k + type_identifier + Action, None, None, None, None
-Action %= GRAMMAR.Epsilon, None
+Action %= (
+    dot + identifier + Action,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.TypeMemberAccessing(h[0], s[2]),
+)
+Action %= (
+    lbracket + number + rbracket + Action,
+    lambda h, s: s[4],
+    None,
+    None,
+    None,
+    lambda h, s: ast.Indexing(h[0], s[2]),
+)
+Action %= (
+    lparen + Args + rparen + Action,
+    lambda h, s: s[4],
+    None,
+    None,
+    None,
+    lambda h, s: ast.FunctionCall(h[0], s[2]),
+)
+Action %= (
+    as_k + type_identifier + Action,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Downcasting(h[0], s[2]),
+)
+Action %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Program %= Declarations + Expr + OptionalSemicolon, None, None, None, None
 

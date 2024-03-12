@@ -40,7 +40,7 @@ class Mutation(Expression):
 
 @dataclass
 class TypeInstanceCreation(Expression):
-    type: str
+    type_id: str
     args: list[Expression]
 
 
@@ -54,3 +54,27 @@ class MappedIterable(Expression):
     map_expr: Expression
     item_id: str
     iterable_expr: Expression
+
+
+@dataclass
+class TypeMemberAccessing(Expression):
+    target: Expression
+    member_id: str
+
+
+@dataclass
+class FunctionCall(Expression):
+    target: Expression
+    args: list[Expression]
+
+
+@dataclass
+class Downcasting(Expression):
+    target: Expression
+    type_id: str
+
+
+@dataclass
+class Indexing(Expression):
+    target: Expression
+    index: str
