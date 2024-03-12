@@ -1,6 +1,7 @@
 from .tools.grammar import Grammar
 from . import ast
 
+
 GRAMMAR = Grammar()
 
 # region TERMINALS
@@ -80,28 +81,28 @@ TypeAnnotation %= GRAMMAR.Epsilon, lambda h, s: None
 OptionalSemicolon %= semicolon, None, None
 OptionalSemicolon %= GRAMMAR.Epsilon, None
 
-Args %= Expr + MoreArgs, lambda h, s: (s[1], *s[2]), None, None
-Args %= GRAMMAR.Epsilon, lambda h, s: ()
-MoreArgs %= comma + Expr + MoreArgs, lambda h, s: (s[2], *s[3]), None, None, None
-MoreArgs %= GRAMMAR.Epsilon, lambda h, s: ()
+Args %= Expr + MoreArgs, lambda h, s: [s[1], *s[2]], None, None
+Args %= GRAMMAR.Epsilon, lambda h, s: []
+MoreArgs %= comma + Expr + MoreArgs, lambda h, s: [s[2], *s[3]], None, None, None
+MoreArgs %= GRAMMAR.Epsilon, lambda h, s: []
 
 Params %= (
     identifier + TypeAnnotation + MoreParams,
-    lambda h, s: ((s[1], s[2]), *s[3]),
+    lambda h, s: [(s[1], s[2]), *s[3]],
     None,
     None,
     None,
 )
-Params %= GRAMMAR.Epsilon, lambda h, s: ()
+Params %= GRAMMAR.Epsilon, lambda h, s: []
 MoreParams %= (
     comma + identifier + TypeAnnotation + MoreParams,
-    lambda h, s: ((s[2], s[3]), *s[4]),
+    lambda h, s: [(s[2], s[3]), *s[4]],
     None,
     None,
     None,
     None,
 )
-MoreParams %= GRAMMAR.Epsilon, lambda h, s: ()
+MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
 
 Expr %= let + Binding + MoreBindings + in_k + Expr, None, None, None, None, None, None
 Expr %= (
@@ -132,12 +133,12 @@ Expr %= Disj + MoreDisjs, None, None, None
 Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
 MoreBindings %= (
     comma + Binding + MoreBindings,
-    lambda h, s: (s[2], *s[3]),
+    lambda h, s: [s[2], *s[3]],
     None,
     None,
     None,
 )
-MoreBindings %= GRAMMAR.Epsilon, lambda h, s: ()
+MoreBindings %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseBranch,
@@ -181,8 +182,8 @@ Stmt %= (
 Stmt %= BlockExpr + OptionalSemicolon, None, None, None
 Stmt %= Disj + MoreDisjs + semicolon, None, None, None, None
 
-MoreStmts %= Stmt + MoreStmts, lambda h, s: (s[1], *s[2]), None, None
-MoreStmts %= GRAMMAR.Epsilon, lambda h, s: ()
+MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]], None, None
+MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseStmtBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
@@ -253,7 +254,7 @@ Atom %= (
 )
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
-    None,
+    lambda h, s: ast.TypeInstanceCreation(s[2], s[4]),
     None,
     None,
     None,
@@ -261,21 +262,28 @@ Atom %= (
     None,
 )
 Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
-Atom %= lbracket + Vector + rbracket, None, None, None, None
+Atom %= lbracket + Vector + rbracket, lambda h, s: s[2], None, None, None
 
 Mutation %= mut + Expr, lambda h, s: ast.Mutation(h[0], s[2]), None, None
 Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
+Vector %= GRAMMAR.Epsilon, None
+VectorStructure %= (
+    given + identifier + in_k + Expr,
+    lambda h, s: ast.MappedIterable(h[0], s[2], s[4]),
+    None,
+    None,
+    None,
+    None,
+)
+VectorStructure %= MoreArgs, lambda h, s: ast.Vector([h[0], *s[1]]), None
 
 Action %= dot + identifier + Action, None, None, None, None
 Action %= lbracket + number + rbracket + Action, None, None, None, None, None
 Action %= lparen + Args + rparen + Action, None, None, None, None, None
 Action %= as_k + type_identifier + Action, None, None, None, None
 Action %= GRAMMAR.Epsilon, None
-
-Vector %= Expr + VectorStructure, None, None, None
-Vector %= GRAMMAR.Epsilon, None
-VectorStructure %= given + identifier + in_k + Expr, None, None, None, None, None
-VectorStructure %= MoreArgs, None, None
 
 Program %= Declarations + Expr + OptionalSemicolon, None, None, None, None
 

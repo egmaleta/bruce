@@ -36,3 +36,21 @@ class Identifier(Expression):
 class Mutation(Expression):
     right: Identifier
     left: Expression
+
+
+@dataclass
+class TypeInstanceCreation(Expression):
+    type: str
+    args: list[Expression]
+
+
+@dataclass
+class Vector(Expression):
+    items: list[Expression]
+
+
+@dataclass
+class MappedIterable(Expression):
+    map_expr: Expression
+    item_id: str
+    iterable_expr: Expression
