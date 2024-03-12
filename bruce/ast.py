@@ -126,3 +126,20 @@ class Concatenation(BinaryOperation):
 class RuntimeTypeCheking(Expression):
     target: Expression
     type_id: str
+
+
+@dataclass
+class Block(Expression):
+    exprs: list[Expression]
+
+
+@dataclass
+class Loop(Expression):
+    condition: Expression
+    body: Expression
+
+
+@dataclass
+class Conditional(Expression):
+    condition_branchs: list[tuple[Expression, Expression]]
+    fallback_branck: Expression

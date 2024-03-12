@@ -107,7 +107,7 @@ MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
 Expr %= let + Binding + MoreBindings + in_k + Expr, None, None, None, None, None, None
 Expr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBranch,
-    None,
+    lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
     None,
     None,
     None,
@@ -115,7 +115,15 @@ Expr %= (
     None,
     None,
 )
-Expr %= while_k + lparen + Expr + rparen + Expr, None, None, None, None, None, None
+Expr %= (
+    while_k + lparen + Expr + rparen + Expr,
+    lambda h, s: ast.Loop(s[3], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 Expr %= (
     for_k + lparen + identifier + in_k + Expr + rparen + Expr,
     None,
@@ -127,7 +135,7 @@ Expr %= (
     None,
     None,
 )
-Expr %= BlockExpr, None, None
+Expr %= BlockExpr, lambda h, s: s[1], None
 Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
@@ -142,7 +150,7 @@ MoreBindings %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseBranch,
-    None,
+    lambda h, s: [(s[3], s[5]), *s[6]],
     None,
     None,
     None,
@@ -150,16 +158,23 @@ ElseBranch %= (
     None,
     None,
 )
-ElseBranch %= else_k + Expr, None, None, None
+ElseBranch %= else_k + Expr, lambda h, s: [s[2]], None, None
 
-BlockExpr %= lbrace + Stmt + MoreStmts + rbrace, None, None, None, None, None
+BlockExpr %= (
+    lbrace + Stmt + MoreStmts + rbrace,
+    lambda h, s: ast.Block([s[2], *s[3]]),
+    None,
+    None,
+    None,
+    None,
+)
 
 # statements are the same as exprs but end up in semicolon
 # if the expression is inline, otherwise the semicolon is optional
 Stmt %= let + Binding + MoreBindings + in_k + Stmt, None, None, None, None, None, None
 Stmt %= (
     if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
-    None,
+    lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
     None,
     None,
     None,
@@ -167,7 +182,15 @@ Stmt %= (
     None,
     None,
 )
-Stmt %= while_k + lparen + Expr + rparen + Stmt, None, None, None, None, None, None
+Stmt %= (
+    while_k + lparen + Expr + rparen + Stmt,
+    lambda h, s: ast.Loop(s[3], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 Stmt %= (
     for_k + lparen + identifier + in_k + Expr + rparen + Stmt,
     None,
@@ -179,7 +202,7 @@ Stmt %= (
     None,
     None,
 )
-Stmt %= BlockExpr + OptionalSemicolon, None, None, None
+Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1], None, None
 Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1], None
 
 MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]], None, None
@@ -187,7 +210,7 @@ MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseStmtBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
-    None,
+    lambda h, s: [(s[3], s[5]), *s[6]],
     None,
     None,
     None,
@@ -195,7 +218,7 @@ ElseStmtBranch %= (
     None,
     None,
 )
-ElseStmtBranch %= else_k + Stmt, None, None, None
+ElseStmtBranch %= else_k + Stmt, lambda h, s: [s[2]], None, None
 
 MoreDisjs %= (
     disj + Disj + MoreDisjs,
