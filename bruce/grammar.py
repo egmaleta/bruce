@@ -241,10 +241,10 @@ Powers %= GRAMMAR.Epsilon, None
 Base %= Atom + Action, None, None, None
 
 Atom %= number, lambda h, s: ast.Number(s[1]), None
-Atom %= string, None, None
-Atom %= true_k, None, None
-Atom %= false_k, None, None
-Atom %= builtin_identifier, None, None
+Atom %= string, lambda h, s: ast.String(s[1]), None
+Atom %= true_k, lambda h, s: ast.Boolean(s[1]), None
+Atom %= false_k, lambda h, s: ast.Boolean(s[1]), None
+Atom %= builtin_identifier, lambda h, s: ast.Identifier(s[1], True), None
 Atom %= identifier + Mutation, None, None, None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
@@ -255,7 +255,7 @@ Atom %= (
     None,
     None,
 )
-Atom %= lparen + Expr + rparen, None, None, None, None
+Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
 Atom %= lbracket + Vector + rbracket, None, None, None, None
 
 Mutation %= mut + Expr, None, None, None
