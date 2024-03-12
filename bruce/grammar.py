@@ -128,7 +128,7 @@ Expr %= (
     None,
 )
 Expr %= BlockExpr, None, None
-Expr %= Disj + MoreDisjs, None, None, None
+Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
 MoreBindings %= (
@@ -180,7 +180,7 @@ Stmt %= (
     None,
 )
 Stmt %= BlockExpr + OptionalSemicolon, None, None, None
-Stmt %= Disj + MoreDisjs + semicolon, None, None, None, None
+Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1], None
 
 MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]], None, None
 MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
@@ -197,47 +197,106 @@ ElseStmtBranch %= (
 )
 ElseStmtBranch %= else_k + Stmt, None, None, None
 
-MoreDisjs %= disj + Disj + MoreDisjs, None, None, None, None
-MoreDisjs %= GRAMMAR.Epsilon, None
+MoreDisjs %= (
+    disj + Disj + MoreDisjs,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Logic(h[0], s[1], s[2]),
+)
+MoreDisjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Disj %= Conj + MoreConjs, None, None, None
+Disj %= Conj + MoreConjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
-MoreConjs %= conj + Conj + MoreConjs, None, None, None, None
-MoreConjs %= GRAMMAR.Epsilon, None
+MoreConjs %= (
+    conj + Conj + MoreConjs,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Logic(h[0], s[1], s[2]),
+)
+MoreConjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Conj %= not_t + Conj, None, None, None
-Conj %= Arith + Comparison, None, None, None
+Conj %= not_t + Conj, lambda h, s: ast.Negation(s[2]), None, None
+Conj %= Arith + Comparison, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Comparison %= lt + Arith, None, None, None
-Comparison %= gt + Arith, None, None, None
-Comparison %= le + Arith, None, None, None
-Comparison %= ge + Arith, None, None, None
-Comparison %= eq + Arith, None, None, None
-Comparison %= neq + Arith, None, None, None
-Comparison %= is_k + type_identifier, None, None, None
-Comparison %= GRAMMAR.Epsilon, None
+Comparison %= lt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= gt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= le + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= ge + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= eq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= neq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= (
+    is_k + type_identifier,
+    lambda h, s: ast.RuntimeTypeCheking(h[0], s[2]),
+    None,
+    None,
+)
+Comparison %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Arith %= Term + MoreTerms, None, None, None
+Arith %= Term + MoreTerms, lambda h, s: s[2], None, lambda h, s: s[1]
 
-MoreTerms %= plus + Term + MoreTerms, None, None, None, None
-MoreTerms %= minus + Term + MoreTerms, None, None, None, None
-MoreTerms %= concat + Term + MoreTerms, None, None, None, None
-MoreTerms %= concat_space + Term + MoreTerms, None, None, None, None
-MoreTerms %= GRAMMAR.Epsilon, None
+MoreTerms %= (
+    plus + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    minus + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    concat + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    concat_space + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
+)
+MoreTerms %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Term %= Factor + MoreFactors, None, None, None
+Term %= Factor + MoreFactors, lambda h, s: s[2], None, lambda h, s: s[1]
 
-MoreFactors %= times + Factor + MoreFactors, None, None, None, None
-MoreFactors %= div + Factor + MoreFactors, None, None, None, None
-MoreFactors %= mod + Factor + MoreFactors, None, None, None, None
-MoreFactors %= GRAMMAR.Epsilon, None
+MoreFactors %= (
+    times + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= (
+    div + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= (
+    mod + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Factor %= minus + Factor, None, None, None
-Factor %= Base + Powers, None, None, None
+Factor %= minus + Factor, lambda h, s: ast.ArithmeticNegation(s[2]), None, None
+Factor %= Base + Powers, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Powers %= power + Factor, None, None, None
-Powers %= power_alt + Factor, None, None, None
-Powers %= GRAMMAR.Epsilon, None
+Powers %= power + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
+Powers %= power_alt + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
+Powers %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Base %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
 

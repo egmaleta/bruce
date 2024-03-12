@@ -78,3 +78,51 @@ class Downcasting(Expression):
 class Indexing(Expression):
     target: Expression
     index: str
+
+
+@dataclass
+class UnaryOperation(Expression):
+    operand: Expression
+
+
+@dataclass
+class Negation(UnaryOperation):
+    pass
+
+
+@dataclass
+class ArithmeticNegation(UnaryOperation):
+    pass
+
+
+@dataclass
+class BinaryOperation(Expression):
+    left: Expression
+    operator: str
+    right: Expression
+
+
+@dataclass
+class Logic(BinaryOperation):
+    pass
+
+
+@dataclass
+class Comparison(BinaryOperation):
+    pass
+
+
+@dataclass
+class Arithmetic(BinaryOperation):
+    pass
+
+
+@dataclass
+class Concatenation(BinaryOperation):
+    pass
+
+
+@dataclass
+class RuntimeTypeCheking(Expression):
+    target: Expression
+    type_id: str
