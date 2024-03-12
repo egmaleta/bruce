@@ -1,5 +1,5 @@
 class Token:
-    def __init__(self, lex, token_type):
+    def __init__(self, lex: str, token_type):
         self.lex = lex
         self.token_type = token_type
 

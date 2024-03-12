@@ -1,4 +1,5 @@
 from .tools.grammar import Grammar
+from . import ast
 
 GRAMMAR = Grammar()
 
@@ -239,7 +240,7 @@ Powers %= GRAMMAR.Epsilon, None
 
 Base %= Atom + Action, None, None, None
 
-Atom %= number, None, None
+Atom %= number, lambda h, s: ast.Number(s[1]), None
 Atom %= string, None, None
 Atom %= true_k, None, None
 Atom %= false_k, None, None
