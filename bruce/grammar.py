@@ -1,291 +1,494 @@
-class Symbol:
-    def __init__(self, name: str, grammar: "Grammar"):
-        self.name = name
-        self.grammar = grammar
-
-    @property
-    def is_terminal(self):
-        return False
-
-    @property
-    def is_non_terminal(self):
-        return False
-
-    @property
-    def is_epsilon(self):
-        return False
-
-    def __add__(self, other):
-        if isinstance(other, Symbol):
-            return Sentence(self, other)
-
-        raise TypeError(other)
-
-    def __or__(self, other):
-        if isinstance(other, Sentence):
-            return SentenceList(Sentence(self), other)
-
-        raise TypeError(other)
-
-    def __len__(self):
-        return 1
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return repr(self.name)
-
-
-class NonTerminal(Symbol):
-    def __init__(self, name: str, grammar: "Grammar"):
-        super().__init__(name, grammar)
-        self.productions: list["Production"] = []
-
-    @property
-    def is_non_terminal(self):
-        return True
-
-    def __imod__(self, other):
-        if isinstance(other, tuple):
-            assert len(other) > 1
-
-            if len(other) == 2:
-                other += (None,) * len(other[0])
-
-            assert (
-                len(other) == len(other[0]) + 2
-            ), "Debe definirse una, y solo una, regla por cada símbolo de la producción"
-            # assert len(other) == 2, "Tiene que ser una Tupla de 2 elementos (sentence, attribute)"
-
-            if isinstance(other[0], Symbol) or isinstance(other[0], Sentence):
-                p = Production(self, other[0], other[1:])
-                self.grammar.add_production(p)
-                return self
-
-            raise Exception("")
-
-        raise TypeError(other)
-
-
-class Terminal(Symbol):
-    @property
-    def is_terminal(self):
-        return True
-
-
-class EOF(Terminal):
-    def __init__(self, grammar: "Grammar"):
-        super().__init__("$", grammar)
-
-
-class Sentence:
-    def __init__(self, *args: Symbol):
-        self.symbols = tuple(x for x in args if not x.is_epsilon)
-        self.hash = hash(self.symbols)
-
-    @property
-    def is_epsilon(self):
-        return False
-
-    def __add__(self, other):
-        if isinstance(other, Symbol):
-            return Sentence(*(self.symbols + (other,)))
-
-        if isinstance(other, Sentence):
-            return Sentence(*(self.symbols + other.symbols))
-
-        raise TypeError(other)
-
-    def __or__(self, other):
-        if isinstance(other, Sentence):
-            return SentenceList(self, other)
-
-        if isinstance(other, Symbol):
-            return SentenceList(self, Sentence(other))
-
-        raise TypeError(other)
-
-    def __iter__(self):
-        return iter(self.symbols)
-
-    def __getitem__(self, index):
-        return self.symbols[index]
-
-    def __eq__(self, other):
-        return self.symbols == other.symbols
-
-    def __hash__(self):
-        return self.hash
-
-    def __len__(self):
-        return len(self.symbols)
-
-    def __repr__(self):
-        return str(self)
-
-    def __str__(self):
-        return ("%s " * len(self.symbols) % tuple(self.symbols)).strip()
-
-
-class SentenceList:
-    def __init__(self, *args: Sentence):
-        self.sentences = list(args)
-
-    def add(self, symbol: Symbol | Sentence | None):
-        if not symbol and (symbol is None or not symbol.is_epsilon):
-            raise ValueError(symbol)
-
-        self.sentences.append(symbol)
-
-    def __iter__(self):
-        return iter(self.sentences)
-
-    def __or__(self, other):
-        if isinstance(other, Sentence):
-            self.add(other)
-            return self
-
-        if isinstance(other, Symbol):
-            return self | Sentence(other)
-
-
-class Epsilon(Terminal, Sentence):
-    def __init__(self, grammar: "Grammar"):
-        super().__init__("epsilon", grammar)
-
-    @property
-    def is_epsilon(self):
-        return True
-
-    def __iter__(self):
-        yield from ()
-
-    def __add__(self, other):
-        return other
-
-    def __eq__(self, other):
-        return isinstance(other, Epsilon)
-
-    def __hash__(self):
-        return hash("")
-
-    def __len__(self):
-        return 0
-
-    def __str__(self):
-        return "e"
-
-    def __repr__(self):
-        return "epsilon"
-
-
-class Production:
-    def __init__(
-        self, nt: NonTerminal, sentence_or_symbol: Sentence | Symbol, attributes
-    ):
-        sentence = (
-            sentence_or_symbol
-            if isinstance(sentence_or_symbol, Sentence)
-            else Sentence(sentence_or_symbol)
-        )
-
-        self.left = nt
-        self.right = sentence
-        self.attributes = attributes
-
-    @property
-    def is_epsilon(self):
-        return self.right.is_epsilon
-
-    def __iter__(self):
-        yield self.left
-        yield self.right
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, Production)
-            and self.left == other.left
-            and self.right == other.right
-        )
-
-    def __hash__(self):
-        return hash((self.left, self.right))
-
-    def __str__(self):
-        return "%s := %s" % (self.left, self.right)
-
-    def __repr__(self):
-        return "%s -> %s" % (self.left, self.right)
-
-
-class Grammar:
-    def __init__(self):
-        self.productions: list[Production] = []
-        self.non_terminals: list[NonTerminal] = []
-        self.terminals: list[Terminal] = []
-        self.start_symbol: Symbol | None = None
-
-        self.Epsilon = Epsilon(self)
-        self.EOF = EOF(self)
-
-        self.symbol_dict: dict[str, Symbol] = {self.EOF.name: self.EOF}
-
-    def add_non_terminal(self, name: str, is_start_symbol=False):
-        name = name.strip()
-        if not name:
-            raise Exception("Empty name")
-
-        nt = NonTerminal(name, self)
-
-        if is_start_symbol:
-            if self.start_symbol is None:
-                self.start_symbol = nt
-            else:
-                raise Exception("Cannot define more than one start symbol.")
-
-        self.non_terminals.append(nt)
-        self.symbol_dict[name] = nt
-        return nt
-
-    def add_non_terminals(self, names: list[str] | str):
-        if isinstance(names, str):
-            names = names.strip().split()
-
-        return tuple(self.add_non_terminal(name) for name in names)
-
-    def add_production(self, production: Production):
-        production.left.productions.append(production)
-        self.productions.append(production)
-
-    def add_terminal(self, name: str):
-        name = name.strip()
-        if not name:
-            raise Exception("Empty name")
-
-        t = Terminal(name, self)
-        self.terminals.append(t)
-        self.symbol_dict[name] = t
-        return t
-
-    def add_terminals(self, names: list[str] | str):
-        if isinstance(names, str):
-            names = names.strip().split()
-
-        return tuple(self.add_terminal(name) for name in names)
-
-    def __getitem__(self, name: str):
-        return self.symbol_dict.get(name)
-
-    def __str__(self):
-        mul = "%s, "
-        ans = "Non-Terminals:\n\t"
-        nonterminals = mul * (len(self.non_terminals) - 1) + "%s\n"
-        ans += nonterminals % tuple(self.non_terminals)
-        ans += "Terminals:\n\t"
-        terminals = mul * (len(self.terminals) - 1) + "%s\n"
-        ans += terminals % tuple(self.terminals)
-        ans += "Productions:\n\t"
-        ans += str(self.productions)
-
-        return ans
+from .tools.grammar import Grammar
+from . import ast
+
+
+GRAMMAR = Grammar()
+
+# region TERMINALS
+
+## KEYWORDS
+let, in_k = GRAMMAR.add_terminals("let in")
+if_k, else_k, elif_k = GRAMMAR.add_terminals("if else elif")
+while_k, for_k = GRAMMAR.add_terminals("while for")
+func = GRAMMAR.add_terminal("function")
+type_k, new, inherits, is_k, as_k = GRAMMAR.add_terminals("type new inherits is as")
+protocol, extends = GRAMMAR.add_terminals("protocol extends")
+true_k, false_k = GRAMMAR.add_terminals("true false")
+
+# OPERATORS
+plus, minus, times, div, mod, power, power_alt = GRAMMAR.add_terminals("+ - * / % ^ **")
+lt, gt, le, ge, eq, neq = GRAMMAR.add_terminals("< > <= >= == !=")
+concat, concat_space = GRAMMAR.add_terminals("@ @@")
+conj, disj, not_t = GRAMMAR.add_terminals("& | !")
+
+# PUNCTUATION
+lparen, rparen, lbrace, rbrace, lbracket, rbracket = GRAMMAR.add_terminals(
+    "( ) { } [ ]"
+)
+colon, semicolon, dot, comma = GRAMMAR.add_terminals(": ; . ,")
+then, given = GRAMMAR.add_terminals("=> ||")
+bind, mut = GRAMMAR.add_terminals("= :=")
+
+# STRINGS
+number, string, identifier, type_identifier, builtin_identifier = GRAMMAR.add_terminals(
+    "number string id type_id builtin_id"
+)
+
+# endregion
+
+# region NON TERMINALS
+
+TypeAnnotation, OptionalSemicolon = GRAMMAR.add_non_terminals(
+    "type_annotation opt_semicolon"
+)
+Params, MoreParams, OptionalParams = GRAMMAR.add_non_terminals(
+    "params more_params opt_params"
+)
+Args, MoreArgs, OptionalArgs = GRAMMAR.add_non_terminals("args more_args opt_args")
+
+Program = GRAMMAR.add_non_terminal("program", True)
+Decl, Declarations = GRAMMAR.add_non_terminals("decl decls")
+FunctionBody = GRAMMAR.add_non_terminal("function_body")
+MethodSpec, MoreMethodSpecs, Extension = GRAMMAR.add_non_terminals(
+    "method_spec more_method_specs extension"
+)
+Member, MemberStructure, MoreMembers, Inheritance = GRAMMAR.add_non_terminals(
+    "member member_structure more_members inheritance"
+)
+
+Expr = GRAMMAR.add_non_terminal("expr")
+Binding, MoreBindings = GRAMMAR.add_non_terminals("binding more_bindings")
+ElseBranch, ElseStmtBranch = GRAMMAR.add_non_terminals("else_branch else_stmt_branch")
+BlockExpr, Stmt, MoreStmts = GRAMMAR.add_non_terminals("block_expr stmt more_stmts")
+
+Disj, MoreDisjs = GRAMMAR.add_non_terminals("disj more_disjs")
+Conj, MoreConjs = GRAMMAR.add_non_terminals("conj more_conjs")
+Comparison = GRAMMAR.add_non_terminal("comparison")
+Arith = GRAMMAR.add_non_terminal("arith")
+Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
+Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
+Base, Powers = GRAMMAR.add_non_terminals("base powers")
+Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
+Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
+
+# endregion
+
+# region PRODUCTIONS
+
+TypeAnnotation %= colon + type_identifier, lambda h, s: s[2], None, None
+TypeAnnotation %= GRAMMAR.Epsilon, lambda h, s: None
+
+OptionalSemicolon %= semicolon, None, None
+OptionalSemicolon %= GRAMMAR.Epsilon, None
+
+Args %= Expr + MoreArgs, lambda h, s: [s[1], *s[2]], None, None
+Args %= GRAMMAR.Epsilon, lambda h, s: []
+MoreArgs %= comma + Expr + MoreArgs, lambda h, s: [s[2], *s[3]], None, None, None
+MoreArgs %= GRAMMAR.Epsilon, lambda h, s: []
+
+Params %= (
+    identifier + TypeAnnotation + MoreParams,
+    lambda h, s: [(s[1], s[2]), *s[3]],
+    None,
+    None,
+    None,
+)
+Params %= GRAMMAR.Epsilon, lambda h, s: []
+MoreParams %= (
+    comma + identifier + TypeAnnotation + MoreParams,
+    lambda h, s: [(s[2], s[3]), *s[4]],
+    None,
+    None,
+    None,
+    None,
+)
+MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
+
+Expr %= let + Binding + MoreBindings + in_k + Expr, None, None, None, None, None, None
+Expr %= (
+    if_k + lparen + Expr + rparen + Expr + ElseBranch,
+    lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Expr %= (
+    while_k + lparen + Expr + rparen + Expr,
+    lambda h, s: ast.Loop(s[3], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Expr %= (
+    for_k + lparen + identifier + in_k + Expr + rparen + Expr,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Expr %= BlockExpr, lambda h, s: s[1], None
+Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
+MoreBindings %= (
+    comma + Binding + MoreBindings,
+    lambda h, s: [s[2], *s[3]],
+    None,
+    None,
+    None,
+)
+MoreBindings %= GRAMMAR.Epsilon, lambda h, s: []
+
+ElseBranch %= (
+    elif_k + lparen + Expr + rparen + Expr + ElseBranch,
+    lambda h, s: [(s[3], s[5]), *s[6]],
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+ElseBranch %= else_k + Expr, lambda h, s: [s[2]], None, None
+
+BlockExpr %= (
+    lbrace + Stmt + MoreStmts + rbrace,
+    lambda h, s: ast.Block([s[2], *s[3]]),
+    None,
+    None,
+    None,
+    None,
+)
+
+# statements are the same as exprs but end up in semicolon
+# if the expression is inline, otherwise the semicolon is optional
+Stmt %= let + Binding + MoreBindings + in_k + Stmt, None, None, None, None, None, None
+Stmt %= (
+    if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
+    lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Stmt %= (
+    while_k + lparen + Expr + rparen + Stmt,
+    lambda h, s: ast.Loop(s[3], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Stmt %= (
+    for_k + lparen + identifier + in_k + Expr + rparen + Stmt,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1], None, None
+Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1], None
+
+MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]], None, None
+MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
+
+ElseStmtBranch %= (
+    elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
+    lambda h, s: [(s[3], s[5]), *s[6]],
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+ElseStmtBranch %= else_k + Stmt, lambda h, s: [s[2]], None, None
+
+MoreDisjs %= (
+    disj + Disj + MoreDisjs,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Logic(h[0], s[1], s[2]),
+)
+MoreDisjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Disj %= Conj + MoreConjs, lambda h, s: s[2], None, lambda h, s: s[1]
+
+MoreConjs %= (
+    conj + Conj + MoreConjs,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Logic(h[0], s[1], s[2]),
+)
+MoreConjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Conj %= not_t + Conj, lambda h, s: ast.Negation(s[2]), None, None
+Conj %= Arith + Comparison, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Comparison %= lt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= gt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= le + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= ge + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= eq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= neq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= (
+    is_k + type_identifier,
+    lambda h, s: ast.RuntimeTypeCheking(h[0], s[2]),
+    None,
+    None,
+)
+Comparison %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Arith %= Term + MoreTerms, lambda h, s: s[2], None, lambda h, s: s[1]
+
+MoreTerms %= (
+    plus + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    minus + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    concat + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
+)
+MoreTerms %= (
+    concat_space + Term + MoreTerms,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
+)
+MoreTerms %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Term %= Factor + MoreFactors, lambda h, s: s[2], None, lambda h, s: s[1]
+
+MoreFactors %= (
+    times + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= (
+    div + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= (
+    mod + Factor + MoreFactors,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
+)
+MoreFactors %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Factor %= minus + Factor, lambda h, s: ast.ArithmeticNegation(s[2]), None, None
+Factor %= Base + Powers, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Powers %= power + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
+Powers %= power_alt + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
+Powers %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Base %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Atom %= number, lambda h, s: ast.Number(s[1]), None
+Atom %= string, lambda h, s: ast.String(s[1]), None
+Atom %= true_k, lambda h, s: ast.Boolean(s[1]), None
+Atom %= false_k, lambda h, s: ast.Boolean(s[1]), None
+Atom %= builtin_identifier, lambda h, s: ast.Identifier(s[1], True), None
+Atom %= (
+    identifier + Mutation,
+    lambda h, s: s[2],
+    None,
+    lambda h, s: ast.Identifier(s[1]),
+)
+Atom %= (
+    new + type_identifier + lparen + Args + rparen,
+    lambda h, s: ast.TypeInstanceCreation(s[2], s[4]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
+Atom %= lbracket + Vector + rbracket, lambda h, s: s[2], None, None, None
+
+Mutation %= mut + Expr, lambda h, s: ast.Mutation(h[0], s[2]), None, None
+Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
+Vector %= GRAMMAR.Epsilon, None
+VectorStructure %= (
+    given + identifier + in_k + Expr,
+    lambda h, s: ast.MappedIterable(h[0], s[2], s[4]),
+    None,
+    None,
+    None,
+    None,
+)
+VectorStructure %= MoreArgs, lambda h, s: ast.Vector([h[0], *s[1]]), None
+
+Action %= (
+    dot + identifier + Action,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.TypeMemberAccessing(h[0], s[2]),
+)
+Action %= (
+    lbracket + number + rbracket + Action,
+    lambda h, s: s[4],
+    None,
+    None,
+    None,
+    lambda h, s: ast.Indexing(h[0], s[2]),
+)
+Action %= (
+    lparen + Args + rparen + Action,
+    lambda h, s: s[4],
+    None,
+    None,
+    None,
+    lambda h, s: ast.FunctionCall(h[0], s[2]),
+)
+Action %= (
+    as_k + type_identifier + Action,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Downcasting(h[0], s[2]),
+)
+Action %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Program %= Declarations + Expr + OptionalSemicolon, None, None, None, None
+
+Declarations %= Decl + Declarations, None, None, None
+Declarations %= GRAMMAR.Epsilon, None
+
+Decl %= (
+    func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Decl %= (
+    protocol
+    + type_identifier
+    + Extension
+    + lbrace
+    + MethodSpec
+    + MoreMethodSpecs
+    + rbrace
+    + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+Decl %= (
+    type_k
+    + type_identifier
+    + OptionalParams
+    + Inheritance
+    + lbrace
+    + Member
+    + MoreMembers
+    + rbrace
+    + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+
+FunctionBody %= then + Stmt, None, None, None
+FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
+
+Extension %= extends + type_identifier, None, None, None
+Extension %= GRAMMAR.Epsilon, None
+
+MethodSpec %= (
+    identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, None, None, None
+MoreMethodSpecs %= GRAMMAR.Epsilon, None
+
+OptionalParams %= lparen + Params + rparen, None, None, None, None
+OptionalParams %= GRAMMAR.Epsilon, None
+
+Inheritance %= inherits + type_identifier + OptionalArgs, None, None, None, None
+Inheritance %= GRAMMAR.Epsilon, None
+
+OptionalArgs %= lparen + Args + rparen, None, None, None, None
+OptionalArgs %= GRAMMAR.Epsilon, None
+
+Member %= identifier + MemberStructure, None, None, None
+MemberStructure %= TypeAnnotation + bind + Stmt, None, None, None, None
+MemberStructure %= (
+    lparen + Params + rparen + TypeAnnotation + FunctionBody,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+)
+
+# endregion
