@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from .tools.semantic import AST
 
 
-@dataclass
 class Expression(AST):
     pass
 
@@ -86,12 +85,10 @@ class UnaryOperation(Expression):
     operand: Expression
 
 
-@dataclass
 class Negation(UnaryOperation):
     pass
 
 
-@dataclass
 class ArithmeticNegation(UnaryOperation):
     pass
 
@@ -103,17 +100,14 @@ class BinaryOperation(Expression):
     right: Expression
 
 
-@dataclass
 class Logic(BinaryOperation):
     pass
 
 
-@dataclass
 class Comparison(BinaryOperation):
     pass
 
 
-@dataclass
 class Arithmetic(BinaryOperation):
     pass
 
