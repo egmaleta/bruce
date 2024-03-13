@@ -433,12 +433,10 @@ Decl %= (
     + type_identifier
     + Extension
     + lbrace
-    + MethodSpec
     + MoreMethodSpecs
     + rbrace
     + OptionalSemicolon,
-    None,
-    None,
+    lambda h, s: ast.Protocol(s[2], s[3], s[5]),
     None,
     None,
     None,
@@ -485,7 +483,7 @@ MoreTypeIds %= GRAMMAR.Epsilon, lambda h, s: []
 
 MethodSpec %= (
     identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
-    None,
+    lambda h, s: ast.MethodSpec(s[1], s[3], s[6]),
     None,
     None,
     None,
@@ -494,8 +492,8 @@ MethodSpec %= (
     None,
     None,
 )
-MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, None, None, None
-MoreMethodSpecs %= GRAMMAR.Epsilon, None
+MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, lambda h, s: [s[1], *s[2]], None, None
+MoreMethodSpecs %= GRAMMAR.Epsilon, lambda h, s: []
 
 OptionalParams %= lparen + Params + rparen, None, None, None, None
 OptionalParams %= GRAMMAR.Epsilon, None

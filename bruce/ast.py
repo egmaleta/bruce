@@ -179,3 +179,17 @@ class Function(AST):
     params: list[tuple[str, str | None]]
     return_type: str | None
     body: Expression
+
+
+@dataclass
+class MethodSpec(AST):
+    id: str
+    params: list[tuple[str, str | None]]
+    return_type: str
+
+
+@dataclass
+class Protocol(AST):
+    type: str
+    extends: list[str]
+    method_specs: list[MethodSpec]
