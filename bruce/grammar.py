@@ -352,8 +352,9 @@ Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
 Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
 Vector %= GRAMMAR.Epsilon, None
 VectorStructure %= (
-    given + identifier + in_k + Expr,
-    lambda h, s: ast.MappedIterable(h[0], s[2], s[4]),
+    given + identifier + TypeAnnotation + in_k + Expr,
+    lambda h, s: ast.MappedIterable(h[0], s[2], s[3], s[5]),
+    None,
     None,
     None,
     None,

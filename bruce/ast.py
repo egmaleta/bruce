@@ -53,6 +53,7 @@ class Vector(Expression):
 class MappedIterable(Expression):
     map_expr: Expression
     item_id: str
+    item_type_id: str | None
     iterable_expr: Expression
 
 
