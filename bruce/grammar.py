@@ -419,7 +419,7 @@ Declarations %= GRAMMAR.Epsilon, None
 
 Decl %= (
     func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,
-    None,
+    lambda h, s: ast.Function(s[2], s[4], s[6], s[7]),
     None,
     None,
     None,
@@ -469,8 +469,8 @@ Decl %= (
     None,
 )
 
-FunctionBody %= then + Stmt, None, None, None
-FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
+FunctionBody %= then + Stmt, lambda h, s: s[2], None, None
+FunctionBody %= BlockExpr + OptionalSemicolon, lambda h, s: s[1], None, None
 
 Extension %= (
     extends + type_identifier + MoreTypeIds,

@@ -171,3 +171,11 @@ def desugar_let_expr(
     return LetExpression(
         id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
     )
+
+
+@dataclass
+class Function(AST):
+    id: str
+    params: list[tuple[str, str | None]]
+    return_type: str | None
+    body: Expression
