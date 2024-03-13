@@ -49,8 +49,8 @@ Args, MoreArgs, OptionalArgs = GRAMMAR.add_non_terminals("args more_args opt_arg
 Program = GRAMMAR.add_non_terminal("program", True)
 Decl, Declarations = GRAMMAR.add_non_terminals("decl decls")
 FunctionBody = GRAMMAR.add_non_terminal("function_body")
-MethodSpec, MoreMethodSpecs, Extension = GRAMMAR.add_non_terminals(
-    "method_spec more_method_specs extension"
+MethodSpec, MoreMethodSpecs, Extension, MoreTypeIds = GRAMMAR.add_non_terminals(
+    "method_spec more_method_specs extension more_type_ids"
 )
 Member, MemberStructure, MoreMembers, Inheritance = GRAMMAR.add_non_terminals(
     "member member_structure more_members inheritance"
@@ -472,8 +472,16 @@ Decl %= (
 FunctionBody %= then + Stmt, None, None, None
 FunctionBody %= BlockExpr + OptionalSemicolon, None, None, None
 
-Extension %= extends + type_identifier, None, None, None
-Extension %= GRAMMAR.Epsilon, None
+Extension %= (
+    extends + type_identifier + MoreTypeIds,
+    lambda h, s: [s[2], *s[3]],
+    None,
+    None,
+    None,
+)
+Extension %= GRAMMAR.Epsilon, lambda h, s: []
+MoreTypeIds %= type_identifier + MoreTypeIds, lambda h, s: [s[1], *s[2]], None, None
+MoreTypeIds %= GRAMMAR.Epsilon, lambda h, s: []
 
 MethodSpec %= (
     identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
