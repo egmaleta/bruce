@@ -68,7 +68,8 @@ Arith, MoreAriths = GRAMMAR.add_non_terminals("arith more_ariths")
 Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
 Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
 Base, Powers = GRAMMAR.add_non_terminals("base powers")
-Atom, Action, Mutation = GRAMMAR.add_non_terminals("atom action mutation")
+Molecule, Mutation = GRAMMAR.add_non_terminals("molecule mutation")
+Atom, Action = GRAMMAR.add_non_terminals("atom action")
 Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
 
 # endregion
@@ -353,19 +354,20 @@ Powers %= (
 Powers %= GRAMMAR.Epsilon, lambda h, s: None
 
 Base %= minus + Base, lambda h, s: ast.ArithmeticNegation(s[2]), None, None
-Base %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
+Base %= Molecule + Mutation, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Molecule %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
+
+Mutation %= as_k + type_identifier, lambda h, s: ast.Downcasting(h[0], s[2]), None, None
+Mutation %= mut + Molecule, lambda h, s: ast.Mutation(h[0], s[2]), None, None
+Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Atom %= number, lambda h, s: ast.Number(s[1]), None
 Atom %= string, lambda h, s: ast.String(s[1]), None
 Atom %= true_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= false_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= builtin_identifier, lambda h, s: ast.Identifier(s[1], True), None
-Atom %= (
-    identifier + Mutation,
-    lambda h, s: s[2],
-    None,
-    lambda h, s: s[1],
-)
+Atom %= identifier, lambda h,s: ast.Identifier(s[1]), None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
     lambda h, s: ast.TypeInstanceCreation(s[2], s[4]),
@@ -377,9 +379,6 @@ Atom %= (
 )
 Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
 Atom %= lbracket + Vector + rbracket, lambda h, s: s[2], None, None, None
-
-Mutation %= mut + Expr, lambda h, s: ast.Mutation(h[0], s[2]), None, None
-Mutation %= GRAMMAR.Epsilon, lambda h, s: ast.Identifier(h[0])
 
 Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
 Vector %= GRAMMAR.Epsilon, None
@@ -416,13 +415,6 @@ Action %= (
     None,
     None,
     lambda h, s: ast.FunctionCall(h[0], s[2]),
-)
-Action %= (
-    as_k + type_identifier + Action,
-    lambda h, s: s[3],
-    None,
-    None,
-    lambda h, s: ast.Downcasting(h[0], s[2]),
 )
 Action %= GRAMMAR.Epsilon, lambda h, s: h[0]
 

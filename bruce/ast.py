@@ -32,12 +32,6 @@ class Identifier(Expression):
 
 
 @dataclass
-class Mutation(Expression):
-    id: str
-    body: Expression
-
-
-@dataclass
 class TypeInstanceCreation(Expression):
     type: str
     args: list[Expression]
@@ -69,15 +63,21 @@ class FunctionCall(Expression):
 
 
 @dataclass
-class Downcasting(Expression):
-    target: Expression
-    type: str
-
-
-@dataclass
 class Indexing(Expression):
     target: Expression
     index: str
+
+
+@dataclass
+class Mutation(Expression):
+    target: Expression
+    value: Expression
+
+
+@dataclass
+class Downcasting(Expression):
+    target: Expression
+    type: str
 
 
 @dataclass
