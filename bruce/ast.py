@@ -34,8 +34,8 @@ class Identifier(Expression):
 
 @dataclass
 class Mutation(Expression):
-    right: Identifier
-    left: Expression
+    id: str
+    body: Expression
 
 
 @dataclass

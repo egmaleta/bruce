@@ -360,7 +360,7 @@ Atom %= (
     identifier + Mutation,
     lambda h, s: s[2],
     None,
-    lambda h, s: ast.Identifier(s[1]),
+    lambda h, s: s[1],
 )
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
@@ -375,7 +375,7 @@ Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
 Atom %= lbracket + Vector + rbracket, lambda h, s: s[2], None, None, None
 
 Mutation %= mut + Expr, lambda h, s: ast.Mutation(h[0], s[2]), None, None
-Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
+Mutation %= GRAMMAR.Epsilon, lambda h, s: ast.Identifier(h[0])
 
 Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
 Vector %= GRAMMAR.Epsilon, None
