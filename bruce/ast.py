@@ -118,6 +118,11 @@ class Arithmetic(BinaryOperation):
     pass
 
 
+class Powering(Arithmetic):
+    def __init__(self, left: Expression, right: Expression):
+        super().__init__(left, "pow", right)
+
+
 @dataclass
 class Concatenation(BinaryOperation):
     pass

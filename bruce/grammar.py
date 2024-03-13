@@ -16,7 +16,7 @@ protocol, extends = GRAMMAR.add_terminals("protocol extends")
 true_k, false_k = GRAMMAR.add_terminals("true false")
 
 # OPERATORS
-plus, minus, times, div, mod, power, power_alt = GRAMMAR.add_terminals("+ - * / % ^ **")
+plus, minus, times, div, mod, power = GRAMMAR.add_terminals("+ - * / % pow")
 lt, gt, le, ge, eq, neq = GRAMMAR.add_terminals("< > <= >= == !=")
 concat, concat_space = GRAMMAR.add_terminals("@ @@")
 conj, disj, not_t = GRAMMAR.add_terminals("& | !")
@@ -332,13 +332,23 @@ MoreFactors %= (
 )
 MoreFactors %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Factor %= minus + Factor, lambda h, s: ast.ArithmeticNegation(s[2]), None, None
-Factor %= Base + Powers, lambda h, s: s[2], None, lambda h, s: s[1]
+Factor %= (
+    Base + Powers,
+    lambda h, s: s[1] if s[2] == None else ast.Powering(s[1], s[2]),
+    None,
+    None,
+)
 
-Powers %= power + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
-Powers %= power_alt + Factor, lambda h, s: ast.Arithmetic(h[0], s[1], s[2]), None, None
-Powers %= GRAMMAR.Epsilon, lambda h, s: h[0]
+Powers %= (
+    power + Base + Powers,
+    lambda h, s: s[2] if s[3] == None else ast.Powering(s[2], s[3]),
+    None,
+    None,
+    None,
+)
+Powers %= GRAMMAR.Epsilon, lambda h, s: None
 
+Base %= minus + Base, lambda h, s: ast.ArithmeticNegation(s[2]), None, None
 Base %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Atom %= number, lambda h, s: ast.Number(s[1]), None
