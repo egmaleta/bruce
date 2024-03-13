@@ -26,7 +26,10 @@ lexer = create_lexer(
         ("protocol", "protocol"),
         ("extends", "extends"),
         ("type_id", f"({capital_letters})(_|{letters}|{capital_letters})*"),
-        ("id", f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*"),
+        (
+            "id",
+            f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*",
+        ),
         ("number", f"({nonzero_digits})(0|{nonzero_digits})*|0"),
         ("true", "true"),
         ("false", "false"),
