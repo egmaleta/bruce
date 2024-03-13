@@ -152,3 +152,22 @@ class Iterator(Expression):
 class Conditional(Expression):
     condition_branchs: list[tuple[Expression, Expression]]
     fallback_branck: Expression
+
+
+@dataclass
+class LetExpression(Expression):
+    id: str
+    type_id: str | None
+    value: Expression
+    body: Expression
+
+
+def desugar_let_expr(
+    bindings: list[tuple[str, str | None, Expression]], body: Expression
+):
+    head, *tail = bindings
+    id, type, value = head
+
+    return LetExpression(
+        id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
+    )

@@ -104,7 +104,15 @@ MoreParams %= (
 )
 MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
 
-Expr %= let + Binding + MoreBindings + in_k + Expr, None, None, None, None, None, None
+Expr %= (
+    let + Binding + MoreBindings + in_k + Expr,
+    lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 Expr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBranch,
     lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
@@ -172,7 +180,15 @@ BlockExpr %= (
 
 # statements are the same as exprs but end up in semicolon
 # if the expression is inline, otherwise the semicolon is optional
-Stmt %= let + Binding + MoreBindings + in_k + Stmt, None, None, None, None, None, None
+Stmt %= (
+    let + Binding + MoreBindings + in_k + Stmt,
+    lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
+    None,
+    None,
+    None,
+    None,
+    None,
+)
 Stmt %= (
     if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
     lambda h, s: ast.Conditional([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
