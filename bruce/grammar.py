@@ -63,8 +63,8 @@ BlockExpr, Stmt, MoreStmts = GRAMMAR.add_non_terminals("block_expr stmt more_stm
 
 Disj, MoreDisjs = GRAMMAR.add_non_terminals("disj more_disjs")
 Conj, MoreConjs = GRAMMAR.add_non_terminals("conj more_conjs")
-Comparison = GRAMMAR.add_non_terminal("comparison")
-Arith = GRAMMAR.add_non_terminal("arith")
+Concat, Comparison = GRAMMAR.add_non_terminals("concat comparison")
+Arith, MoreAriths = GRAMMAR.add_non_terminals("arith more_ariths")
 Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
 Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
 Base, Powers = GRAMMAR.add_non_terminals("base powers")
@@ -259,14 +259,14 @@ MoreConjs %= (
 MoreConjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Conj %= not_t + Conj, lambda h, s: ast.Negation(s[2]), None, None
-Conj %= Arith + Comparison, lambda h, s: s[2], None, lambda h, s: s[1]
+Conj %= Concat + Comparison, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Comparison %= lt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
-Comparison %= gt + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
-Comparison %= le + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
-Comparison %= ge + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
-Comparison %= eq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
-Comparison %= neq + Arith, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= lt + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= gt + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= le + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= ge + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= eq + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
+Comparison %= neq + Concat, lambda h, s: ast.Comparison(h[0], s[1], s[2]), None, None
 Comparison %= (
     is_k + type_identifier,
     lambda h, s: ast.RuntimeTypeCheking(h[0], s[2]),
@@ -274,6 +274,24 @@ Comparison %= (
     None,
 )
 Comparison %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Concat %= Arith + MoreAriths, lambda h, s: s[2], None, lambda h, s: s[1]
+
+MoreAriths %= (
+    concat + Arith + MoreAriths,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(h[0], s[2]),
+)
+MoreAriths %= (
+    concat_space + Arith + MoreAriths,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.Concatenation(ast.Concatenation(h[0], ast.String('" "')), s[2]),
+)
+MoreAriths %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Arith %= Term + MoreTerms, lambda h, s: s[2], None, lambda h, s: s[1]
 
@@ -290,20 +308,6 @@ MoreTerms %= (
     None,
     None,
     lambda h, s: ast.Arithmetic(h[0], s[1], s[2]),
-)
-MoreTerms %= (
-    concat + Term + MoreTerms,
-    lambda h, s: s[3],
-    None,
-    None,
-    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
-)
-MoreTerms %= (
-    concat_space + Term + MoreTerms,
-    lambda h, s: s[3],
-    None,
-    None,
-    lambda h, s: ast.Concatenation(h[0], s[1], s[2]),
 )
 MoreTerms %= GRAMMAR.Epsilon, lambda h, s: h[0]
 

@@ -123,9 +123,9 @@ class Powering(Arithmetic):
         super().__init__(left, "pow", right)
 
 
-@dataclass
 class Concatenation(BinaryOperation):
-    pass
+    def __init__(self, left: Expression, right: Expression):
+        super().__init__(left, "@", right)
 
 
 @dataclass
