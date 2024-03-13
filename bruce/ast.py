@@ -40,7 +40,7 @@ class Mutation(Expression):
 
 @dataclass
 class TypeInstanceCreation(Expression):
-    type_id: str
+    type: str
     args: list[Expression]
 
 
@@ -53,7 +53,7 @@ class Vector(Expression):
 class MappedIterable(Expression):
     map_expr: Expression
     item_id: str
-    item_type_id: str | None
+    item_type: str | None
     iterable_expr: Expression
 
 
@@ -72,7 +72,7 @@ class FunctionCall(Expression):
 @dataclass
 class Downcasting(Expression):
     target: Expression
-    type_id: str
+    type: str
 
 
 @dataclass
@@ -126,7 +126,7 @@ class Concatenation(BinaryOperation):
 @dataclass
 class RuntimeTypeCheking(Expression):
     target: Expression
-    type_id: str
+    type: str
 
 
 @dataclass
@@ -143,7 +143,7 @@ class Loop(Expression):
 @dataclass
 class Iterator(Expression):
     item_id: str
-    item_type_id: str | None
+    item_type: str | None
     iterable_expr: Expression
     body: Expression
 
@@ -157,7 +157,7 @@ class Conditional(Expression):
 @dataclass
 class LetExpression(Expression):
     id: str
-    type_id: str | None
+    type: str | None
     value: Expression
     body: Expression
 
