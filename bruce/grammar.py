@@ -125,7 +125,8 @@ Expr %= (
     None,
 )
 Expr %= (
-    for_k + lparen + identifier + in_k + Expr + rparen + Expr,
+    for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Expr,
+    None,
     None,
     None,
     None,
@@ -192,7 +193,8 @@ Stmt %= (
     None,
 )
 Stmt %= (
-    for_k + lparen + identifier + in_k + Expr + rparen + Stmt,
+    for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Stmt,
+    None,
     None,
     None,
     None,
