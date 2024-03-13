@@ -141,6 +141,14 @@ class Loop(Expression):
 
 
 @dataclass
+class Iterator(Expression):
+    item_id: str
+    item_type_id: str | None
+    iterable_expr: Expression
+    body: Expression
+
+
+@dataclass
 class Conditional(Expression):
     condition_branchs: list[tuple[Expression, Expression]]
     fallback_branck: Expression

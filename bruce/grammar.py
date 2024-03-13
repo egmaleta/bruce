@@ -126,7 +126,7 @@ Expr %= (
 )
 Expr %= (
     for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Expr,
-    None,
+    lambda h, s: ast.Iterator(s[3], s[4], s[6], s[8]),
     None,
     None,
     None,
@@ -194,7 +194,7 @@ Stmt %= (
 )
 Stmt %= (
     for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Stmt,
-    None,
+    lambda h, s: ast.Iterator(s[3], s[4], s[6], s[8]),
     None,
     None,
     None,
