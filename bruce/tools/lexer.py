@@ -43,7 +43,7 @@ class Lexer:
                             max_priority = s.tag[1]
                     final_lex = lex
             else:
-                break
+                break  # TODO: Create an error handling
 
         return final, final_lex
 
