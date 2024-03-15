@@ -13,22 +13,18 @@ class LiteralNode(ExprNode):
     value: str
 
 
-@dataclass
 class NumberNode(LiteralNode):
-    value: str
+    pass
 
 
 @dataclass
 class StringNode(LiteralNode):
-    value: str
-
     def __post_init__(self):
         self.value = self.value[1:-1]
 
 
-@dataclass
 class BooleanNode(LiteralNode):
-    value: str
+    pass
 
 
 @dataclass
