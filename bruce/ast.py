@@ -1,19 +1,24 @@
 from dataclasses import dataclass
 
 from .tools.semantic import AST
+import visitor
 
 
 class Expression(AST):
     pass
 
 
+@dataclass    
+class Literal(Expression):
+    value:str
+
 @dataclass
-class Number(Expression):
+class Number(Literal):
     value: str
 
 
 @dataclass
-class String(Expression):
+class String(Literal):
     value: str
 
     def __post_init__(self):
@@ -21,13 +26,12 @@ class String(Expression):
 
 
 @dataclass
-class Boolean(Expression):
+class Boolean(Literal):
     value: str
 
 
 @dataclass
-class Identifier(Expression):
-    value: str
+class Identifier(Literal):
     is_builtin: bool = False
 
 
@@ -192,3 +196,26 @@ class Protocol(AST):
     type: str
     extends: list[str]
     method_specs: list[MethodSpec]
+
+
+class SemanticCheckerVisitor(object):
+    def __init__(self):
+        self.errors = []
+
+    @visitor.on("node")
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(Number)
+    def visit(self, node, scope):
+        return self.errors
+
+    @visitor.when(Literal)
+    def visit(self, node, scope)   
+        return self.errors      
+
+    @visitor.when(Identifier)
+    def visit(self, node, scope):
+        if not scope.is_var_defined(node.value):
+            self.errors.append(f"Variable {node.value} not defined")
+        return self.errors
