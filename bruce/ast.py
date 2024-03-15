@@ -1,16 +1,17 @@
 from dataclasses import dataclass
+import visitor
 
 from .tools.semantic import AST
-import visitor
 
 
 class Expression(AST):
     pass
 
 
-@dataclass    
+@dataclass
 class Literal(Expression):
-    value:str
+    value: str
+
 
 @dataclass
 class Number(Literal):
@@ -211,8 +212,8 @@ class SemanticCheckerVisitor(object):
         return self.errors
 
     @visitor.when(Literal)
-    def visit(self, node, scope)   
-        return self.errors      
+    def visit(self, node, scope):
+        return self.errors
 
     @visitor.when(Identifier)
     def visit(self, node, scope):
