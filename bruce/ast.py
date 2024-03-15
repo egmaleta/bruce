@@ -1,25 +1,25 @@
 from dataclasses import dataclass
 
-from .tools.semantic import AST
+from .tools.semantic import ASTNode
 from .tools import visitor
 
 
-class Expression(AST):
+class ExprNode(ASTNode):
     pass
 
 
 @dataclass
-class Literal(Expression):
+class LiteralNode(ExprNode):
     value: str
 
 
 @dataclass
-class Number(Literal):
+class NumberNode(LiteralNode):
     value: str
 
 
 @dataclass
-class String(Literal):
+class StringNode(LiteralNode):
     value: str
 
     def __post_init__(self):
@@ -27,176 +27,174 @@ class String(Literal):
 
 
 @dataclass
-class Boolean(Literal):
+class BooleanNode(LiteralNode):
     value: str
 
 
 @dataclass
-class Identifier(Literal):
+class IdentifierNode(LiteralNode):
     is_builtin: bool = False
 
 
 @dataclass
-class TypeInstanceCreation(Expression):
+class TypeInstancingNode(ExprNode):
     type: str
-    args: list[Expression]
+    args: list[ExprNode]
 
 
 @dataclass
-class Vector(Expression):
-    items: list[Expression]
+class VectorNode(ExprNode):
+    items: list[ExprNode]
 
 
 @dataclass
-class MappedIterable(Expression):
-    map_expr: Expression
+class MappedIterableNode(ExprNode):
+    map_expr: ExprNode
     item_id: str
     item_type: str | None
-    iterable_expr: Expression
+    iterable_expr: ExprNode
 
 
 @dataclass
-class TypeMemberAccessing(Expression):
-    target: Expression
+class MemberAccessingNode(ExprNode):
+    target: ExprNode
     member_id: str
 
 
 @dataclass
-class FunctionCall(Expression):
-    target: Expression
-    args: list[Expression]
+class FunctionCallNode(ExprNode):
+    target: ExprNode
+    args: list[ExprNode]
 
 
 @dataclass
-class Indexing(Expression):
-    target: Expression
+class IndexingNode(ExprNode):
+    target: ExprNode
     index: str
 
 
 @dataclass
-class Mutation(Expression):
-    target: Expression
-    value: Expression
+class MutationNode(ExprNode):
+    target: ExprNode
+    value: ExprNode
 
 
 @dataclass
-class Downcasting(Expression):
-    target: Expression
+class DowncastingNode(ExprNode):
+    target: ExprNode
     type: str
 
 
 @dataclass
-class UnaryOperation(Expression):
-    operand: Expression
+class UnaryOpNode(ExprNode):
+    operand: ExprNode
 
 
-class Negation(UnaryOperation):
+class NegOpNode(UnaryOpNode):
     pass
 
 
-class ArithmeticNegation(UnaryOperation):
+class ArithNegOpNode(UnaryOpNode):
     pass
 
 
 @dataclass
-class BinaryOperation(Expression):
-    left: Expression
+class BinaryOpNode(ExprNode):
+    left: ExprNode
     operator: str
-    right: Expression
+    right: ExprNode
 
 
-class Logic(BinaryOperation):
+class LogicOpNode(BinaryOpNode):
     pass
 
 
-class Comparison(BinaryOperation):
+class ComparisonOpNode(BinaryOpNode):
     pass
 
 
-class Arithmetic(BinaryOperation):
+class ArithOpNode(BinaryOpNode):
     pass
 
 
-class Powering(Arithmetic):
-    def __init__(self, left: Expression, right: Expression):
+class PowerOpNode(ArithOpNode):
+    def __init__(self, left: ExprNode, right: ExprNode):
         super().__init__(left, "pow", right)
 
 
-class Concatenation(BinaryOperation):
-    def __init__(self, left: Expression, right: Expression):
+class ConcatOpNode(BinaryOpNode):
+    def __init__(self, left: ExprNode, right: ExprNode):
         super().__init__(left, "@", right)
 
 
 @dataclass
-class RuntimeTypeCheking(Expression):
-    target: Expression
+class TypeMatchingNode(ExprNode):
+    target: ExprNode
     type: str
 
 
 @dataclass
-class Block(Expression):
-    exprs: list[Expression]
+class BlockNode(ExprNode):
+    exprs: list[ExprNode]
 
 
 @dataclass
-class Loop(Expression):
-    condition: Expression
-    body: Expression
+class LoopNode(ExprNode):
+    condition: ExprNode
+    body: ExprNode
 
 
 @dataclass
-class Iterator(Expression):
+class IteratorNode(ExprNode):
     item_id: str
     item_type: str | None
-    iterable_expr: Expression
-    body: Expression
+    iterable_expr: ExprNode
+    body: ExprNode
 
 
 @dataclass
-class Conditional(Expression):
-    condition_branchs: list[tuple[Expression, Expression]]
-    fallback_branck: Expression
+class ConditionalNode(ExprNode):
+    condition_branchs: list[tuple[ExprNode, ExprNode]]
+    fallback_branck: ExprNode
 
 
 @dataclass
-class LetExpression(Expression):
+class LetExprNode(ExprNode):
     id: str
     type: str | None
-    value: Expression
-    body: Expression
+    value: ExprNode
+    body: ExprNode
 
 
-def desugar_let_expr(
-    bindings: list[tuple[str, str | None, Expression]], body: Expression
-):
+def desugar_let_expr(bindings: list[tuple[str, str | None, ExprNode]], body: ExprNode):
     head, *tail = bindings
     id, type, value = head
 
-    return LetExpression(
+    return LetExprNode(
         id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
     )
 
 
 @dataclass
-class Function(AST):
+class FunctionNode(ASTNode):
     id: str
     params: list[tuple[str, str | None]]
     return_type: str | None
-    body: Expression
+    body: ExprNode
 
 
 @dataclass
-class MethodSpec(AST):
+class MethodSpecNode(ASTNode):
     id: str
     params: list[tuple[str, str | None]]
     return_type: str
 
 
 @dataclass
-class Protocol(AST):
+class ProtocolNode(ASTNode):
     type: str
     extends: list[str]
-    method_specs: list[MethodSpec]
+    method_specs: list[MethodSpecNode]
 
 
 class SemanticCheckerVisitor(object):
@@ -207,15 +205,15 @@ class SemanticCheckerVisitor(object):
     def visit(self, node, scope):
         pass
 
-    @visitor.when(Number)
+    @visitor.when(NumberNode)
     def visit(self, node, scope):
         return self.errors
 
-    @visitor.when(Literal)
+    @visitor.when(LiteralNode)
     def visit(self, node, scope):
         return self.errors
 
-    @visitor.when(Identifier)
+    @visitor.when(IdentifierNode)
     def visit(self, node, scope):
         if not scope.is_var_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")

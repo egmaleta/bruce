@@ -1,7 +1,7 @@
 from abc import ABC
 
 
-class AST(ABC):
+class ASTNode(ABC):
     pass
 
 
