@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-import visitor
 
 from .tools.semantic import AST
+from .tools import visitor
 
 
 class Expression(AST):
