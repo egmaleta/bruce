@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .tools.semantic import ASTNode
+from .tools.semantic import ASTNode, Scope
 from .tools import visitor
 
 
@@ -193,7 +193,7 @@ class ProtocolNode(ASTNode):
     method_specs: list[MethodSpecNode]
 
 
-class SemanticCheckerVisitor(object):
+class SemanticChecker(object):
     def __init__(self):
         self.errors = []
 
@@ -201,16 +201,12 @@ class SemanticCheckerVisitor(object):
     def visit(self, node, scope):
         pass
 
-    @visitor.when(NumberNode)
-    def visit(self, node, scope):
-        return self.errors
-
     @visitor.when(LiteralNode)
-    def visit(self, node, scope):
+    def visit(self, node: LiteralNode, scope: Scope):
         return self.errors
 
     @visitor.when(IdentifierNode)
-    def visit(self, node, scope):
+    def visit(self, node: IdentifierNode, scope: Scope):
         if not scope.is_var_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")
         return self.errors
