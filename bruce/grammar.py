@@ -148,7 +148,14 @@ Expr %= (
 Expr %= BlockExpr, lambda h, s: s[1], None
 Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Binding %= identifier + TypeAnnotation + bind + Expr, None, None, None, None, None
+Binding %= (
+    identifier + TypeAnnotation + bind + Expr,
+    lambda h, s: (s[1], s[2], s[4]),
+    None,
+    None,
+    None,
+    None,
+)
 MoreBindings %= (
     comma + Binding + MoreBindings,
     lambda h, s: [s[2], *s[3]],
@@ -367,7 +374,7 @@ Atom %= string, lambda h, s: ast.String(s[1]), None
 Atom %= true_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= false_k, lambda h, s: ast.Boolean(s[1]), None
 Atom %= builtin_identifier, lambda h, s: ast.Identifier(s[1], True), None
-Atom %= identifier, lambda h,s: ast.Identifier(s[1]), None
+Atom %= identifier, lambda h, s: ast.Identifier(s[1]), None
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
     lambda h, s: ast.TypeInstanceCreation(s[2], s[4]),
