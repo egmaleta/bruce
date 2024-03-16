@@ -532,7 +532,13 @@ Extension %= (
     None,
 )
 Extension %= GRAMMAR.Epsilon, lambda h, s: []
-MoreTypeIds %= type_identifier + MoreTypeIds, lambda h, s: [s[1], *s[2]], None, None
+MoreTypeIds %= (
+    comma + type_identifier + MoreTypeIds,
+    lambda h, s: [s[2], *s[3]],
+    None,
+    None,
+    None,
+)
 MoreTypeIds %= GRAMMAR.Epsilon, lambda h, s: []
 
 MethodSpec %= (
