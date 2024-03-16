@@ -503,7 +503,7 @@ Decl %= (
     + MoreMembers
     + rbrace
     + OptionalSemicolon,
-    None,
+    lambda h, s: ast.TypeNode(s[2], s[3], s[4][0], s[4][1], [s[6], *s[7]]),
     None,
     None,
     None,
@@ -543,20 +543,32 @@ MethodSpec %= (
 MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, lambda h, s: [s[1], *s[2]], None, None
 MoreMethodSpecs %= GRAMMAR.Epsilon, lambda h, s: []
 
-OptionalParams %= lparen + Params + rparen, None, None, None, None
-OptionalParams %= GRAMMAR.Epsilon, None
+OptionalParams %= lparen + Params + rparen, lambda h, s: s[2], None, None, None
+OptionalParams %= GRAMMAR.Epsilon, lambda h, s: None
 
-Inheritance %= inherits + type_identifier + OptionalArgs, None, None, None, None
-Inheritance %= GRAMMAR.Epsilon, None
+Inheritance %= (
+    inherits + type_identifier + OptionalArgs,
+    lambda h, s: (s[2], s[3]),
+    None,
+    None,
+    None,
+)
+Inheritance %= GRAMMAR.Epsilon, lambda h, s: (None, None)
 
-OptionalArgs %= lparen + Args + rparen, None, None, None, None
-OptionalArgs %= GRAMMAR.Epsilon, None
+OptionalArgs %= lparen + Args + rparen, lambda h, s: s[2], None, None, None
+OptionalArgs %= GRAMMAR.Epsilon, lambda h, s: None
 
-Member %= identifier + MemberStructure, None, None, None
-MemberStructure %= TypeAnnotation + bind + Stmt, None, None, None, None
+Member %= identifier + MemberStructure, lambda h, s: s[2], None, lambda h, s: s[1]
+MemberStructure %= (
+    TypeAnnotation + bind + Stmt,
+    lambda h, s: ast.TypePropertyNode(h[0], s[1], s[3]),
+    None,
+    None,
+    None,
+)
 MemberStructure %= (
     lparen + Params + rparen + TypeAnnotation + FunctionBody,
-    None,
+    lambda h, s: ast.MethodNode(h[0], s[2], s[4], s[5]),
     None,
     None,
     None,

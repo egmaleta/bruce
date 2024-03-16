@@ -193,6 +193,30 @@ class ProtocolNode(ASTNode):
     method_specs: list[MethodSpecNode]
 
 
+@dataclass
+class TypePropertyNode(ASTNode):
+    id: str
+    type: str | None
+    value: ExprNode
+
+
+@dataclass
+class MethodNode(ASTNode):
+    id: str
+    params: list[tuple[str, str | None]]
+    return_type: str | None
+    body: ExprNode
+
+
+@dataclass
+class TypeNode(ASTNode):
+    type: str
+    params: list[tuple[str, str | None]] | None
+    parent_type: str | None
+    parent_args: list[ExprNode] | None
+    members: list[TypePropertyNode | MethodNode]
+
+
 class SemanticChecker(object):
     def __init__(self):
         self.errors = []
