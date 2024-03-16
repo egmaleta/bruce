@@ -223,6 +223,10 @@ class ProgramNode(ASTNode):
     expr: ExprNode
 
 
+def is_asignable(node: ASTNode):
+    return isinstance(node, (IdentifierNode, IndexingNode, MemberAccessingNode))
+
+
 class SemanticChecker(object):
     def __init__(self):
         self.errors = []
@@ -239,4 +243,10 @@ class SemanticChecker(object):
     def visit(self, node: IdentifierNode, scope: Scope):
         if not scope.is_var_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")
+        return self.errors
+
+    @visitor.when(MutationNode)
+    def visit(self, node: MutationNode, scope: Scope):
+        if not is_asignable(node.target):
+            self.errors.append(f"Expression '' does not support destructive assignment")
         return self.errors
