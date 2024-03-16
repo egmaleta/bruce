@@ -460,10 +460,16 @@ Action %= (
 )
 Action %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Program %= Declarations + Expr + OptionalSemicolon, None, None, None, None
+Program %= (
+    Declarations + Expr + OptionalSemicolon,
+    lambda h, s: ast.ProgramNode(s[1], s[2]),
+    None,
+    None,
+    None,
+)
 
-Declarations %= Decl + Declarations, None, None, None
-Declarations %= GRAMMAR.Epsilon, None
+Declarations %= Decl + Declarations, lambda h, s: [s[1], *s[2]], None, None
+Declarations %= GRAMMAR.Epsilon, lambda h, s: []
 
 Decl %= (
     func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,

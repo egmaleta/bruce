@@ -217,6 +217,12 @@ class TypeNode(ASTNode):
     members: list[TypePropertyNode | MethodNode]
 
 
+@dataclass
+class ProgramNode(ASTNode):
+    declarations: list[ASTNode]
+    expr: ExprNode
+
+
 class SemanticChecker(object):
     def __init__(self):
         self.errors = []
