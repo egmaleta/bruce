@@ -66,7 +66,7 @@ class FunctionCallNode(ExprNode):
 @dataclass
 class IndexingNode(ExprNode):
     target: ExprNode
-    index: str
+    index: ExprNode
 
 
 @dataclass

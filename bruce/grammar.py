@@ -443,7 +443,7 @@ Action %= (
     lambda h, s: ast.MemberAccessingNode(h[0], s[2]),
 )
 Action %= (
-    lbracket + number + rbracket + Action,
+    lbracket + Expr + rbracket + Action,
     lambda h, s: s[4],
     None,
     None,
