@@ -48,22 +48,29 @@ class NonTerminal(Symbol):
 
     def __imod__(self, other):
         if isinstance(other, tuple):
-            assert len(other) > 1
+            s: Sentence | Symbol = other[0]
+            attrs = other[1:]
 
-            if len(other) == 2:
-                other += (None,) * len(other[0])
+            # the number of attributes `len(attrs)` must be equal
+            # to the length of the production body plus one (the head) `len(s) + 1`
+            diff = len(s) + 1 - len(attrs)
+            if diff > 0:
+                attrs += (None,) * diff
 
-            assert (
-                len(other) == len(other[0]) + 2
-            ), "Debe definirse una, y solo una, regla por cada símbolo de la producción"
-            # assert len(other) == 2, "Tiene que ser una Tupla de 2 elementos (sentence, attribute)"
+            assert len(attrs) == len(s) + 1, "Too many attributes"
 
-            if isinstance(other[0], Symbol) or isinstance(other[0], Sentence):
-                p = Production(self, other[0], other[1:])
-                self.grammar.add_production(p)
-                return self
+            p = Production(self, s, attrs)
+            self.grammar.add_production(p)
 
-            raise Exception("")
+            return self
+
+        if isinstance(other, (Symbol, Sentence)):
+            attrs = (None,) * (len(other) + 1)
+
+            p = Production(self, other, attrs)
+            self.grammar.add_production(p)
+
+            return self
 
         raise TypeError(other)
 
