@@ -257,31 +257,30 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
 
 class TypeCollector(object):
-    def __init__(self, errors: list[str] = []):
-        self.context = None
-        self.errors = errors
+    def __init__(self):
+        self.errors = []
 
     @visitor.on("node")
-    def visit(self, node):
+    def visit(self, node, context):
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node: ProgramNode):
-        self.context = Context()
+    def visit(self, node: ProgramNode, ctx: Context):
         for child in node.declarations:
-            self.visit(child)
-        return self.context
+            self.visit(child, ctx)
+
+        return self.errors
 
     @visitor.when(TypeNode)
-    def visit(self, node: TypeNode):
+    def visit(self, node: TypeNode, ctx: Context):
         try:
-            self.context.create_type(node.type)
+            ctx.create_type(node.type)
         except SemanticError as se:
             self.errors.append(se.text)
 
-        return self.context
+        return self.errors
 
     @visitor.when(ProtocolNode)
-    def visit(self, node: TypeNode):
+    def visit(self, node: TypeNode, ctx: Context):
         # TODO
-        return self.context
+        return self.errors
