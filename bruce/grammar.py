@@ -340,11 +340,10 @@ Decl %= (
     + OptionalParams
     + Inheritance
     + lbrace
-    + Member
     + MoreMembers
     + rbrace
     + OptionalSemicolon,
-    lambda h, s: ast.TypeNode(s[2], s[3], s[4][0], s[4][1], [s[6], *s[7]]),
+    lambda h, s: ast.TypeNode(s[2], s[3], s[4][0], s[4][1], s[6]),
 )
 
 FunctionBody %= then + Stmt, lambda h, s: s[2]
@@ -380,5 +379,8 @@ MemberStructure %= (
     lparen + Params + rparen + TypeAnnotation + FunctionBody,
     lambda h, s: ast.MethodNode(h[0], s[2], s[4], s[5]),
 )
+
+MoreMembers %= Member + MoreMembers, lambda h, s: [s[1], *s[2]]
+MoreMembers %= GRAMMAR.Epsilon, lambda h, s: []
 
 # endregion
