@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .tools.semantic import ASTNode, Scope
+from .tools.semantic import ASTNode, Scope, Context, SemanticError
 from .tools import visitor
 
 
@@ -252,8 +252,8 @@ class SemanticChecker(object):  # TODO implement all the nodes
         return self.errors
 
 
-class TypeCollector(object):  # TODO implement all the nodes
-    def __init__(self, errors=[]):
+class TypeCollector(object):
+    def __init__(self, errors: list[str] = []):
         self.context = None
         self.errors = errors
 
@@ -262,8 +262,26 @@ class TypeCollector(object):  # TODO implement all the nodes
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node):
+    def visit(self, node: ProgramNode):
         self.context = Context()
         for child in node.declarations:
             self.visit(child)
+        return self.context
+
+    @visitor.when(TypeNode)
+    def visit(self, node: TypeNode):
+        try:
+            self.context.create_type(node.type)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+        return self.context
+
+    @visitor.when(ProtocolNode)
+    def visit(self, node: TypeNode):
+        # TODO
+        return self.context
+
+    @visitor.when(ASTNode)
+    def visit(self, node):
         return self.context
