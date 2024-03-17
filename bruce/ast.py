@@ -247,8 +247,12 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, scope: Scope):
+        self.visit(node.target, scope)
+        self.visit(node.value, scope)
+
         if not is_asignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
+
         return self.errors
 
 
