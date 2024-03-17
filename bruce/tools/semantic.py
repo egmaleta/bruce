@@ -1,6 +1,6 @@
 from abc import ABC
 from collections import OrderedDict
-from itertools import islice
+import itertools as itt
 
 
 class ASTNode(ABC):
@@ -238,7 +238,7 @@ class Scope:
         return info
 
     def find_variable(self, vname, index=None):
-        locals = self.locals if index is None else islice(self.locals, index)
+        locals = self.locals if index is None else itt.islice(self.locals, index)
         try:
             return next(x for x in locals if x.name == vname)
         except StopIteration:

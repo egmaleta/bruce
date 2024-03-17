@@ -227,7 +227,7 @@ def is_asignable(node: ASTNode):
     return isinstance(node, (IdentifierNode, IndexingNode, MemberAccessingNode))
 
 
-class SemanticChecker(object):
+class SemanticChecker(object):  # TODO implement all the nodes
     def __init__(self):
         self.errors = []
 
@@ -250,3 +250,20 @@ class SemanticChecker(object):
         if not is_asignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
         return self.errors
+
+
+class TypeCollector(object):  # TODO implement all the nodes
+    def __init__(self, errors=[]):
+        self.context = None
+        self.errors = errors
+
+    @visitor.on("node")
+    def visit(self, node):
+        pass
+
+    @visitor.when(ProgramNode)
+    def visit(self, node):
+        self.context = Context()
+        for child in node.declarations:
+            self.visit(child)
+        return self.context
