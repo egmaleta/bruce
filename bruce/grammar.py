@@ -76,114 +76,54 @@ Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
 
 # region PRODUCTIONS
 
-TypeAnnotation %= colon + type_identifier, lambda h, s: s[2], None, None
+TypeAnnotation %= colon + type_identifier, lambda h, s: s[2]
 TypeAnnotation %= GRAMMAR.Epsilon, lambda h, s: None
 
-OptionalSemicolon %= semicolon, None, None
-OptionalSemicolon %= GRAMMAR.Epsilon, None
+OptionalSemicolon %= semicolon
+OptionalSemicolon %= GRAMMAR.Epsilon
 
-Args %= Expr + MoreArgs, lambda h, s: [s[1], *s[2]], None, None
+Args %= Expr + MoreArgs, lambda h, s: [s[1], *s[2]]
 Args %= GRAMMAR.Epsilon, lambda h, s: []
-MoreArgs %= comma + Expr + MoreArgs, lambda h, s: [s[2], *s[3]], None, None, None
+MoreArgs %= comma + Expr + MoreArgs, lambda h, s: [s[2], *s[3]]
 MoreArgs %= GRAMMAR.Epsilon, lambda h, s: []
 
-Params %= (
-    identifier + TypeAnnotation + MoreParams,
-    lambda h, s: [(s[1], s[2]), *s[3]],
-    None,
-    None,
-    None,
-)
+Params %= identifier + TypeAnnotation + MoreParams, lambda h, s: [(s[1], s[2]), *s[3]]
 Params %= GRAMMAR.Epsilon, lambda h, s: []
 MoreParams %= (
     comma + identifier + TypeAnnotation + MoreParams,
     lambda h, s: [(s[2], s[3]), *s[4]],
-    None,
-    None,
-    None,
-    None,
 )
 MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
 
 Expr %= (
     let + Binding + MoreBindings + in_k + Expr,
     lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 Expr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBranch,
     lambda h, s: ast.ConditionalNode([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-Expr %= (
-    while_k + lparen + Expr + rparen + Expr,
-    lambda h, s: ast.LoopNode(s[3], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
-)
+Expr %= while_k + lparen + Expr + rparen + Expr, lambda h, s: ast.LoopNode(s[3], s[5])
 Expr %= (
     for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Expr,
     lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-Expr %= BlockExpr, lambda h, s: s[1], None
+Expr %= BlockExpr, lambda h, s: s[1]
 Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Binding %= (
-    identifier + TypeAnnotation + bind + Expr,
-    lambda h, s: (s[1], s[2], s[4]),
-    None,
-    None,
-    None,
-    None,
-)
-MoreBindings %= (
-    comma + Binding + MoreBindings,
-    lambda h, s: [s[2], *s[3]],
-    None,
-    None,
-    None,
-)
+Binding %= identifier + TypeAnnotation + bind + Expr, lambda h, s: (s[1], s[2], s[4])
+MoreBindings %= comma + Binding + MoreBindings, lambda h, s: [s[2], *s[3]]
 MoreBindings %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseBranch,
     lambda h, s: [(s[3], s[5]), *s[6]],
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-ElseBranch %= else_k + Expr, lambda h, s: [s[2]], None, None
+ElseBranch %= else_k + Expr, lambda h, s: [s[2]]
 
 BlockExpr %= (
     lbrace + Stmt + MoreStmts + rbrace,
     lambda h, s: ast.BlockNode([s[2], *s[3]]),
-    None,
-    None,
-    None,
-    None,
 )
 
 # statements are the same as exprs but end up in semicolon
@@ -191,60 +131,27 @@ BlockExpr %= (
 Stmt %= (
     let + Binding + MoreBindings + in_k + Stmt,
     lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 Stmt %= (
     if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
     lambda h, s: ast.ConditionalNode([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-Stmt %= (
-    while_k + lparen + Expr + rparen + Stmt,
-    lambda h, s: ast.LoopNode(s[3], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
-)
+Stmt %= while_k + lparen + Expr + rparen + Stmt, lambda h, s: ast.LoopNode(s[3], s[5])
 Stmt %= (
     for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Stmt,
     lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1], None, None
-Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1], None
+Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1]
+Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1]
 
-MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]], None, None
+MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]]
 MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseStmtBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
     lambda h, s: [(s[3], s[5]), *s[6]],
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-ElseStmtBranch %= else_k + Stmt, lambda h, s: [s[2]], None, None
+ElseStmtBranch %= else_k + Stmt, lambda h, s: [s[2]]
 
 MoreDisjs %= (
     disj + Disj + MoreDisjs,
@@ -266,51 +173,16 @@ MoreConjs %= (
 )
 MoreConjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Conj %= not_t + Conj, lambda h, s: ast.NegOpNode(s[2]), None, None
+Conj %= not_t + Conj, lambda h, s: ast.NegOpNode(s[2])
 Conj %= Concat + Comparison, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Comparison %= (
-    lt + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    gt + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    le + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    ge + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    eq + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    neq + Concat,
-    lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2]),
-    None,
-    None,
-)
-Comparison %= (
-    is_k + type_identifier,
-    lambda h, s: ast.TypeMatchingNode(h[0], s[2]),
-    None,
-    None,
-)
+Comparison %= lt + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= gt + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= le + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= ge + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= eq + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= neq + Concat, lambda h, s: ast.ComparisonOpNode(h[0], s[1], s[2])
+Comparison %= is_k + type_identifier, lambda h, s: ast.TypeMatchingNode(h[0], s[2])
 Comparison %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Concat %= Arith + MoreAriths, lambda h, s: s[2], None, lambda h, s: s[1]
@@ -377,63 +249,43 @@ MoreFactors %= GRAMMAR.Epsilon, lambda h, s: h[0]
 Factor %= (
     Base + Powers,
     lambda h, s: s[1] if s[2] == None else ast.PowerOpNode(s[1], s[2]),
-    None,
-    None,
 )
 
 Powers %= (
     power + Base + Powers,
     lambda h, s: s[2] if s[3] == None else ast.PowerOpNode(s[2], s[3]),
-    None,
-    None,
-    None,
 )
 Powers %= GRAMMAR.Epsilon, lambda h, s: None
 
-Base %= minus + Base, lambda h, s: ast.ArithNegOpNode(s[2]), None, None
+Base %= minus + Base, lambda h, s: ast.ArithNegOpNode(s[2])
 Base %= Molecule + Mutation, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Molecule %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Mutation %= (
-    as_k + type_identifier,
-    lambda h, s: ast.DowncastingNode(h[0], s[2]),
-    None,
-    None,
-)
-Mutation %= mut + Molecule, lambda h, s: ast.MutationNode(h[0], s[2]), None, None
+Mutation %= as_k + type_identifier, lambda h, s: ast.DowncastingNode(h[0], s[2])
+Mutation %= mut + Molecule, lambda h, s: ast.MutationNode(h[0], s[2])
 Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
-Atom %= number, lambda h, s: ast.NumberNode(s[1]), None
-Atom %= string, lambda h, s: ast.StringNode(s[1]), None
-Atom %= true_k, lambda h, s: ast.BooleanNode(s[1]), None
-Atom %= false_k, lambda h, s: ast.BooleanNode(s[1]), None
-Atom %= builtin_identifier, lambda h, s: ast.IdentifierNode(s[1], True), None
-Atom %= identifier, lambda h, s: ast.IdentifierNode(s[1]), None
+Atom %= number, lambda h, s: ast.NumberNode(s[1])
+Atom %= string, lambda h, s: ast.StringNode(s[1])
+Atom %= true_k, lambda h, s: ast.BooleanNode(s[1])
+Atom %= false_k, lambda h, s: ast.BooleanNode(s[1])
+Atom %= builtin_identifier, lambda h, s: ast.IdentifierNode(s[1], True)
+Atom %= identifier, lambda h, s: ast.IdentifierNode(s[1])
 Atom %= (
     new + type_identifier + lparen + Args + rparen,
     lambda h, s: ast.TypeInstancingNode(s[2], s[4]),
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-Atom %= lparen + Expr + rparen, lambda h, s: s[2], None, None, None
-Atom %= lbracket + Vector + rbracket, lambda h, s: s[2], None, None, None
+Atom %= lparen + Expr + rparen, lambda h, s: s[2]
+Atom %= lbracket + Vector + rbracket, lambda h, s: s[2]
 
 Vector %= Expr + VectorStructure, lambda h, s: s[2], None, lambda h, s: s[1]
-Vector %= GRAMMAR.Epsilon, None
+Vector %= GRAMMAR.Epsilon, lambda h, s: ast.VectorNode([])
 VectorStructure %= (
     given + identifier + TypeAnnotation + in_k + Expr,
     lambda h, s: ast.MappedIterableNode(h[0], s[2], s[3], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-VectorStructure %= MoreArgs, lambda h, s: ast.VectorNode([h[0], *s[1]]), None
+VectorStructure %= MoreArgs, lambda h, s: ast.VectorNode([h[0], *s[1]])
 
 Action %= (
     dot + identifier + Action,
@@ -463,24 +315,14 @@ Action %= GRAMMAR.Epsilon, lambda h, s: h[0]
 Program %= (
     Declarations + Expr + OptionalSemicolon,
     lambda h, s: ast.ProgramNode(s[1], s[2]),
-    None,
-    None,
-    None,
 )
 
-Declarations %= Decl + Declarations, lambda h, s: [s[1], *s[2]], None, None
+Declarations %= Decl + Declarations, lambda h, s: [s[1], *s[2]]
 Declarations %= GRAMMAR.Epsilon, lambda h, s: []
 
 Decl %= (
     func + identifier + lparen + Params + rparen + TypeAnnotation + FunctionBody,
     lambda h, s: ast.FunctionNode(s[2], s[4], s[6], s[7]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 Decl %= (
     protocol
@@ -491,13 +333,6 @@ Decl %= (
     + rbrace
     + OptionalSemicolon,
     lambda h, s: ast.ProtocolNode(s[2], s[3], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 Decl %= (
     type_k
@@ -510,82 +345,40 @@ Decl %= (
     + rbrace
     + OptionalSemicolon,
     lambda h, s: ast.TypeNode(s[2], s[3], s[4][0], s[4][1], [s[6], *s[7]]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 
-FunctionBody %= then + Stmt, lambda h, s: s[2], None, None
-FunctionBody %= BlockExpr + OptionalSemicolon, lambda h, s: s[1], None, None
+FunctionBody %= then + Stmt, lambda h, s: s[2]
+FunctionBody %= BlockExpr + OptionalSemicolon, lambda h, s: s[1]
 
-Extension %= (
-    extends + type_identifier + MoreTypeIds,
-    lambda h, s: [s[2], *s[3]],
-    None,
-    None,
-    None,
-)
+Extension %= extends + type_identifier + MoreTypeIds, lambda h, s: [s[2], *s[3]]
 Extension %= GRAMMAR.Epsilon, lambda h, s: []
-MoreTypeIds %= (
-    comma + type_identifier + MoreTypeIds,
-    lambda h, s: [s[2], *s[3]],
-    None,
-    None,
-    None,
-)
+MoreTypeIds %= comma + type_identifier + MoreTypeIds, lambda h, s: [s[2], *s[3]]
 MoreTypeIds %= GRAMMAR.Epsilon, lambda h, s: []
 
 MethodSpec %= (
     identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
     lambda h, s: ast.MethodSpecNode(s[1], s[3], s[6]),
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
 )
-MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, lambda h, s: [s[1], *s[2]], None, None
+MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, lambda h, s: [s[1], *s[2]]
 MoreMethodSpecs %= GRAMMAR.Epsilon, lambda h, s: []
 
-OptionalParams %= lparen + Params + rparen, lambda h, s: s[2], None, None, None
+OptionalParams %= lparen + Params + rparen, lambda h, s: s[2]
 OptionalParams %= GRAMMAR.Epsilon, lambda h, s: None
 
-Inheritance %= (
-    inherits + type_identifier + OptionalArgs,
-    lambda h, s: (s[2], s[3]),
-    None,
-    None,
-    None,
-)
+Inheritance %= inherits + type_identifier + OptionalArgs, lambda h, s: (s[2], s[3])
 Inheritance %= GRAMMAR.Epsilon, lambda h, s: (None, None)
 
-OptionalArgs %= lparen + Args + rparen, lambda h, s: s[2], None, None, None
+OptionalArgs %= lparen + Args + rparen, lambda h, s: s[2]
 OptionalArgs %= GRAMMAR.Epsilon, lambda h, s: None
 
 Member %= identifier + MemberStructure, lambda h, s: s[2], None, lambda h, s: s[1]
 MemberStructure %= (
     TypeAnnotation + bind + Stmt,
     lambda h, s: ast.TypePropertyNode(h[0], s[1], s[3]),
-    None,
-    None,
-    None,
 )
 MemberStructure %= (
     lparen + Params + rparen + TypeAnnotation + FunctionBody,
     lambda h, s: ast.MethodNode(h[0], s[2], s[4], s[5]),
-    None,
-    None,
-    None,
-    None,
-    None,
 )
 
 # endregion
