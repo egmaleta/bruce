@@ -223,8 +223,9 @@ class ProgramNode(ASTNode):
     expr: ExprNode
 
 
-def is_asignable(node: ASTNode):
-    return isinstance(node, (IdentifierNode, IndexingNode, MemberAccessingNode))
+def is_assignable(node: ASTNode):
+    is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
+    return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
 
 
 class SemanticChecker(object):  # TODO implement all the nodes
@@ -250,7 +251,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.target, scope)
         self.visit(node.value, scope)
 
-        if not is_asignable(node.target):
+        if not is_assignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
 
         return self.errors
