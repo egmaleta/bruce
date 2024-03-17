@@ -285,7 +285,3 @@ class TypeCollector(object):
     def visit(self, node: TypeNode):
         # TODO
         return self.context
-
-    @visitor.when(ASTNode)
-    def visit(self, node):
-        return self.context
