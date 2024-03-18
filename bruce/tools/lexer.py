@@ -1,6 +1,7 @@
 from .token import Token
 from .regex.automata import State
 from .regex import Regex
+from .grammar import Terminal
 
 
 class Lexer:
@@ -64,3 +65,7 @@ class Lexer:
 def create_lexer(table, eof):
     l = Lexer(table, eof)
     return lambda text: l(text)
+
+
+def keyword_row(tm: Terminal):
+    return tm, tm.name

@@ -1,4 +1,5 @@
-from .tools.lexer import create_lexer
+from .tools.lexer import create_lexer, keyword_row
+from . import grammar as g
 
 
 # region Tokenizer
@@ -8,6 +9,62 @@ letters = "|".join(chr(n) for n in range(ord("a"), ord("z") + 1))
 capital_letters = "|".join(chr(n) for n in range(ord("A"), ord("Z") + 1))
 
 lexer = create_lexer(
+    # [
+    #     keyword_row(g.let),
+    #     keyword_row(g.in_k),
+    #     keyword_row(g.if_k),
+    #     keyword_row(g.else_k),
+    #     keyword_row(g.elif_k),
+    #     keyword_row(g.for_k),
+    #     keyword_row(g.func),
+    #     keyword_row(g.type_k),
+    #     keyword_row(g.new),
+    #     keyword_row(g.inherits),
+    #     keyword_row(g.is_k),
+    #     keyword_row(g.as_k),
+    #     keyword_row(g.protocol),
+    #     keyword_row(g.extends),
+    #     keyword_row(g.true_k),
+    #     keyword_row(g.false_k),
+    #     keyword_row(g.plus),
+    #     keyword_row(g.minus),
+    #     keyword_row(g.times),
+    #     keyword_row(g.div),
+    #     keyword_row(g.mod),
+    #     keyword_row(g.lt),
+    #     keyword_row(g.gt),
+    #     keyword_row(g.le),
+    #     keyword_row(g.ge),
+    #     keyword_row(g.eq),
+    #     keyword_row(g.neq),
+    #     keyword_row(g.concat),
+    #     keyword_row(g.concat_space),
+    #     keyword_row(g.conj),
+    #     keyword_row(g.disj),
+    #     keyword_row(g.not_t),
+    #     keyword_row(g.lparen),
+    #     keyword_row(g.rparen),
+    #     keyword_row(g.lbrace),
+    #     keyword_row(g.rbrace),
+    #     keyword_row(g.lbracket),
+    #     keyword_row(g.rbracket),
+    #     keyword_row(g.colon),
+    #     keyword_row(g.semicolon),
+    #     keyword_row(g.dot),
+    #     keyword_row(g.comma),
+    #     keyword_row(g.then),
+    #     keyword_row(g.given),
+    #     keyword_row(g.bind),
+    #     keyword_row(g.mut),
+    #     (g.power, r"\^|\*\*"),
+    #     (g.builtin_identifier, r"PI|E|print|base|self|sin|cos|sqrt|log|exp|rand")
+    #     (g.type_identifier, f"({capital_letters})(_|{letters}|{capital_letters})*"),
+    #     (
+    #         g.identifier,
+    #         f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*",
+    #     ),
+    #     (g.number, f"({nonzero_digits})(0|{nonzero_digits})*|0"),
+    # ]
     [
         ("for", "for"),
         ("foreach", "foreach"),
