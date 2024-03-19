@@ -47,7 +47,7 @@ class BinaryNode(Node):
         raise NotImplementedError()
 
 
-class EpsilonNode(AtomicNode):
+class EpsilonNode(Node):
     def evaluate(self):
         return NFA(1, [0], {})
 

@@ -1,60 +1,85 @@
-from ..grammar import Grammar
+from ..grammar import Grammar, Terminal
 from ..parser import evaluate_parse, create_parser
 from ..token import Token
-from .ast import UnionNode, ConcatNode, ClosureNode, SymbolNode, EpsilonNode
 from .automata import nfa_to_dfa
-
-G = Grammar()
-
-E = G.add_non_terminal("E", True)
-T, F, A, X, Y, Z = G.add_non_terminals("T F A X Y Z")
-pipe, star, opar, cpar, symbol, epsilon = G.add_terminals("| * ( ) symbol ε")
-
-############################ BEGIN PRODUCTIONS ############################
-# ======================================================================= #
-#                                                                         #
-# ========================== { E --> T X } ============================== #
-#                                                                         #
-E %= T + X, lambda h, s: s[2], None, lambda h, s: s[1]
-#                                                                         #
-# =================== { X --> '|' T X | epsilon } ======================= #
-#                                                                         #
-X %= pipe + T + X, lambda h, s: s[3], None, None, lambda h, s: UnionNode(h[0], s[2])
-X %= G.Epsilon, lambda h, s: h[0]
-#                                                                         #
-# ============================ { T --> F Y } ============================ #
-#                                                                         #
-T %= F + Y, lambda h, s: s[2], None, lambda h, s: s[1]
-#                                                                         #
-# ==================== { Y --> F Y | epsilon } ========================== #
-#                                                                         #
-Y %= F + Y, lambda h, s: s[2], None, lambda h, s: ConcatNode(h[0], s[1])
-Y %= G.Epsilon, lambda h, s: h[0]
-#                                                                         #
-# ======================= { F --> A Z } ================================= #
-#                                                                         #
-F %= A + Z, lambda h, s: s[2], None, lambda h, s: s[1]
-#                                                                         #
-# ==================== { Z --> * Z | epsilon } ========================== #
-#                                                                         #
-Z %= star + Z, lambda h, s: s[2], None, lambda h, s: ClosureNode(h[0])
-Z %= G.Epsilon, lambda h, s: h[0]
-#                                                                         #
-# ==================== { A --> symbol | 'Epsilon' | ( E ) } ============= #
-#                                                                         #
-# ==================== { A --> symbol | 'Epsilon' | ( E ) } ============= #
-#                                                                         #
-A %= symbol, lambda h, s: SymbolNode(s[1]), symbol
-A %= epsilon, lambda h, s: EpsilonNode(s[1]), epsilon
-A %= opar + E + cpar, lambda h, s: s[2], None, None, None
-#                                                                         #
-# ======================================================================= #
-############################# END PRODUCTIONS #############################
+from . import ast
 
 
-def regex_tokenizer(text, G, skip_whitespaces=True):
-    tokens = []
-    fixed_tokens = "| * ( ) ε".split()
+GRAMMAR = Grammar()
+
+# region TERMINALS
+
+pipe = GRAMMAR.add_terminal("|")
+star, question = GRAMMAR.add_terminals("* ?")
+lparen, rparen = GRAMMAR.add_terminals("( )")
+symbol = GRAMMAR.add_terminal("s")
+
+# endregion
+
+# region NON TERMINALS
+
+Rgx = GRAMMAR.add_non_terminal("regex", True)
+Concats, MoreConcats, MoreUnions = GRAMMAR.add_non_terminals(
+    "concats more_concats more_unions"
+)
+Atom, Quantifier = GRAMMAR.add_non_terminals("atom qtfier")
+
+# endregion
+
+# region PRODUCTIONS
+
+Rgx %= Concats + MoreUnions, lambda h, s: s[2], None, lambda h, s: s[1]
+MoreUnions %= (
+    pipe + Concats + MoreUnions,
+    lambda h, s: s[3],
+    None,
+    None,
+    lambda h, s: ast.UnionNode(h[0], s[2]),
+)
+MoreUnions %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Concats %= Atom + MoreConcats, lambda h, s: s[2], None, lambda h, s: s[1]
+MoreConcats %= (
+    Atom + MoreConcats,
+    lambda h, s: s[2],
+    None,
+    lambda h, s: ast.ConcatNode(h[0], s[1]),
+)
+MoreConcats %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Atom %= (
+    lparen + Rgx + rparen + Quantifier,
+    lambda h, s: s[4],
+    None,
+    None,
+    None,
+    lambda h, s: s[2],
+)
+Atom %= symbol + Quantifier, lambda h, s: s[2], None, lambda h, s: ast.SymbolNode(s[1])
+
+Quantifier %= (
+    star + Quantifier,
+    lambda h, s: s[2],
+    None,
+    lambda h, s: ast.ClosureNode(h[0]),
+)
+Quantifier %= (
+    question + Quantifier,
+    lambda h, s: s[2],
+    None,
+    lambda h, s: ast.UnionNode(h[0], ast.EpsilonNode()),
+)
+Quantifier %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+
+# endregion
+
+
+def regex_tokenizer(
+    text: str, G: Grammar, char_terminal: Terminal, skip_whitespaces=True
+):
+    tokens: list[Token] = []
+    fixed_tokens = [t.name for t in G.terminals if t != char_terminal]
 
     double_bslash = False
 
@@ -66,20 +91,20 @@ def regex_tokenizer(text, G, skip_whitespaces=True):
         elif not double_bslash and char in fixed_tokens:
             tokens.append(Token(char, G.symbol_dict[char]))
         else:
-            tokens.append(Token(char, G.symbol_dict["symbol"]))
+            tokens.append(Token(char, char_terminal))
             if double_bslash:
                 double_bslash = False
 
-    tokens.append(Token("$", G.EOF))
+    tokens.append(Token(G.EOF.name, G.EOF))
     return tokens
 
 
 class Regex:
     def __init__(self, text):
-        tokens = regex_tokenizer(text, G, False)
-        parser = create_parser(G)
-        left_parser = parser([token.token_type for token in tokens])
-        ast = evaluate_parse(left_parser, tokens)
+        tokens = regex_tokenizer(text, GRAMMAR, symbol, False)
+        parser = create_parser(GRAMMAR)
+        left_parse = parser([token.token_type for token in tokens])
+        ast = evaluate_parse(left_parse, tokens)
         nfa = ast.evaluate()
         self.automaton = nfa_to_dfa(nfa)
 
