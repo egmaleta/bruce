@@ -118,8 +118,8 @@ lexer = create_lexer(
             f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*",
         ),
         (g.number, f"({nonzero_digits})(0|{nonzero_digits})*|0"),
-        ("space", "  *"),
-        ("newline", "\n"),
+        (None, "  *"),
+        (None, "\n"),
     ],
     g.GRAMMAR.EOF,
 )

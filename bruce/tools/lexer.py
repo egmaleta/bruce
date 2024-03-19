@@ -59,7 +59,9 @@ class Lexer:
         yield self.eof.name, self.eof
 
     def __call__(self, text):
-        return [Token(lex, ttype) for lex, ttype in self._tokenize(text)]
+        return [
+            Token(lex, ttype) for lex, ttype in self._tokenize(text) if ttype != None
+        ]
 
 
 def create_lexer(table, eof):
