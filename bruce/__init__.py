@@ -114,7 +114,7 @@ lexer = create_lexer(
         (g.mut, r":="),
         (g.type_identifier, f"({capital_letters})(_|{letters}|{capital_letters})*"),
         (
-            keyword_row(g.identifier),
+            g.identifier,
             f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*",
         ),
         (g.number, f"({nonzero_digits})(0|{nonzero_digits})*|0"),
