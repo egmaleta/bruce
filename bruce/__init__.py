@@ -118,7 +118,7 @@ lexer = create_lexer(
             keyword_row(g.identifier),
             f"({letters}|{capital_letters})(_|{letters}|{capital_letters}|0|{nonzero_digits})*",
         ),
-        (keyword_row(g.number), f"({nonzero_digits})(0|{nonzero_digits})*|0"),
+        (g.number, f"({nonzero_digits})(0|{nonzero_digits})*|0"),
         ("space", "  *"),
         ("newline", "\n"),
     ],
