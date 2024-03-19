@@ -270,8 +270,6 @@ class TypeCollector(object):
         for child in node.declarations:
             self.visit(child, ctx)
 
-        return self.errors
-
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context):
         try:
@@ -279,9 +277,9 @@ class TypeCollector(object):
         except SemanticError as se:
             self.errors.append(se.text)
 
-        return self.errors
-
     @visitor.when(ProtocolNode)
     def visit(self, node: TypeNode, ctx: Context):
-        # TODO
-        return self.errors
+        try:
+            ctx.create_type(node.type)
+        except SemanticError as se:
+            self.errors.append(se.text)
