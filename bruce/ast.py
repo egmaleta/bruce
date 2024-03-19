@@ -269,6 +269,7 @@ class TypeCollector(object):
     def visit(self, node: ProgramNode, ctx: Context):
         for child in node.declarations:
             self.visit(child, ctx)
+        return self.errors
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context):
