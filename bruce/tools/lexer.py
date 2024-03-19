@@ -56,7 +56,7 @@ class Lexer:
             index += len(lex)
             yield lex, final
 
-        yield "$", self.eof
+        yield self.eof.name, self.eof
 
     def __call__(self, text):
         return [Token(lex, ttype) for lex, ttype in self._tokenize(text)]

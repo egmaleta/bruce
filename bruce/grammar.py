@@ -163,7 +163,7 @@ Expr %= (
 Expr %= BlockExpr, lambda h, s: s[1]
 Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
 
-OptionalSemicolon %= semicolon, lambda h, s: None, None
+OptionalSemicolon %= semicolon, lambda h, s: None
 OptionalSemicolon %= GRAMMAR.Epsilon, lambda h, s: None
 
 Binding %= identifier + TypeAnnotation + bind + Expr, lambda h, s: (s[1], s[2], s[4])

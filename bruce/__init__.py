@@ -1,6 +1,5 @@
 from .tools.lexer import create_lexer, keyword_row
 from . import grammar as g
-from .grammar import GRAMMAR
 
 
 # region Tokenizer
@@ -122,7 +121,7 @@ lexer = create_lexer(
         ("space", "  *"),
         ("newline", "\n"),
     ],
-    GRAMMAR.EOF,
+    g.GRAMMAR.EOF,
 )
 
 # endregion
