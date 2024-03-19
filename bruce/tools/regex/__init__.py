@@ -12,7 +12,7 @@ GRAMMAR = Grammar()
 pipe = GRAMMAR.add_terminal("|")
 star, question = GRAMMAR.add_terminals("* ?")
 lparen, rparen = GRAMMAR.add_terminals("( )")
-symbol = GRAMMAR.add_terminal("s")
+symbol, range_t = GRAMMAR.add_terminals("s -")
 
 # endregion
 
@@ -22,7 +22,7 @@ Rgx = GRAMMAR.add_non_terminal("regex", True)
 Concats, MoreConcats, MoreUnions = GRAMMAR.add_non_terminals(
     "concats more_concats more_unions"
 )
-Atom, Quantifier = GRAMMAR.add_non_terminals("atom qtfier")
+Atom, Range, Quantifier = GRAMMAR.add_non_terminals("atom range qtfier")
 
 # endregion
 
@@ -55,7 +55,16 @@ Atom %= (
     None,
     lambda h, s: s[2],
 )
-Atom %= symbol + Quantifier, lambda h, s: s[2], None, lambda h, s: ast.SymbolNode(s[1])
+Atom %= (
+    symbol + Range + Quantifier,
+    lambda h, s: s[3],
+    None,
+    lambda h, s: s[1],
+    lambda h, s: s[2],
+)
+
+Range %= range_t + symbol, lambda h, s: ast.RangeNode(h[0], s[2])
+Range %= GRAMMAR.Epsilon, lambda h, s: ast.SymbolNode(h[0])
 
 Quantifier %= (
     star + Quantifier,
