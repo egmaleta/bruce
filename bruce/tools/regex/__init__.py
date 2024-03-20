@@ -84,25 +84,23 @@ Quantifier %= GRAMMAR.Epsilon, lambda h, s: h[0]
 # endregion
 
 
-def regex_tokenizer(
-    text: str, G: Grammar, char_terminal: Terminal, skip_whitespaces=True
-):
+def regex_tokenizer(text: str, G: Grammar, char_terminal: Terminal):
     tokens: list[Token] = []
-    fixed_tokens = [t.name for t in G.terminals if t != char_terminal]
+    fixed_chars = [t.name for t in G.terminals if t != char_terminal]
 
-    double_bslash = False
-
+    scaping = False
     for char in text:
-        if skip_whitespaces and char.isspace():
-            continue
-        elif char == "\\":
-            double_bslash = True
-        elif not double_bslash and char in fixed_tokens:
-            tokens.append(Token(char, G.symbol_dict[char]))
-        else:
+        if scaping:
             tokens.append(Token(char, char_terminal))
-            if double_bslash:
-                double_bslash = False
+            scaping = False
+        elif char == "\\":
+            scaping = True
+        else:
+            tokens.append(
+                Token(
+                    char, G.symbol_dict[char] if char in fixed_chars else char_terminal
+                )
+            )
 
     tokens.append(Token(G.EOF.name, G.EOF))
     return tokens
@@ -110,7 +108,7 @@ def regex_tokenizer(
 
 class Regex:
     def __init__(self, text):
-        tokens = regex_tokenizer(text, GRAMMAR, symbol, False)
+        tokens = regex_tokenizer(text, GRAMMAR, symbol)
         parser = create_parser(GRAMMAR)
         left_parse = parser([token.token_type for token in tokens])
         ast = evaluate_parse(left_parse, tokens)
