@@ -77,38 +77,25 @@ class ConcatNode(BinaryNode):
 
 
 class RangeNode(Node):
-    LETTERS = "abcdefghijklmnñopqrstuvwxyz"
-    CAPITAL_LETTERS = LETTERS.upper()
-    DIGITS = "0123456789"
-
-    @staticmethod
-    def _range_from(target: str, lower: str, upper: str):
-        try:
-            li = target.index(lower)
-            ui = target.index(upper)
-        except:
-            return None
-        else:
-            if ui < li:
-                return None
-
-            return target[li : ui + 1]
+    # first char: \x00
+    # last char: \x7f
+    # '"' is between '!' and '#'
+    ASCII = "".join([chr(i) for i in range(128)])
 
     def __init__(self, lower, upper):
         self.lower: str = lower
         self.upper: str = upper
 
     def evaluate(self):
-        r = lambda target: self._range_from(target, self.lower, self.upper)
         chars: str | None = None
 
-        if self.lower.isdigit() and self.upper.isdigit():
-            chars = r(self.DIGITS)
-        elif self.lower.isalpha() and self.upper.isalpha():
-            if self.lower.isupper() and self.upper.isupper():
-                chars = r(self.CAPITAL_LETTERS)
-            else:
-                chars = r(self.LETTERS)
+        try:
+            li = self.ASCII.index(self.lower)
+            ui = self.ASCII.index(self.upper)
+            if ui >= li:
+                chars = self.ASCII[li : ui + 1]
+        except:
+            pass
 
         if chars == None:
             raise Exception(f"Invalid range: {(self.lower, self.upper)}")
