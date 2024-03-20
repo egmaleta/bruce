@@ -53,7 +53,7 @@ lexer = create_lexer(
         keyword_row(g.mut),
         (g.builtin_identifier, r"E|PI|self|base|print|range|sqrt|exp|log|rand|sin|cos"),
         (g.type_identifier, r"A-Z(a-z|A-Z|0-9|_)*"),
-        (g.identifier, r"a-z(a-z|A-Z|0-9|_)*"),
+        (g.identifier, r"(a-z|_)(a-z|A-Z|0-9|_)*"),
         (g.number, r"(0|1-90-9*)(.0-90-9*)?"),
         (None, r" *"),
         (None, "\n*"),
