@@ -7,10 +7,12 @@ from .tools import visitor
 class ExprNode(ASTNode):
     pass
 
+
 @dataclass
 class ProgramNode(ASTNode):
     declarations: list[ASTNode]
     expr: ExprNode
+
 
 @dataclass
 class LiteralNode(ExprNode):
@@ -219,8 +221,6 @@ class TypeNode(ASTNode):
     parent_type: str | None
     parent_args: list[ExprNode] | None
     members: list[TypePropertyNode | MethodNode]
-
-
 
 
 def is_assignable(node: ASTNode):

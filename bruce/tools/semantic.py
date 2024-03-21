@@ -232,8 +232,9 @@ class VariableInfo:
         self.name = name
         self.type = vtype
 
+
 class FunctionInfo:
-    def __init__(self, name, params,ftype,body):
+    def __init__(self, name, params, ftype, body):
         self.name = name
         self.params = params
         self.type = ftype
@@ -260,12 +261,11 @@ class Scope:
         info = VariableInfo(vname, vtype)
         self.local_vars.append(info)
         return info
-    
+
     def define_function(self, fname, params, type, body):
         info = FunctionInfo(fname, params)
         self.local_funcs.append(info)
         return info
-        
 
     def find_variable(self, vname, index=None):
         locals = self.local_vars if index is None else itt.islice(self.locals, index)
@@ -277,14 +277,16 @@ class Scope:
                 if self.parent != None
                 else None
             )
-        
-    def find_function(self,fname,params,body, index = None):
-        local_funcs = self.local_funcs if index is None else itt.islice(self.locals,index)
+
+    def find_function(self, fname, params, body, index=None):
+        local_funcs = (
+            self.local_funcs if index is None else itt.islice(self.locals, index)
+        )
         try:
-            return next(x for x in local_funcs if x.name)    
+            return next(x for x in local_funcs if x.name)
         except StopIteration:
-            return(
-                self.parent.find_function(fname,params,body, self.index)
+            return (
+                self.parent.find_function(fname, params, body, self.index)
                 if self.parent != None
                 else None
             )
