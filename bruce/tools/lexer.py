@@ -1,7 +1,7 @@
 from .token import Token
 from .regex.automata import State
 from .regex import Regex
-from .grammar import Terminal
+from .grammar import Terminal, EOF
 
 
 class Lexer:
@@ -64,7 +64,7 @@ class Lexer:
         ]
 
 
-def create_lexer(table, eof):
+def create_lexer(table: list[tuple[Terminal, str]], eof: EOF):
     l = Lexer(table, eof)
     return lambda text: l(text)
 
