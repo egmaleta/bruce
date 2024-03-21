@@ -146,24 +146,22 @@ class Type:
 
     def __repr__(self):
         return str(self)
-    
+
 
 class Protocol:
-    def __init__(self, name:str) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.parents:list[Protocol] = []
+        self.parents: list[Protocol] = []
         self.methods: list[Method] = []
 
     def __eq__(self, __value: object) -> bool:
         return self.name == __value.name
 
-
     def extends(self, other) -> bool:
         if other in self.parents:
             return True
-        
+
         return any(parent.extends(other) for parent in self.parents)
-        
 
 
 class Context:
