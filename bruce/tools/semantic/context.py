@@ -4,7 +4,7 @@ from . import SemanticError
 
 
 class Attribute:
-    def __init__(self, name, typex):
+    def __init__(self, name: str, typex: "Type"):
         self.name = name
         self.type = typex
 
@@ -16,7 +16,13 @@ class Attribute:
 
 
 class Method:
-    def __init__(self, name, param_names, params_types, return_type):
+    def __init__(
+        self,
+        name: str,
+        param_names: list[str],
+        params_types: list["Type" | None],
+        return_type: "Type" | None,
+    ):
         self.name = name
         self.param_names = param_names
         self.param_types = params_types
@@ -39,11 +45,11 @@ class Method:
 class Type:
     def __init__(self, name: str):
         self.name = name
-        self.attributes = []
-        self.methods = []
-        self.parent = None
+        self.attributes: list[Attribute] = []
+        self.methods: list[Method] = []
+        self.parent: Type | None = None
 
-    def set_parent(self, parent):
+    def set_parent(self, parent: "Type"):
         if self.parent is not None:
             raise SemanticError(f"Parent type is already set for {self.name}.")
         self.parent = parent
@@ -63,7 +69,7 @@ class Type:
                     f'Attribute "{name}" is not defined in {self.name}.'
                 )
 
-    def define_attribute(self, name: str, typex):
+    def define_attribute(self, name: str, typex: "Type"):
         try:
             self.get_attribute(name)
         except SemanticError:
@@ -87,7 +93,11 @@ class Type:
                 raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
     def define_method(
-        self, name: str, param_names: list, param_types: list, return_type
+        self,
+        name: str,
+        param_names: list[str],
+        param_types: list["Type"],
+        return_type: "Type" | None,
     ):
         if name in (method.name for method in self.methods):
             raise SemanticError(f'Method "{name}" already defined in {self.name}')
@@ -110,7 +120,7 @@ class Type:
             plain[method.name] = (method, self)
         return plain.values() if clean else plain
 
-    def conforms_to(self, other):
+    def conforms_to(self, other: "Type"):
         return (
             other.bypass()
             or self == other
@@ -154,58 +164,6 @@ class Protocol:
         
         return any(parent.extends(other) for parent in self.parents)
         
-
-
-class ErrorType(Type):
-    def __init__(self):
-        Type.__init__(self, "<error>")
-
-    def conforms_to(self, other):
-        return True
-
-    def bypass(self):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, Type)
-
-
-class VoidType(Type):
-    def __init__(self):
-        Type.__init__(self, "<void>")
-
-    def conforms_to(self, other):
-        raise Exception("Invalid type: void type.")
-
-    def bypass(self):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, VoidType)
-
-
-class NumberType(Type):
-    def __init__(self):
-        Type.__init__(self, "number")
-
-    def __eq__(self, other):
-        return other.name == self.name or isinstance(other, NumberType)
-
-
-class BooleanType(Type):
-    def __init__(self):
-        Type().__init__(self, "boolean")
-
-    def __eq__(self, other) -> bool:
-        return other.name == self.name or isinstance(other, BooleanType)
-
-
-class StringType(Type):
-    def __init__(self):
-        Type().__init__(self, "string")
-
-    def __eq__(self, other: object) -> bool:
-        return other.name == self.name or isinstance(other, StringType)
 
 
 class Context:
