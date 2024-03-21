@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from .tools.semantic import ASTNode, Scope, Context, SemanticError
+from .tools.semantic import ASTNode, SemanticError
+from .tools.semantic.context import Context
+from .tools.semantic.scope import Scope
 from .tools import visitor
 
 
