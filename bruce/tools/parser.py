@@ -1,6 +1,7 @@
 from itertools import islice
 
 from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production, EOF
+from .token import Token
 
 
 class ContainerSet:
@@ -190,7 +191,7 @@ def create_parser(
             follows = compute_follows(G, firsts)
         M = build_parsing_table(G, firsts, follows)
 
-    def parser(token_types: list[Terminal]):
+    def parser(token_types: list[Terminal]) -> list[Production]:
         cursor = 0
         p = M[G.start_symbol, token_types[cursor]][0]
         output = [p]
@@ -222,7 +223,7 @@ def create_parser(
     return parser
 
 
-def evaluate_parse(left_parse, tokens):
+def evaluate_parse(left_parse: list[Production], tokens: list[Token]):
     if not left_parse or not tokens:
         return
 
@@ -234,7 +235,12 @@ def evaluate_parse(left_parse, tokens):
     return result
 
 
-def evaluate(production, left_parse, tokens, inherited_value=None):
+def evaluate(
+    production: Production,
+    left_parse: list[Production],
+    tokens: list[Token],
+    inherited_value=None,
+):
     head, body = production
     attributes = production.attributes
 
