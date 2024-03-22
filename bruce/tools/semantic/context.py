@@ -20,8 +20,8 @@ class Method:
         self,
         name: str,
         param_names: list[str],
-        params_types: list["Type" | None],
-        return_type: "Type" | None,
+        params_types: list["Type"],
+        return_type: "Type",
     ):
         self.name = name
         self.param_names = param_names
@@ -97,7 +97,7 @@ class Type:
         name: str,
         param_names: list[str],
         param_types: list["Type"],
-        return_type: "Type" | None,
+        return_type: "Type",
     ):
         if name in (method.name for method in self.methods):
             raise SemanticError(f'Method "{name}" already defined in {self.name}')
