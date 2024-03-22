@@ -307,12 +307,12 @@ class TypeBuilder(object):
                 self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
-        
+
         if node.params:
-           try:
-               self.current_type.set_params(node.params)
-           except SemanticError as se:
-               self.errors.append(se.text)
+            try:
+                self.current_type.set_params(node.params)
+            except SemanticError as se:
+                self.errors.append(se.text)
 
         for member in node.members:
             self.visit(member)
@@ -352,3 +352,47 @@ class TypeBuilder(object):
                 node.id, params_name, params_type, node.return_type)
         except SemanticError as se:
             self.errors.append(se.text)
+
+
+class TypeChecker:
+    def __init__(self, context, errors=[]):
+        self.context = context
+        self.current_type = None
+        self.current_method = None
+        self.errors = errors
+
+    @visitor.on('node')
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(ProgramNode)
+    def visit(self, node, scope=None):
+        scope = Scope()
+        for declaration in node.declarations:
+            self.visit(declaration, scope.create_child())
+        return scope
+
+    @visitor.when(TypeNode)
+    def visit(self, node: TypeNode, scope: Scope):
+        self.current_type = self.context.get_type(node.type)
+        for member in node.members:
+            self.visit(member, scope.create_child())
+
+    @visitor.when(FunctionNode)
+    def visit(self, node: FunctionNode, scope: Scope):
+        self.current_method = self.current_type.get_method(node.id)
+        for param in node.params:
+            self.visit(param, scope)
+        self.visit(node.body, scope.create_child())
+
+    @visitor.when(TypePropertyNode)
+    def visit(self, node: TypePropertyNode, scope: Scope):
+        self.visit(node.value, scope)
+
+    @visitor.when(LetExprNode)
+    def visit(self, node: LetExprNode, scope: Scope):
+        if scope.is_var_defined(node.id):
+            self.errors.append(f"Variable {node.id} already defined")
+        self.visit(node.value, scope)
+        scope.define_var(node.id, node.type)
+        self.visit(node.body, scope.create_child())
