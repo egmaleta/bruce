@@ -175,8 +175,7 @@ def desugar_let_expr(bindings: list[tuple[str, str | None, ExprNode]], body: Exp
     id, type, value = head
 
     return LetExprNode(
-        id, type, value, body if len(
-            tail) == 0 else desugar_let_expr(tail, body)
+        id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
     )
 
 
@@ -219,8 +218,7 @@ class TypeNode(ASTNode):
 
 
 def is_assignable(node: ASTNode):
-    is_assignable_id = isinstance(
-        node, IdentifierNode) and (not node.is_builtin)
+    is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
     return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
 
 
@@ -248,8 +246,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.value, scope)
 
         if not is_assignable(node.target):
-            self.errors.append(
-                f"Expression '' does not support destructive assignment")
+            self.errors.append(f"Expression '' does not support destructive assignment")
 
         return self.errors
 
@@ -307,12 +304,12 @@ class TypeBuilder(object):
                 self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
-        
+
         if node.params:
-           try:
-               self.current_type.set_params(node.params)
-           except SemanticError as se:
-               self.errors.append(se.text)
+            try:
+                self.current_type.set_params(node.params)
+            except SemanticError as se:
+                self.errors.append(se.text)
 
         for member in node.members:
             self.visit(member)
@@ -330,7 +327,8 @@ class TypeBuilder(object):
             params_name = [param[0] for param in node.params]
             params_type = [param[1] for param in node.params]
             self.current_type.define_method(
-                node.id, params_name, params_type, node.return_type)
+                node.id, params_name, params_type, node.return_type
+            )
         except SemanticError as se:
             self.errors.append(se.text)
 
@@ -349,6 +347,7 @@ class TypeBuilder(object):
             params_name = [param[0] for param in node.params]
             params_type = [param[1] for param in node.params]
             self.current_type.define_method(
-                node.id, params_name, params_type, node.return_type)
+                node.id, params_name, params_type, node.return_type
+            )
         except SemanticError as se:
             self.errors.append(se.text)

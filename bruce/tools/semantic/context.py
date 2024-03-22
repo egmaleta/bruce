@@ -54,12 +54,12 @@ class Type:
         if self.parent is not None:
             raise SemanticError(f"Parent type is already set for {self.name}.")
         self.parent = parent
-        
-    def set_params(self, params: list[Attribute]): #FIXME Fix this
+
+    def set_params(self, params: list[Attribute]):  # FIXME Fix this
         if self.params is not None:
             raise SemanticError(f"Params type are already set for {self.name}.")
         self.params = params
-        
+
     def get_attribute(self, name: str):
         try:
             return next(attr for attr in self.attributes if attr.name == name)
@@ -186,13 +186,15 @@ class Context:
             return self.types[name]
         except KeyError:
             raise SemanticError(f'Type "{name}" is not defined.')
-        
+
     def create_protocol(self, name: str):
         if name in self.protocols:
-            raise SemanticError(f"Protocol with the same name ({name}) already in context.")
+            raise SemanticError(
+                f"Protocol with the same name ({name}) already in context."
+            )
         protocol = self.protocols[name] = Protocol(name)
         return protocol
-    
+
     def get_protocol(self, name: str):
         try:
             return self.protocols[name]
@@ -203,7 +205,9 @@ class Context:
         return (
             "{\n\t"
             + "\n\t".join(y for x in self.types.values() for y in str(x).split("\n"))
-            + "\n\t".join(y for x in self.protocols.values() for y in str(x).split("\n"))
+            + "\n\t".join(
+                y for x in self.protocols.values() for y in str(x).split("\n")
+            )
             + "\n}"
         )
 
