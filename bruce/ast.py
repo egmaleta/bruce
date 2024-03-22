@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from .tools.semantic import ASTNode, SemanticError
-from .tools.semantic.context import Context
+from .tools.semantic.context import Context, Type
 from .tools.semantic.scope import Scope
 from .tools import visitor
 
@@ -175,7 +175,8 @@ def desugar_let_expr(bindings: list[tuple[str, str | None, ExprNode]], body: Exp
     id, type, value = head
 
     return LetExprNode(
-        id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
+        id, type, value, body if len(
+            tail) == 0 else desugar_let_expr(tail, body)
     )
 
 
@@ -209,24 +210,17 @@ class TypePropertyNode(ASTNode):
 
 
 @dataclass
-class MethodNode(ASTNode):
-    id: str
-    params: list[tuple[str, str | None]]
-    return_type: str | None
-    body: ExprNode
-
-
-@dataclass
 class TypeNode(ASTNode):
     type: str
     params: list[tuple[str, str | None]] | None
     parent_type: str | None
     parent_args: list[ExprNode] | None
-    members: list[TypePropertyNode | MethodNode]
+    members: list[TypePropertyNode | FunctionNode]
 
 
 def is_assignable(node: ASTNode):
-    is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
+    is_assignable_id = isinstance(
+        node, IdentifierNode) and (not node.is_builtin)
     return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
 
 
@@ -254,7 +248,8 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.value, scope)
 
         if not is_assignable(node.target):
-            self.errors.append(f"Expression '' does not support destructive assignment")
+            self.errors.append(
+                f"Expression '' does not support destructive assignment")
 
         return self.errors
 
@@ -284,5 +279,70 @@ class TypeCollector(object):
     def visit(self, node: TypeNode, ctx: Context):
         try:
             ctx.create_type(node.type)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+
+class TypeBuilder(object):
+    def __init__(self, context, errors=[]):
+        self.context: Context = context
+        self.errors: list[str] = errors
+        self.current_type: Type = None
+
+    @visitor.on("node")
+    def visit(self, node):
+        pass
+
+    @visitor.when(ProgramNode)
+    def visit(self, node: ProgramNode):
+        for declaration in node.declarations:
+            self.visit(declaration)
+
+    @visitor.when(TypeNode)
+    def visit(self, node: TypeNode):
+        self.current_type = self.context.get_type(node.type)
+        if node.parent_type:
+            try:
+                parent_type = self.context.get_type(node.parent_type)
+                self.current_type.set_parent(parent_type)
+            except SemanticError as se:
+                self.errors.append(se.text)
+
+        for member in node.members:
+            self.visit(member)
+
+    @visitor.when(TypePropertyNode)
+    def visit(self, node: TypePropertyNode):
+        try:
+            self.current_type.define_attribute(node.id, node.type)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(FunctionNode)
+    def visit(self, node: FunctionNode):
+        try:
+            params_name = [param[0] for param in node.params]
+            params_type = [param[1] for param in node.params]
+            self.current_type.define_method(
+                node.id, params_name, params_type, node.return_type)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(ProtocolNode)
+    def visit(self, node: ProtocolNode):
+        try:
+            self.current_type = self.context.get_type(node.type)
+            for method_spec in node.method_specs:
+                self.visit(method_spec)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(MethodSpecNode)
+    def visit(self, node: MethodSpecNode):
+        try:
+            params_name = [param[0] for param in node.params]
+            params_type = [param[1] for param in node.params]
+            self.current_type.define_method(
+                node.id, params_name, params_type, node.return_type)
         except SemanticError as se:
             self.errors.append(se.text)

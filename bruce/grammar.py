@@ -141,7 +141,7 @@ MemberStructure %= (
 )
 MemberStructure %= (
     lparen + Params + rparen + TypeAnnotation + FunctionBody,
-    lambda h, s: ast.MethodNode(h[0], s[2], s[4], s[5]),
+    lambda h, s: ast.FunctionNode(h[0], s[2], s[4], s[5]),
 )
 
 MoreMembers %= Member + MoreMembers, lambda h, s: [s[1], *s[2]]
