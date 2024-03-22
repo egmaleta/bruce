@@ -55,10 +55,14 @@ class Type:
             raise SemanticError(f"Parent type is already set for {self.name}.")
         self.parent = parent
         
-    def set_params(self, params: list[Attribute]): #FIXME Fix this
+    def set_params(self, params: list[tuple[str, str | None]]):
         if self.params is not None:
             raise SemanticError(f"Params type are already set for {self.name}.")
-        self.params = params
+        self.params = []
+        for param in params:
+            if param[0] in (p.name for p in self.params):
+                raise SemanticError(f"Param {param[0]} is already set for {self.name}.")
+            self.params.append(Attribute(param[0], param[1]))
         
     def get_attribute(self, name: str):
         try:
