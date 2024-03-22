@@ -190,13 +190,15 @@ class Context:
             return self.types[name]
         except KeyError:
             raise SemanticError(f'Type "{name}" is not defined.')
-        
+
     def create_protocol(self, name: str):
         if name in self.protocols:
-            raise SemanticError(f"Protocol with the same name ({name}) already in context.")
+            raise SemanticError(
+                f"Protocol with the same name ({name}) already in context."
+            )
         protocol = self.protocols[name] = Protocol(name)
         return protocol
-    
+
     def get_protocol(self, name: str):
         try:
             return self.protocols[name]
@@ -207,7 +209,9 @@ class Context:
         return (
             "{\n\t"
             + "\n\t".join(y for x in self.types.values() for y in str(x).split("\n"))
-            + "\n\t".join(y for x in self.protocols.values() for y in str(x).split("\n"))
+            + "\n\t".join(
+                y for x in self.protocols.values() for y in str(x).split("\n")
+            )
             + "\n}"
         )
 
