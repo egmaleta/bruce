@@ -278,7 +278,7 @@ class TypeCollector(object):
     @visitor.when(ProtocolNode)
     def visit(self, node: TypeNode, ctx: Context):
         try:
-            ctx.create_type(node.type)
+            ctx.create_protocol(node.type)
         except SemanticError as se:
             self.errors.append(se.text)
 
@@ -307,6 +307,12 @@ class TypeBuilder(object):
                 self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
+        
+        if node.params:
+           try:
+               self.current_type.set_params(node.params)
+           except SemanticError as se:
+               self.errors.append(se.text)
 
         for member in node.members:
             self.visit(member)
@@ -331,7 +337,7 @@ class TypeBuilder(object):
     @visitor.when(ProtocolNode)
     def visit(self, node: ProtocolNode):
         try:
-            self.current_type = self.context.get_type(node.type)
+            self.current_type = self.context.get_protocol(node.type)
             for method_spec in node.method_specs:
                 self.visit(method_spec)
         except SemanticError as se:
