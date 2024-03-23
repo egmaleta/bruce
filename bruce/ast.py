@@ -265,8 +265,8 @@ class TypeCollector(object):
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
         for child in node.declarations:
-            self.visit(child, ctx)
-        return self.errors
+            if not isinstance(child, FunctionNode):
+                self.visit(child, ctx)
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context):
