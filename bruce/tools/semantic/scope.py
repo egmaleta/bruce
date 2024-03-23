@@ -1,4 +1,5 @@
 from itertools import islice
+from typing import Union
 
 from . import Variable, Function, Type, Proto, ExprNode
 
@@ -19,7 +20,7 @@ class Scope:
         self.children.append(child)
         return child
 
-    def define_variable(self, name: str, type: Type | Proto | None = None):
+    def define_variable(self, name: str, type: Union[Type, Proto, None] = None):
         info = Variable(name, type)
         self.local_vars.append(info)
         return info
@@ -27,9 +28,9 @@ class Scope:
     def define_function(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto" | None]],
+        params: list[tuple[str, Union[Type, Proto, None]]],
         body: ExprNode,
-        type: "Type" | "Proto" | None = None,
+        type: Union[Type, Proto, None] = None,
     ):
         info = Function(name, params, body, type)
         self.local_funcs.append(info)

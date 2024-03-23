@@ -1,5 +1,6 @@
 from abc import ABC
 from collections import OrderedDict
+from typing import Union
 
 
 class ASTNode(ABC):
@@ -17,7 +18,7 @@ class SemanticError(Exception):
 
 
 class Variable:
-    def __init__(self, name: str, type: "Type" | "Proto" | None = None):
+    def __init__(self, name: str, type: Union["Type", "Proto", None] = None):
         self.name = name
         self.type = type
         self._label = "[var]"
@@ -26,7 +27,7 @@ class Variable:
     def is_mutable():
         return True
 
-    def set_type(self, type: "Type" | "Proto"):
+    def set_type(self, type: Union["Type", "Proto"]):
         if self.type == None:
             self.type = type
 
@@ -39,13 +40,13 @@ class Variable:
 
 
 class Attribute(Variable):
-    def __init__(self, name: str, type: "Type" | "Proto"):
+    def __init__(self, name: str, type: Union["Type", "Proto"]):
         super().__init__(name, type)
         self._label = "[attrib]"
 
 
 class Constant(Variable):
-    def __init__(self, name: str, type: "Type" | "Proto"):
+    def __init__(self, name: str, type: Union["Type", "Proto"]):
         super().__init__(name, type)
         self._label = "[const]"
 
@@ -58,9 +59,9 @@ class Function:
     def __init__(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto" | None]],
+        params: list[tuple[str, Union["Type", "Proto", None]]],
         body: ExprNode,
-        type: "Type" | "Proto" | None = None,
+        type: Union["Type", "Proto", None] = None,
     ):
         self.name = name
         self.params = OrderedDict(params)
@@ -68,11 +69,11 @@ class Function:
         self.body = body
         self._label = "[func]"
 
-    def set_type(self, type: "Type" | "Proto"):
+    def set_type(self, type: Union["Type", "Proto"]):
         if self.type == None:
             self.type = type
 
-    def set_param_type(self, name: str, type: "Type" | "Proto"):
+    def set_param_type(self, name: str, type: Union["Type", "Proto"]):
         if name in self.params and self.params[name] == None:
             self.params[name] = type
 
@@ -92,9 +93,9 @@ class Method(Function):
     def __init__(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto" | None]],
+        params: list[tuple[str, Union["Type", "Proto", None]]],
         body: ExprNode,
-        type: "Type" | "Proto" | None = None,
+        type: Union["Type", "Proto", None] = None,
     ):
         super().__init__(name, params, type, body)
         self._label = "[method]"
@@ -103,7 +104,7 @@ class Method(Function):
 class Type:
     def __init__(self, name: str):
         self.name = name
-        self.params: OrderedDict[str, Type | "Proto" | None] = OrderedDict()
+        self.params: OrderedDict[str, Union["Type", "Proto", None]] = OrderedDict()
 
         self.attributes: list[Attribute] = []
         self.methods: list[Method] = []
@@ -111,7 +112,7 @@ class Type:
         self.parent: Type | None = None
         self.parent_args: list[ExprNode] = []
 
-    def set_params(self, params: list[tuple[str, "Type" | "Proto" | None]]):
+    def set_params(self, params: list[tuple[str, Union["Type", "Proto", None]]]):
         if len(self.params) > 0:
             raise SemanticError(f"Params are already set for type '{self.name}'.")
 
@@ -122,7 +123,7 @@ class Type:
                 )
             self.params[name] = type
 
-    def set_param_type(self, name: str, type: "Type" | "Proto"):
+    def set_param_type(self, name: str, type: Union["Type", "Proto"]):
         if name in self.params and self.params[name] == None:
             self.params[name] = type
 
@@ -141,7 +142,7 @@ class Type:
 
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
 
-    def define_attribute(self, name: str, type: "Type" | "Proto"):
+    def define_attribute(self, name: str, type: Union["Type", "Proto"]):
         try:
             self.get_attribute(name)
         except SemanticError:
@@ -171,9 +172,9 @@ class Type:
     def define_method(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto" | None]],
+        params: list[tuple[str, Union["Type", "Proto", None]]],
         body: ExprNode,
-        type: "Type" | "Proto" | None = None,
+        type: Union["Type", "Proto", None] = None,
     ):
         try:
             self.get_method(name)
@@ -246,8 +247,8 @@ class MethodSpec:
     def __init__(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto"]],
-        type: "Type" | "Proto",
+        params: list[tuple[str, Union["Type", "Proto"]]],
+        type: Union["Type", "Proto"],
     ):
         self.name = name
         self.params = OrderedDict(params)
@@ -301,8 +302,8 @@ class Proto:
     def add_method_spec(
         self,
         name: str,
-        params: list[tuple[str, "Type" | "Proto"]],
-        type: "Type" | "Proto",
+        params: list[tuple[str, Union["Type", "Proto"]]],
+        type: Union["Type", "Proto"],
     ):
         spec = MethodSpec(name, params, type)
         if spec not in self._all_method_specs():
