@@ -1,126 +1,10 @@
-from . import SemanticError, Type, Protocol
-
-
-class Type:
-    def __init__(self, name: str):
-        self.name = name
-        self.attributes: list[Attribute] = []
-        self.methods: list[Method] = []
-        self.parent: Type | None = None
-        self.params: list[Attribute] = None
-
-    def set_parent(self, parent: "Type"):
-        if self.parent is not None:
-            raise SemanticError(f"Parent type is already set for {self.name}.")
-        self.parent = parent
-
-    def set_params(self, params: list[tuple[str, str | None]]):
-        if self.params is not None:
-            raise SemanticError(f"Params type are already set for {self.name}.")
-        self.params = []
-        for param in params:
-            if param[0] in (p.name for p in self.params):
-                raise SemanticError(f"Param {param[0]} is already set for {self.name}.")
-            self.params.append(Attribute(param[0], param[1]))
-
-    def get_attribute(self, name: str):
-        try:
-            return next(attr for attr in self.attributes if attr.name == name)
-        except StopIteration:
-            if self.parent is None:
-                raise SemanticError(
-                    f'Attribute "{name}" is not defined in {self.name}.'
-                )
-            try:
-                return self.parent.get_attribute(name)
-            except SemanticError:
-                raise SemanticError(
-                    f'Attribute "{name}" is not defined in {self.name}.'
-                )
-
-    def define_attribute(self, name: str, typex: "Type"):
-        try:
-            self.get_attribute(name)
-        except SemanticError:
-            attribute = Attribute(name, typex)
-            self.attributes.append(attribute)
-            return attribute
-        else:
-            raise SemanticError(
-                f'Attribute "{name}" is already defined in {self.name}.'
-            )
-
-    def get_method(self, name: str):
-        try:
-            return next(method for method in self.methods if method.name == name)
-        except StopIteration:
-            if self.parent is None:
-                raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
-            try:
-                return self.parent.get_method(name)
-            except SemanticError:
-                raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
-
-    def define_method(
-        self,
-        name: str,
-        param_names: list[str],
-        param_types: list["Type"],
-        return_type: "Type",
-    ):
-        if name in (method.name for method in self.methods):
-            raise SemanticError(f'Method "{name}" already defined in {self.name}')
-
-        method = Method(name, param_names, param_types, return_type)
-        self.methods.append(method)
-        return method
-
-    def all_attributes(self, clean=True):
-        plain = (
-            OrderedDict() if self.parent is None else self.parent.all_attributes(False)
-        )
-        for attr in self.attributes:
-            plain[attr.name] = (attr, self)
-        return plain.values() if clean else plain
-
-    def all_methods(self, clean=True):
-        plain = OrderedDict() if self.parent is None else self.parent.all_methods(False)
-        for method in self.methods:
-            plain[method.name] = (method, self)
-        return plain.values() if clean else plain
-
-    def conforms_to(self, other: "Type"):
-        return (
-            other.bypass()
-            or self == other
-            or self.parent is not None
-            and self.parent.conforms_to(other)
-        )
-
-    def bypass(self):
-        return False
-
-    def __str__(self):
-        output = f"type {self.name}"
-        parent = "" if self.parent is None else f" : {self.parent.name}"
-        output += parent
-        output += " {"
-        output += "\n\t" if self.attributes or self.methods else ""
-        output += "\n\t".join(str(x) for x in self.attributes)
-        output += "\n\t" if self.attributes else ""
-        output += "\n\t".join(str(x) for x in self.methods)
-        output += "\n" if self.methods else ""
-        output += "}\n"
-        return output
-
-    def __repr__(self):
-        return str(self)
+from . import SemanticError, Type, Proto
 
 
 class Context:
     def __init__(self):
         self.types: dict[str, Type] = {}
-        self.protocols: dict[str, Protocol] = {}
+        self.protocols: dict[str, Proto] = {}
 
     def create_type(self, name: str):
         if name in self.types:
@@ -140,7 +24,7 @@ class Context:
             raise SemanticError(
                 f"Protocol with the same name '{name}' already in context."
             )
-        protocol = self.protocols[name] = Protocol(name)
+        protocol = self.protocols[name] = Proto(name)
         return protocol
 
     def get_protocol(self, name: str):

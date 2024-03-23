@@ -16,8 +16,8 @@ class SemanticError(Exception):
         return self.args[0]
 
 
-class VariableInfo:
-    def __init__(self, name: str, type: "Type" | None = None):
+class Variable:
+    def __init__(self, name: str, type: "Type" | "Proto" | None = None):
         self.name = name
         self.type = type
         self._label = "[var]"
@@ -26,7 +26,7 @@ class VariableInfo:
     def is_mutable():
         return True
 
-    def set_type(self, type: "Type"):
+    def set_type(self, type: "Type" | "Proto"):
         if self.type == None:
             self.type = type
 
@@ -38,14 +38,14 @@ class VariableInfo:
         return str(self)
 
 
-class AttributeInfo(VariableInfo):
-    def __init__(self, name: str, type: "Type"):
+class Attribute(Variable):
+    def __init__(self, name: str, type: "Type" | "Proto"):
         super().__init__(name, type)
         self._label = "[attrib]"
 
 
-class ConstantInfo(VariableInfo):
-    def __init__(self, name: str, type: "Type"):
+class Constant(Variable):
+    def __init__(self, name: str, type: "Type" | "Proto"):
         super().__init__(name, type)
         self._label = "[const]"
 
@@ -54,13 +54,13 @@ class ConstantInfo(VariableInfo):
         return False
 
 
-class FunctionInfo:
+class Function:
     def __init__(
         self,
         name: str,
-        params: list[tuple[str, "Type" | None]],
+        params: list[tuple[str, "Type" | "Proto" | None]],
         body: ExprNode,
-        type: "Type" | None = None,
+        type: "Type" | "Proto" | None = None,
     ):
         self.name = name
         self.params = OrderedDict(params)
@@ -68,11 +68,11 @@ class FunctionInfo:
         self.body = body
         self._label = "[func]"
 
-    def set_type(self, type: "Type"):
+    def set_type(self, type: "Type" | "Proto"):
         if self.type == None:
             self.type = type
 
-    def set_param_type(self, name: str, type: "Type"):
+    def set_param_type(self, name: str, type: "Type" | "Proto"):
         if name in self.params and self.params[name] == None:
             self.params[name] = type
 
@@ -88,16 +88,158 @@ class FunctionInfo:
         return f"{self._label} {self.name}({params}): {typename};"
 
 
-class MethodInfo(FunctionInfo):
+class Method(Function):
     def __init__(
         self,
         name: str,
-        params: list[tuple[str, "Type" | None]],
+        params: list[tuple[str, "Type" | "Proto" | None]],
         body: ExprNode,
-        type: "Type" | None = None,
+        type: "Type" | "Proto" | None = None,
     ):
         super().__init__(name, params, type, body)
         self._label = "[method]"
+
+
+class Type:
+    def __init__(self, name: str):
+        self.name = name
+        self.params: OrderedDict[str, Type | "Proto" | None] = OrderedDict()
+
+        self.attributes: list[Attribute] = []
+        self.methods: list[Method] = []
+
+        self.parent: Type | None = None
+        self.parent_args: list[ExprNode] = []
+
+    def set_params(self, params: list[tuple[str, "Type" | "Proto" | None]]):
+        if len(self.params) > 0:
+            raise SemanticError(f"Params are already set for type '{self.name}'.")
+
+        for name, type in params:
+            if name in self.params:
+                raise SemanticError(
+                    f"Param '{name}' is duplicated in constructor of type '{self.name}'."
+                )
+            self.params[name] = type
+
+    def set_param_type(self, name: str, type: "Type" | "Proto"):
+        if name in self.params and self.params[name] == None:
+            self.params[name] = type
+
+    def get_attribute(self, name: str):
+        target = None
+        for attr in self.attributes:
+            if attr.name == name:
+                target = attr
+                break
+
+        if target != None:
+            return target
+
+        if self.parent != None:
+            return self.parent.get_attribute(name)
+
+        raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
+
+    def define_attribute(self, name: str, type: "Type" | "Proto"):
+        try:
+            self.get_attribute(name)
+        except SemanticError:
+            attribute = Attribute(name, type)
+            self.attributes.append(attribute)
+            return attribute
+        else:
+            raise SemanticError(
+                f"Attribute '{name}' is already defined in type '{self.name}'."
+            )
+
+    def get_method(self, name: str):
+        target = None
+        for attr in self.methods:
+            if attr.name == name:
+                target = attr
+                break
+
+        if target != None:
+            return target
+
+        if self.parent != None:
+            return self.parent.get_method(name)
+
+        raise SemanticError(f"Method '{name}' is not defined in type '{self.name}'.")
+
+    def define_method(
+        self,
+        name: str,
+        params: list[tuple[str, "Type" | "Proto" | None]],
+        body: ExprNode,
+        type: "Type" | "Proto" | None = None,
+    ):
+        try:
+            self.get_method(name)
+        except SemanticError:
+            method = Method(name, params, body, type)
+            self.methods.append(method)
+            return method
+        else:
+            raise SemanticError(
+                f"Method '{name}' is already defined in type '{self.name}'."
+            )
+
+    @property
+    def is_inheritable(self):
+        return True
+
+    def conforms_to(self, other: "Type"):
+        if self == other:
+            return True
+
+        if not other.is_inheritable:
+            return False
+
+        return self.parent != None and self.parent.conforms_to(other)
+
+    def implements(self, proto: "Proto"):
+        # TODO
+        raise NotImplementedError()
+
+    def set_parent(self, parent: "Type"):
+        if self.parent is not None:
+            raise SemanticError(f"Parent type is already set for type '{self.name}'.")
+        self.parent = parent
+
+    def all_attributes(self, clean=True):
+        plain = (
+            OrderedDict() if self.parent is None else self.parent.all_attributes(False)
+        )
+        for attr in self.attributes:
+            plain[attr.name] = (attr, self)
+        return plain.values() if clean else plain
+
+    def all_methods(self, clean=True):
+        plain = OrderedDict() if self.parent is None else self.parent.all_methods(False)
+        for method in self.methods:
+            plain[method.name] = (method, self)
+        return plain.values() if clean else plain
+
+    def __str__(self):
+        output = f"type {self.name}"
+        parent = "" if self.parent is None else f" : {self.parent.name}"
+        output += parent
+        output += " {"
+        output += "\n\t" if self.attributes or self.methods else ""
+        output += "\n\t".join(str(x) for x in self.attributes)
+        output += "\n\t" if self.attributes else ""
+        output += "\n\t".join(str(x) for x in self.methods)
+        output += "\n" if self.methods else ""
+        output += "}\n"
+        return output
+
+    def __repr__(self):
+        return str(self)
+
+    def __eq__(self, other):
+        return self.name == other.name
 
 
 class MethodSpec:
