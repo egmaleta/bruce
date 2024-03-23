@@ -1,13 +1,9 @@
 from dataclasses import dataclass
 
-from .tools.semantic import ASTNode, SemanticError
+from .tools.semantic import ASTNode, ExprNode, SemanticError
 from .tools.semantic.context import Context, Type
 from .tools.semantic.scope import Scope
 from .tools import visitor
-
-
-class ExprNode(ASTNode):
-    pass
 
 
 @dataclass

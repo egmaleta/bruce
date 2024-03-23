@@ -1,20 +1,6 @@
 from itertools import islice
 
 
-class VariableInfo:
-    def __init__(self, name, vtype):
-        self.name = name
-        self.type = vtype
-
-
-class FunctionInfo:
-    def __init__(self, name, params, ftype, body):
-        self.name = name
-        self.params = params
-        self.type = ftype
-        self.body = body
-
-
 class Scope:
     def __init__(self, parent=None):
         self.local_vars = []

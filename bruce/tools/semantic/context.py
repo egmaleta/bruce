@@ -3,45 +3,6 @@ from collections import OrderedDict
 from . import SemanticError
 
 
-class Attribute:
-    def __init__(self, name: str, typex: "Type"):
-        self.name = name
-        self.type = typex
-
-    def __str__(self):
-        return f"[attrib] {self.name} : {self.type.name};"
-
-    def __repr__(self):
-        return str(self)
-
-
-class Method:
-    def __init__(
-        self,
-        name: str,
-        param_names: list[str],
-        params_types: list["Type"],
-        return_type: "Type",
-    ):
-        self.name = name
-        self.param_names = param_names
-        self.param_types = params_types
-        self.return_type = return_type
-
-    def __str__(self):
-        params = ", ".join(
-            f"{n}:{t.name}" for n, t in zip(self.param_names, self.param_types)
-        )
-        return f"[method] {self.name}({params}): {self.return_type.name};"
-
-    def __eq__(self, other):
-        return (
-            other.name == self.name
-            and other.return_type == self.return_type
-            and other.param_types == self.param_types
-        )
-
-
 class Type:
     def __init__(self, name: str):
         self.name = name
