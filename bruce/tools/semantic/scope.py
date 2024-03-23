@@ -36,7 +36,7 @@ class Scope:
 
     def find_variable(self, name: str, index=None):
         locals = self.local_vars if index is None else islice(self.locals, index)
-        
+
         try:
             return next(x for x in locals if x.name == name)
         except StopIteration:
