@@ -147,6 +147,7 @@ class BlockNode(ExprNode):
 class LoopNode(ExprNode):
     condition: ExprNode
     body: ExprNode
+    fallback_expr: ExprNode
 
 
 @dataclass
@@ -155,6 +156,7 @@ class IteratorNode(ExprNode):
     item_type: str | None
     iterable_expr: ExprNode
     body: ExprNode
+    fallback_expr: ExprNode
 
 
 @dataclass

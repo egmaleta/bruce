@@ -155,10 +155,22 @@ Expr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBranch,
     lambda h, s: ast.ConditionalNode([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
 )
-Expr %= while_k + lparen + Expr + rparen + Expr, lambda h, s: ast.LoopNode(s[3], s[5])
 Expr %= (
-    for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Expr,
-    lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8]),
+    while_k + lparen + Expr + rparen + Expr + else_k + Expr,
+    lambda h, s: ast.LoopNode(s[3], s[5], s[7]),
+)
+Expr %= (
+    for_k
+    + lparen
+    + identifier
+    + TypeAnnotation
+    + in_k
+    + Expr
+    + rparen
+    + Expr
+    + else_k
+    + Expr,
+    lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8], s[10]),
 )
 Expr %= BlockExpr, lambda h, s: s[1]
 Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
@@ -217,10 +229,22 @@ Stmt %= (
     if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,
     lambda h, s: ast.ConditionalNode([(s[3], s[5]), *(s[6][:-1])], s[6][-1]),
 )
-Stmt %= while_k + lparen + Expr + rparen + Stmt, lambda h, s: ast.LoopNode(s[3], s[5])
 Stmt %= (
-    for_k + lparen + identifier + TypeAnnotation + in_k + Expr + rparen + Stmt,
-    lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8]),
+    while_k + lparen + Expr + rparen + Expr + else_k + Stmt,
+    lambda h, s: ast.LoopNode(s[3], s[5], s[7]),
+)
+Stmt %= (
+    for_k
+    + lparen
+    + identifier
+    + TypeAnnotation
+    + in_k
+    + Expr
+    + rparen
+    + Expr
+    + else_k
+    + Stmt,
+    lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8], s[10]),
 )
 Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1]
 Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1]
