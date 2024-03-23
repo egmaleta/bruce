@@ -1,5 +1,7 @@
 from itertools import islice
 
+from . import Variable, Function, Type, Proto, ExprNode
+
 
 class Scope:
     def __init__(self, parent=None):
@@ -17,40 +19,46 @@ class Scope:
         self.children.append(child)
         return child
 
-    def define_variable(self, vname, vtype):
-        info = VariableInfo(vname, vtype)
+    def define_variable(self, name: str, type: Type | Proto | None = None):
+        info = Variable(name, type)
         self.local_vars.append(info)
         return info
 
-    def define_function(self, fname, params, type, body):
-        info = FunctionInfo(fname, params)
+    def define_function(
+        self,
+        name: str,
+        params: list[tuple[str, "Type" | "Proto" | None]],
+        body: ExprNode,
+        type: "Type" | "Proto" | None = None,
+    ):
+        info = Function(name, params, body, type)
         self.local_funcs.append(info)
         return info
 
-    def find_variable(self, vname, index=None):
+    def find_variable(self, name: str, index=None):
         locals = self.local_vars if index is None else islice(self.locals, index)
         try:
-            return next(x for x in locals if x.name == vname)
+            return next(x for x in locals if x.name == name)
         except StopIteration:
             return (
-                self.parent.find_variable(vname, self.index)
+                self.parent.find_variable(name, self.index)
                 if self.parent != None
                 else None
             )
 
-    def find_function(self, fname, params, body, index=None):
+    def find_function(self, name: str, index=None):
         local_funcs = self.local_funcs if index is None else islice(self.locals, index)
         try:
-            return next(x for x in local_funcs if x.name)
+            return next(x for x in local_funcs if x.name == name)
         except StopIteration:
             return (
-                self.parent.find_function(fname, params, body, self.index)
+                self.parent.find_function(name, self.index)
                 if self.parent != None
                 else None
             )
 
-    def is_defined(self, vname):
-        return self.find_variable(vname) is not None
+    def is_defined(self, name: str):
+        return self.find_variable(name) is not None
 
-    def is_local(self, vname):
-        return any(True for x in self.locals if x.name == vname)
+    def is_local(self, name: str):
+        return any(True for x in self.locals if x.name == name)
