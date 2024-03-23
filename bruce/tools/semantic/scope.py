@@ -5,7 +5,8 @@ from . import Variable, Function, Type, Proto, ExprNode
 
 class Scope:
     def __init__(self, parent=None):
-        self.locals = []
+        self.local_vars: list[Variable] = []
+        self.local_funcs: list[Function] = []
         self.parent = parent
         self.children = []
         self.index = 0 if parent is None else len(parent)
