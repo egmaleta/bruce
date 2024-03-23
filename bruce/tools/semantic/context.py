@@ -1,6 +1,4 @@
-from collections import OrderedDict
-
-from . import SemanticError
+from . import SemanticError, Type, Protocol
 
 
 class Type:
@@ -119,52 +117,38 @@ class Type:
         return str(self)
 
 
-class Protocol:
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.parents: list[Protocol] = []
-        self.methods: list[Method] = []
-
-    def __eq__(self, __value: object) -> bool:
-        return self.name == __value.name
-
-    def extends(self, other) -> bool:
-        if other in self.parents:
-            return True
-
-        return any(parent.extends(other) for parent in self.parents)
-
-
 class Context:
     def __init__(self):
-        self.types = {}
-        self.protocols = {}
+        self.types: dict[str, Type] = {}
+        self.protocols: dict[str, Protocol] = {}
 
     def create_type(self, name: str):
         if name in self.types:
-            raise SemanticError(f"Type with the same name ({name}) already in context.")
-        typex = self.types[name] = Type(name)
-        return typex
+            raise SemanticError(f"Type with the same name '{name}' already in context.")
+        type = self.types[name] = Type(name)
+        return type
 
     def get_type(self, name: str):
-        try:
-            return self.types[name]
-        except KeyError:
-            raise SemanticError(f'Type "{name}" is not defined.')
+        type = self.types.get(name)
+        if type == None:
+            raise SemanticError(f"Type '{name}' is not defined.")
+
+        return type
 
     def create_protocol(self, name: str):
         if name in self.protocols:
             raise SemanticError(
-                f"Protocol with the same name ({name}) already in context."
+                f"Protocol with the same name '{name}' already in context."
             )
         protocol = self.protocols[name] = Protocol(name)
         return protocol
 
     def get_protocol(self, name: str):
-        try:
-            return self.protocols[name]
-        except KeyError:
-            raise SemanticError(f'Protocol "{name}" is not defined.')
+        protocol = self.protocols.get(name)
+        if protocol == None:
+            raise SemanticError(f"Protocol '{name}' is not defined.")
+
+        return protocol
 
     def __str__(self):
         return (

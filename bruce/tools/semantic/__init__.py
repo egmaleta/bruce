@@ -98,3 +98,82 @@ class MethodInfo(FunctionInfo):
     ):
         super().__init__(name, params, type, body)
         self._label = "[method]"
+
+
+class MethodSpec:
+    def __init__(
+        self,
+        name: str,
+        params: list[tuple[str, "Type" | "Proto"]],
+        type: "Type" | "Proto",
+    ):
+        self.name = name
+        self.params = OrderedDict(params)
+        self.type = type
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+
+class Proto:
+    def __init__(self, name: str):
+        self.name = name
+        self.parents: list[Proto] = []
+        self.method_specs: list[MethodSpec] = []
+
+    def _ancestors(self) -> set["Proto"]:
+        ancestors = set()
+
+        for parent in self.parents:
+            ancestors.add(parent)
+            ancestors |= parent._ancestors()
+
+        return ancestors
+
+    def _all_method_specs(self) -> set[MethodSpec]:
+        specs = set()
+
+        for ancestor in self._ancestors():
+            specs |= ancestor._all_method_specs()
+
+        for spec in self.method_specs:
+            specs.add(spec)
+
+        return specs
+
+    def add_parent(self, parent: "Proto"):
+        ancestors = self._ancestors()
+        parent_ancestors = parent._ancestors()
+
+        cond = self not in parent_ancestors
+        cond = cond and parent not in ancestors
+        cond = cond and len(ancestors & parent_ancestors) == 0
+        cond = cond and len(self._all_method_specs() & parent._all_method_specs()) == 0
+
+        if cond:
+            self.parents.append(parent)
+
+    def add_method_spec(
+        self,
+        name: str,
+        params: list[tuple[str, "Type" | "Proto"]],
+        type: "Type" | "Proto",
+    ):
+        spec = MethodSpec(name, params, type)
+        if spec not in self._all_method_specs():
+            self.method_specs.append(spec)
+
+    def all_method_specs(self):
+        return list(self._all_method_specs())
+
+    def extends(self, other):
+        return other in self._ancestors()
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
