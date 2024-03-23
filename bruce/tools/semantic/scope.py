@@ -5,8 +5,7 @@ from . import Variable, Function, Type, Proto, ExprNode
 
 class Scope:
     def __init__(self, parent=None):
-        self.local_vars = []
-        self.local_funcs = []
+        self.locals = []
         self.parent = parent
         self.children = []
         self.index = 0 if parent is None else len(parent)
@@ -37,6 +36,7 @@ class Scope:
 
     def find_variable(self, name: str, index=None):
         locals = self.local_vars if index is None else islice(self.locals, index)
+        
         try:
             return next(x for x in locals if x.name == name)
         except StopIteration:
