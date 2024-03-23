@@ -360,7 +360,7 @@ class TypeChecker:
         self.current_method = None
         self.errors = errors
 
-    @visitor.on('node')
+    @visitor.on("node")
     def visit(self, node, scope):
         pass
 
