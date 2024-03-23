@@ -323,11 +323,8 @@ class TypeBuilder(object):
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode):
         try:
-            if node.type:
-                type = self.context.get_type(node.type)
-                self.current_type.define_attribute(node.id, type)
-            else:
-                self.current_type.define_attribute(node.id, node.type)
+            type = self.context.get_type(node.type)
+            self.current_type.define_attribute(node.id, type)
         except SemanticError as se:
             self.errors.append(se.text)
 
