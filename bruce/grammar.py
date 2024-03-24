@@ -343,12 +343,12 @@ MoreFactors %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Factor %= (
     Base + Powers,
-    lambda h, s: s[1] if s[2] == None else ast.PowerOpNode(s[1], s[2]),
+    lambda h, s: s[1] if s[2] is None else ast.PowerOpNode(s[1], s[2]),
 )
 
 Powers %= (
     power + Base + Powers,
-    lambda h, s: s[2] if s[3] == None else ast.PowerOpNode(s[2], s[3]),
+    lambda h, s: s[2] if s[3] is None else ast.PowerOpNode(s[2], s[3]),
 )
 Powers %= GRAMMAR.Epsilon, lambda h, s: None
 

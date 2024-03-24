@@ -97,7 +97,7 @@ class RangeNode(Node):
         except:
             pass
 
-        if chars == None:
+        if chars is None:
             raise Exception(f"Invalid range: {(self.lower, self.upper)}")
 
         node = SymbolNode(chars[0])

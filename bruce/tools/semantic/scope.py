@@ -44,7 +44,7 @@ class Scope:
         except StopIteration:
             return (
                 self.parent.find_variable(name, self.index)
-                if self.parent != None
+                if self.parent is not None
                 else None
             )
 
@@ -55,7 +55,7 @@ class Scope:
         except StopIteration:
             return (
                 self.parent.find_function(name, self.index)
-                if self.parent != None
+                if self.parent is not None
                 else None
             )
 

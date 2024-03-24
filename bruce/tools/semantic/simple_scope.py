@@ -9,14 +9,14 @@ class Scope:
 
     def get_variable(self, name: str):
         v = self.variables.get(name)
-        if v != None:
+        if v is not None:
             return v
 
-        if self.parent != None:
+        if self.parent is not None:
             return self.parent.get_variable(name)
 
     def has_variable(self, name: str):
-        return self.get_variable(name) != None
+        return self.get_variable(name) is not None
 
     def create_variable(self, name: str, type: Type | None):
         if self.has_variable(name):
@@ -28,7 +28,7 @@ class Scope:
 
     def mutate_variable(self, name: str, value: Any):
         v = self.get_variable(name)
-        if v == None:
+        if v is None:
             raise SemanticError(f"variable '{name}' hasn't been defined")
 
         if v.is_mutable():

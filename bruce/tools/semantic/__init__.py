@@ -28,11 +28,11 @@ class Variable:
         return True
 
     def set_type(self, type: Union["Type", "Proto"]):
-        if self.type == None:
+        if self.type is None:
             self.type = type
 
     def __str__(self):
-        typename = self.type.name if self.type != None else "Unknown"
+        typename = self.type.name if self.type is not None else "Unknown"
         return f"{self._label} {self.name} : {typename};"
 
     def __repr__(self):
@@ -70,21 +70,21 @@ class Function:
         self._label = "[func]"
 
     def set_type(self, type: Union["Type", "Proto"]):
-        if self.type == None:
+        if self.type is None:
             self.type = type
 
     def set_param_type(self, name: str, type: Union["Type", "Proto"]):
-        if name in self.params and self.params[name] == None:
+        if name in self.params and self.params[name] is None:
             self.params[name] = type
 
     def __str__(self):
         params = []
         for name, type in self.params.items():
-            typename = type.name if type != None else "Unknown"
+            typename = type.name if type is not None else "Unknown"
             params.append(f"{name}: {typename}")
         params = ", ".join(params)
 
-        typename = self.type.name if self.type != None else "Unknown"
+        typename = self.type.name if self.type is not None else "Unknown"
 
         return f"{self._label} {self.name}({params}): {typename};"
 
@@ -124,7 +124,7 @@ class Type:
             self.params[name] = type
 
     def set_param_type(self, name: str, type: Union["Type", "Proto"]):
-        if name in self.params and self.params[name] == None:
+        if name in self.params and self.params[name] is None:
             self.params[name] = type
 
     def get_attribute(self, name: str):
@@ -134,10 +134,10 @@ class Type:
                 target = attr
                 break
 
-        if target != None:
+        if target is not None:
             return target
 
-        if self.parent != None:
+        if self.parent is not None:
             return self.parent.get_attribute(name)
 
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
@@ -161,10 +161,10 @@ class Type:
                 target = attr
                 break
 
-        if target != None:
+        if target is not None:
             return target
 
-        if self.parent != None:
+        if self.parent is not None:
             return self.parent.get_method(name)
 
         raise SemanticError(f"Method '{name}' is not defined in type '{self.name}'.")
@@ -198,7 +198,7 @@ class Type:
         if not other.is_inheritable:
             return False
 
-        return self.parent != None and self.parent.conforms_to(other)
+        return self.parent is not None and self.parent.conforms_to(other)
 
     def implements(self, proto: "Proto"):
         # TODO

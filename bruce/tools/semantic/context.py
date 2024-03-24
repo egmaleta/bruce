@@ -29,7 +29,7 @@ class Context:
 
     def get_protocol(self, name: str):
         protocol = self.protocols.get(name)
-        if protocol == None:
+        if protocol is None:
             raise SemanticError(f"Protocol '{name}' is not defined.")
 
         return protocol
