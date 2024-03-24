@@ -308,16 +308,14 @@ class TypeBuilder(object):
             except SemanticError as se:
                 self.errors.append(se.text)
 
-        if node.params:
-            for param in node.params:
-                try:
-                    if param[1]:
-                        param_type = ctx.get_type(param[1])
-                        current_type.set_param(param[0], param_type)
-                    else:
-                        current_type.set_param(param[0], param[1])
-                except SemanticError as se:
-                    self.errors.append(se.text)
+        if node.params is not None:
+            params = [
+                (n, ctx.get_type(t) if t is not None else t) for n, t in node.params
+            ]
+            try:
+                current_type.set_params(params)
+            except SemanticError as se:
+                self.errors.append(se.text)
 
         for member in node.members:
             self.visit(member, ctx)
