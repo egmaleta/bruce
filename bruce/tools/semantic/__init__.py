@@ -112,20 +112,12 @@ class Type:
         self.parent: Type | None = None
         self.parent_args: list[ExprNode] = []
 
-    def set_params(self, params: list[tuple[str, Union["Type", "Proto", None]]]):
-        if len(self.params) > 0:
-            raise SemanticError(f"Params are already set for type '{self.name}'.")
-
-        for name, type in params:
-            if name in self.params:
-                raise SemanticError(
-                    f"Param '{name}' is duplicated in constructor of type '{self.name}'."
-                )
-            self.params[name] = type
-
-    def set_param_type(self, name: str, type: Union["Type", "Proto"]):
-        if name in self.params and self.params[name] == None:
-            self.params[name] = type
+    def set_param(self, name, type: Union["Type", "Proto", None]):
+        if name in self.params:
+            raise SemanticError(
+                f"Param '{name}' is duplicated in constructor of type '{self.name}'."
+            )
+        self.params[name] = type
 
     def get_attribute(self, name: str):
         target = None
@@ -134,7 +126,7 @@ class Type:
                 target = attr
                 break
 
-        if target != None:
+        if target is not None:
             return target
 
         if self.parent != None:
@@ -161,10 +153,10 @@ class Type:
                 target = attr
                 break
 
-        if target != None:
+        if target is not None:
             return target
 
-        if self.parent != None:
+        if self.parent is not None:
             return self.parent.get_method(name)
 
         raise SemanticError(f"Method '{name}' is not defined in type '{self.name}'.")
