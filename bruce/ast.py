@@ -267,6 +267,7 @@ class TypeCollector(object):
         for child in node.declarations:
             if not isinstance(child, FunctionNode):
                 self.visit(child, ctx)
+        return self.errors
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context):
@@ -284,38 +285,42 @@ class TypeCollector(object):
 
 
 class TypeBuilder(object):
-    def __init__(self, context, errors=[]):
-        self.context: Context = context
+    def __init__(self, errors=[]):
         self.errors: list[str] = errors
-        self.current_type: Type = None
 
     @visitor.on("node")
-    def visit(self, node):
+    def visit(self, node, ctx: Context):
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node: ProgramNode):
+    def visit(self, node: ProgramNode, ctx: Context):
+        ctx = ctx if ctx else Context()
         for declaration in node.declarations:
-            self.visit(declaration)
+            self.visit(declaration, ctx)
 
     @visitor.when(TypeNode)
-    def visit(self, node: TypeNode):
-        self.current_type = self.context.get_type(node.type)
+    def visit(self, node: TypeNode, ctx: Context):
+        current_type = ctx.get_type(node.type)
         if node.parent_type:
             try:
-                parent_type = self.context.get_type(node.parent_type)
-                self.current_type.set_parent(parent_type)
+                parent_type = ctx.get_type(node.parent_type)
+                current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
 
         if node.params:
-            try:
-                self.current_type.set_params(node.params)
-            except SemanticError as se:
-                self.errors.append(se.text)
+            for param in node.params:
+                try:
+                    if param[1]:
+                        param_type = ctx.get_type(param[1])
+                        current_type.set_param(param[0], param_type)
+                    else:
+                        current_type.set_param(param[0], param[1])
+                except SemanticError as se:
+                    self.errors.append(se.text)
 
         for member in node.members:
-            self.visit(member)
+            self.visit(member, ctx)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode):
