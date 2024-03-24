@@ -40,7 +40,7 @@ class Variable:
 
 
 class Attribute(Variable):
-    def __init__(self, name: str, type: Union["Type", "Proto"]):
+    def __init__(self, name: str, type: Union["Type", "Proto", None] = None):
         super().__init__(name, type)
         self._label = "[attrib]"
 
@@ -142,7 +142,7 @@ class Type:
 
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
 
-    def define_attribute(self, name: str, type: Union["Type", "Proto"]):
+    def define_attribute(self, name: str, type: Union["Type", "Proto", None]):
         try:
             self.get_attribute(name)
         except SemanticError:
