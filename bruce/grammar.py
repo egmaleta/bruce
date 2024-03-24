@@ -41,8 +41,10 @@ number, string, identifier, type_identifier, builtin_identifier = GRAMMAR.add_te
 TypeAnnotation, OptionalSemicolon = GRAMMAR.add_non_terminals(
     "type_annotation opt_semicolon"
 )
-Params, MoreParams, OptionalParams = GRAMMAR.add_non_terminals(
-    "params more_params opt_params"
+Params, MoreParams, OptionalParams, TypedParams, MoreTypedParams = (
+    GRAMMAR.add_non_terminals(
+        "params more_params opt_params typed_params more_typed_params"
+    )
 )
 Args, MoreArgs, OptionalArgs = GRAMMAR.add_non_terminals("args more_args opt_args")
 
@@ -119,7 +121,13 @@ MoreTypeIds %= comma + type_identifier + MoreTypeIds, lambda h, s: [s[2], *s[3]]
 MoreTypeIds %= GRAMMAR.Epsilon, lambda h, s: []
 
 MethodSpec %= (
-    identifier + lparen + Params + rparen + colon + type_identifier + OptionalSemicolon,
+    identifier
+    + lparen
+    + TypedParams
+    + rparen
+    + colon
+    + type_identifier
+    + OptionalSemicolon,
     lambda h, s: ast.MethodSpecNode(s[1], s[3], s[6]),
 )
 MoreMethodSpecs %= MethodSpec + MoreMethodSpecs, lambda h, s: [s[1], *s[2]]
@@ -264,6 +272,17 @@ MoreParams %= (
     lambda h, s: [(s[2], s[3]), *s[4]],
 )
 MoreParams %= GRAMMAR.Epsilon, lambda h, s: []
+
+TypedParams %= identifier + colon + type_identifier + MoreTypedParams, lambda h, s: [
+    (s[1], s[3]),
+    *s[4],
+]
+TypedParams %= GRAMMAR.Epsilon, lambda h, s: []
+MoreTypedParams %= (
+    comma + identifier + colon + type_identifier + MoreTypedParams,
+    lambda h, s: [(s[2], s[4]), *s[5]],
+)
+MoreTypedParams %= GRAMMAR.Epsilon, lambda h, s: []
 
 ElseStmtBranch %= (
     elif_k + lparen + Expr + rparen + Expr + ElseStmtBranch,

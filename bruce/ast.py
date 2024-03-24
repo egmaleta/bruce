@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from typing import Union
 
-from .tools.semantic import ASTNode, ExprNode, SemanticError
-from .tools.semantic.context import Context, Type
+from .tools.semantic import ASTNode, ExprNode, SemanticError, Type, Proto
+from .tools.semantic.context import Context
 from .tools.semantic.scope import Scope
 from .tools import visitor
 
@@ -193,7 +194,7 @@ class FunctionNode(ASTNode):
 @dataclass
 class MethodSpecNode(ASTNode):
     id: str
-    params: list[tuple[str, str | None]]
+    params: list[tuple[str, str]]
     return_type: str
 
 
@@ -223,6 +224,10 @@ class TypeNode(ASTNode):
 def is_assignable(node: ASTNode):
     is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
     return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
+
+
+def get_safe_type(typename: str | None, ctx: Context):
+    return ctx.get_type_or_proto(typename) if typename is not None else typename
 
 
 class SemanticChecker(object):  # TODO implement all the nodes
@@ -256,7 +261,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
 class TypeCollector(object):
     def __init__(self):
-        self.errors = []
+        self.errors: list[str] = []
 
     @visitor.on("node")
     def visit(self, node, context):
@@ -267,6 +272,7 @@ class TypeCollector(object):
         for child in node.declarations:
             if not isinstance(child, FunctionNode):
                 self.visit(child, ctx)
+
         return self.errors
 
     @visitor.when(TypeNode)
@@ -285,76 +291,84 @@ class TypeCollector(object):
 
 
 class TypeBuilder(object):
-    def __init__(self, errors=[]):
-        self.errors: list[str] = errors
+    def __init__(self):
+        self.errors: list[str] = []
+
+        # type doesn't include None because current_type will be set before read
+        self.current_type: Union[Type, Proto] = None
 
     @visitor.on("node")
-    def visit(self, node, ctx: Context):
+    def visit(self, node, ctx):
         pass
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
-        ctx = ctx if ctx else Context()
         for declaration in node.declarations:
-            self.visit(declaration, ctx)
+            if not isinstance(declaration, FunctionNode):
+                self.visit(declaration, ctx)
+
+        return self.errors
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context):
-        current_type = ctx.get_type(node.type)
+        try:
+            self.current_type = ctx.get_type(node.type)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
         if node.parent_type:
             try:
                 parent_type = ctx.get_type(node.parent_type)
-                current_type.set_parent(parent_type)
+                self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
 
         if node.params is not None:
-            params = [
-                (n, ctx.get_type(t) if t is not None else t) for n, t in node.params
-            ]
             try:
-                current_type.set_params(params)
+                params = [(n, get_safe_type(t, ctx)) for n, t in node.params]
+                self.current_type.set_params(params)
             except SemanticError as se:
                 self.errors.append(se.text)
 
         for member in node.members:
             self.visit(member, ctx)
 
+        # TODO: handle parent args
+
     @visitor.when(TypePropertyNode)
-    def visit(self, node: TypePropertyNode):
+    def visit(self, node: TypePropertyNode, ctx: Context):
         try:
-            type = self.context.get_type(node.type)
+            type = get_safe_type(node.type, ctx)
             self.current_type.define_attribute(node.id, type)
         except SemanticError as se:
             self.errors.append(se.text)
 
     @visitor.when(FunctionNode)
-    def visit(self, node: FunctionNode):
+    def visit(self, node: FunctionNode, ctx: Context):
         try:
-            params_name = [param[0] for param in node.params]
-            params_type = [param[1] for param in node.params]
+            params = [(n, get_safe_type(t, ctx)) for n, t in node.params]
             self.current_type.define_method(
-                node.id, params_name, params_type, node.return_type
+                node.id, params, node.body, get_safe_type(node.return_type, ctx)
             )
         except SemanticError as se:
             self.errors.append(se.text)
 
     @visitor.when(ProtocolNode)
-    def visit(self, node: ProtocolNode):
+    def visit(self, node: ProtocolNode, ctx: Context):
         try:
-            self.current_type = self.context.get_protocol(node.type)
-            for method_spec in node.method_specs:
-                self.visit(method_spec)
+            self.current_type = ctx.get_protocol(node.type)
         except SemanticError as se:
             self.errors.append(se.text)
 
+        for method_spec in node.method_specs:
+            self.visit(method_spec)
+
     @visitor.when(MethodSpecNode)
-    def visit(self, node: MethodSpecNode):
+    def visit(self, node: MethodSpecNode, ctx: Context):
         try:
-            params_name = [param[0] for param in node.params]
-            params_type = [param[1] for param in node.params]
-            self.current_type.define_method(
-                node.id, params_name, params_type, node.return_type
+            params = [(n, get_safe_type(t, ctx)) for n, t in node.params]
+            self.current_type.add_method_spec(
+                node.id, params, get_safe_type(node.return_type, ctx)
             )
         except SemanticError as se:
             self.errors.append(se.text)

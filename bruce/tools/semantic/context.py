@@ -34,6 +34,17 @@ class Context:
 
         return protocol
 
+    def get_type_or_proto(self, name: str):
+        try:
+            return self.get_type(name)
+        except:
+            try:
+                return self.get_protocol(name)
+            except:
+                raise SemanticError(
+                    f"No Type or Protocol is defined under '{name}' name."
+                )
+
     def __str__(self):
         return (
             "{\n\t"
