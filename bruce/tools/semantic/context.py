@@ -14,7 +14,7 @@ class Context:
 
     def get_type(self, name: str):
         type = self.types.get(name)
-        if type == None:
+        if type is None:
             raise SemanticError(f"Type '{name}' is not defined.")
 
         return type
