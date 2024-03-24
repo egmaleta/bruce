@@ -70,7 +70,9 @@ Arith, MoreAriths = GRAMMAR.add_non_terminals("arith more_ariths")
 Term, MoreTerms = GRAMMAR.add_non_terminals("term more_terms")
 Factor, MoreFactors = GRAMMAR.add_non_terminals("factor more_factors")
 Base, Powers = GRAMMAR.add_non_terminals("base powers")
-Molecule, Mutation = GRAMMAR.add_non_terminals("molecule mutation")
+Molecule, Mutation, Downcasting = GRAMMAR.add_non_terminals(
+    "molecule mutation downcasting"
+)
 Atom, Action = GRAMMAR.add_non_terminals("atom action")
 Vector, VectorStructure = GRAMMAR.add_non_terminals("vector vector_structure")
 
@@ -181,7 +183,13 @@ Expr %= (
     lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8], s[10]),
 )
 Expr %= BlockExpr, lambda h, s: s[1]
-Expr %= Disj + MoreDisjs, lambda h, s: s[2], None, lambda h, s: s[1]
+Expr %= (
+    Disj + MoreDisjs + Downcasting,
+    lambda h, s: s[3],
+    None,
+    lambda h, s: s[1],
+    lambda h, s: s[2],
+)
 
 OptionalSemicolon %= semicolon, lambda h, s: None
 OptionalSemicolon %= GRAMMAR.Epsilon, lambda h, s: None
@@ -255,7 +263,13 @@ Stmt %= (
     lambda h, s: ast.IteratorNode(s[3], s[4], s[6], s[8], s[10]),
 )
 Stmt %= BlockExpr + OptionalSemicolon, lambda h, s: s[1]
-Stmt %= Disj + MoreDisjs + semicolon, lambda h, s: s[2], None, lambda h, s: s[1]
+Stmt %= (
+    Disj + MoreDisjs + Downcasting + semicolon,
+    lambda h, s: s[3],
+    None,
+    lambda h, s: s[1],
+    lambda h, s: s[2],
+)
 
 MoreStmts %= Stmt + MoreStmts, lambda h, s: [s[1], *s[2]]
 MoreStmts %= GRAMMAR.Epsilon, lambda h, s: []
@@ -376,9 +390,11 @@ Base %= Molecule + Mutation, lambda h, s: s[2], None, lambda h, s: s[1]
 
 Molecule %= Atom + Action, lambda h, s: s[2], None, lambda h, s: s[1]
 
-Mutation %= as_k + type_identifier, lambda h, s: ast.DowncastingNode(h[0], s[2])
 Mutation %= mut + Molecule, lambda h, s: ast.MutationNode(h[0], s[2])
 Mutation %= GRAMMAR.Epsilon, lambda h, s: h[0]
+
+Downcasting %= as_k + type_identifier, lambda h, s: ast.DowncastingNode(h[0], s[2])
+Downcasting %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 Atom %= number, lambda h, s: ast.NumberNode(s[1])
 Atom %= string, lambda h, s: ast.StringNode(s[1])
