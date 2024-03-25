@@ -1,7 +1,7 @@
 from itertools import islice
 from typing import Union
 
-from . import Variable, Function, Type, Proto, ExprNode
+from . import Variable, Function, Type, Proto
 
 
 class Scope:
@@ -29,10 +29,9 @@ class Scope:
         self,
         name: str,
         params: list[tuple[str, Union[Type, Proto, None]]],
-        body: ExprNode,
         type: Union[Type, Proto, None] = None,
     ):
-        info = Function(name, params, body, type)
+        info = Function(name, params, type)
         self.local_funcs.append(info)
         return info
 

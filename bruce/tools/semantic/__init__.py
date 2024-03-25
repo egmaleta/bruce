@@ -1,14 +1,5 @@
-from abc import ABC
 from collections import OrderedDict
 from typing import Union
-
-
-class ASTNode(ABC):
-    pass
-
-
-class ExprNode(ASTNode):
-    pass
 
 
 class SemanticError(Exception):
@@ -60,13 +51,11 @@ class Function:
         self,
         name: str,
         params: list[tuple[str, Union["Type", "Proto", None]]],
-        body: ExprNode,
         type: Union["Type", "Proto", None] = None,
     ):
         self.name = name
         self.params = OrderedDict(params)
         self.type = type
-        self.body = body
         self._label = "[func]"
 
     def set_type(self, type: Union["Type", "Proto"]):
@@ -94,10 +83,9 @@ class Method(Function):
         self,
         name: str,
         params: list[tuple[str, Union["Type", "Proto", None]]],
-        body: ExprNode,
         type: Union["Type", "Proto", None] = None,
     ):
-        super().__init__(name, params, type, body)
+        super().__init__(name, params, type)
         self._label = "[method]"
 
 
@@ -110,7 +98,6 @@ class Type:
         self.methods: list[Method] = []
 
         self.parent: Type | None = None
-        self.parent_args: list[ExprNode] = []
 
     def set_params(self, params: list[tuple[str, Union["Type", "Proto", None]]]):
         if len(self.params) > 0:
@@ -173,13 +160,12 @@ class Type:
         self,
         name: str,
         params: list[tuple[str, Union["Type", "Proto", None]]],
-        body: ExprNode,
         type: Union["Type", "Proto", None] = None,
     ):
         try:
             self.get_method(name)
         except SemanticError:
-            method = Method(name, params, body, type)
+            method = Method(name, params, type)
             self.methods.append(method)
             return method
         else:

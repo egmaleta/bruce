@@ -1,12 +1,10 @@
+from typing import Union
+
 from .tools.semantic import SemanticError, Type, Proto
 from .tools.semantic.context import Context
 from .tools.semantic.scope import Scope
 from .tools import visitor
-from .ast import (ProgramNode, TypeNode, TypePropertyNode,
-                  FunctionNode, ProtocolNode, MethodSpecNode,
-                  BlockNode, LetExprNode, TypeInstancingNode, 
-                  BooleanNode, StringNode, NumberNode)
-from typing import Union
+from .ast import *
 
 
 def get_safe_type(typename: str | None, ctx: Context):
@@ -37,8 +35,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.value, scope)
 
         if not is_assignable(node.target):
-            self.errors.append(
-                f"Expression '' does not support destructive assignment")
+            self.errors.append(f"Expression '' does not support destructive assignment")
 
         return self.errors
 
@@ -132,8 +129,7 @@ class TypeBuilder(object):
         try:
             params = [(n, get_safe_type(t, ctx)) for n, t in node.params]
             self.current_type.define_method(
-                node.id, params, node.body, get_safe_type(
-                    node.return_type, ctx)
+                node.id, params, get_safe_type(node.return_type, ctx)
             )
         except SemanticError as se:
             self.errors.append(se.text)
@@ -182,10 +178,8 @@ class TypeChecker:
         self.current_type = ctx.get_type(node.type)
         if node.parent_type:
             parent_type = ctx.get_type(node.parent_type)
-            parent_params_size = len(
-                parent_type.params) if parent_type.params else 0
-            node_parent_args_size = len(
-                node.parent_args) if node.parent_args else 0
+            parent_params_size = len(parent_type.params) if parent_type.params else 0
+            node_parent_args_size = len(node.parent_args) if node.parent_args else 0
             if parent_params_size != node_parent_args_size:
                 self.errors.append(
                     f"Type {node.parent_type} expects {parent_params_size} arguments but {node_parent_args_size} were given"
@@ -201,27 +195,27 @@ class TypeChecker:
             self.visit(member, ctx, scope.create_child())
 
     @visitor.when(FunctionNode)
-    def visit(self, node: FunctionNode, cxt: Context, scope: Scope):
+    def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)
         for param in node.params:
             self.visit(param, ctx, scope)
-        self.visit(node.body, cxt, scope.create_child())
+        self.visit(node.body, ctx, scope.create_child())
 
     @visitor.when(TypePropertyNode)
-    def visit(self, node: TypePropertyNode, scope: Scope):
+    def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
         self.visit(node.value, ctx, scope.create_child())
 
     @visitor.when(BlockNode)
-    def visit(self, node: BlockNode, scope: Scope):
+    def visit(self, node: BlockNode, ctx: Context, scope: Scope):
         for member in node.exprs:
             self.visit(member, ctx, scope.create_child())
 
     @visitor.when(LetExprNode)
-    def visit(self, node: LetExprNode, cxt: Context, scope: Scope):
+    def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
         # node.type = self.context.get_type("object").name if not node.type else node.type
         if scope.is_defined(node.id):
             self.errors.append(f"Variable {node.id} already defined")
-        self.visit(node.value, cxt, scope.create_child())
+        self.visit(node.value, ctx, scope.create_child())
         if node.type:
             node_type = self.context.get_type(node.type)
             if not self.current_type.conforms_to(node_type):
@@ -232,7 +226,7 @@ class TypeChecker:
         self.visit(node.body, ctx, scope.create_child())
 
     @visitor.when(TypeInstancingNode)
-    def visit(self, node: TypeInstancingNode, cxt: Context, scope: Scope):
+    def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
         self.current_type = self.context.get_type(node.type)
         node_params_size = len(node.args) if node.args else 0
         current_type_params_size = (
@@ -253,5 +247,5 @@ class TypeChecker:
         self.current_type = self.context.get_type(node.type)
 
     @visitor.when(BooleanNode)
-    def visit(self, node: BooleanNode, cxt: Context, scope: Scope):
+    def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
         self.current_type = self.context.get_type("Boolean")
