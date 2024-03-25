@@ -1,6 +1,7 @@
 from typing import Union
 
 from bruce.tools.graph import topological_order
+from bruce.types import BOOLEAN_TYPE
 
 from .tools.semantic import SemanticError, Type, Proto
 from .tools.semantic.context import Context
@@ -182,25 +183,32 @@ class TypeChecker:
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
         current_type: Type = get_safe_type(node.type, ctx)
         scope.define_variable("self", current_type)
+        for param in node.params:
+            scope.define_variable(param[0], get_safe_type(param[1], ctx))
         # This is to know if the args of the parents are ok
         if node.parent_type:
-            parent_type = get_safe_type(node.parent_type, ctx)
-            parent_args_size = len(
-                parent_type.params) if parent_type.params else 0
-            node_parent_args_size = len(
-                node.parent_args) if node.parent_args else 0
-            if parent_args_size != node_parent_args_size:
-                self.errors.append(
-                    f"Type {node.parent_type} expects {parent_args_size} arguments but {node_parent_args_size} were given"
-                )
-            if parent_type.params and node.parent_args:
-                for parent_arg, node_arg in zip(parent_type.params, node.parent_args):
-                    arg_type = self.visit(node_arg, ctx, scope.create_child())
-                    if not arg_type.conforms_to(parent_arg.type):
-                        self.errors.append(
-                            f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
-                        )
-        current_type.parent_args = node.parent_args
+            if node.params:                    
+                parent_type = get_safe_type(node.parent_type, ctx)
+                parent_args_size = len(
+                    parent_type.params) if parent_type.params else 0
+                node_parent_args_size = len(
+                    node.parent_args) if node.parent_args else 0
+                if parent_args_size != node_parent_args_size:
+                    self.errors.append(
+                        f"Type {node.parent_type} expects {parent_args_size} arguments but {node_parent_args_size} were given"
+                    )
+                    
+                if parent_type.params and node.parent_args:
+                    for parent_arg, node_arg in zip(parent_type.params, node.parent_args):
+                        arg_type = self.visit(node_arg, ctx, scope.create_child())
+                        parent_arg_type = scope.find_variable(parent_arg).type
+                        if not arg_type.conforms_to(parent_arg_type):
+                            self.errors.append(
+                                f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
+                            )
+            else:
+                parent_type = get_safe_type(node.parent_type, ctx)
+                current_type.set_parent(parent_type.params)
 
         for member in node.members:
             self.visit(member, ctx, scope.create_child())
@@ -215,7 +223,11 @@ class TypeChecker:
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
         attributte_type = self.visit(node.value, ctx, scope.create_child())
-        scope.define_variable(node.id, attributte_type)
+        node_type = get_safe_type(node.type, ctx)
+        if not attributte_type.conforms_to(node_type):
+            self.errors.append(
+                f"Cannot convert {attributte_type.name} to {node_type.name}"
+            )
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
@@ -269,7 +281,7 @@ class TypeChecker:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        self.current_type = self.context.get_type("Boolean")
+        self.current_type = BOOLEAN_TYPE
         
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
