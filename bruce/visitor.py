@@ -114,8 +114,6 @@ class TypeBuilder(object):
         for member in node.members:
             self.visit(member, ctx)
 
-        # TODO: handle parent args
-
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context):
         try:
