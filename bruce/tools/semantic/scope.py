@@ -13,7 +13,7 @@ class Scope:
         self.index = 0 if parent is None else len(parent)
 
     def __len__(self):
-        return len(self.locals)
+        return len(self.local_vars)
 
     def create_child(self):
         child = Scope(self)
