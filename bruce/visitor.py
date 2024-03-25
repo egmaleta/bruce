@@ -1,9 +1,10 @@
+from typing import Union
+
 from .tools.semantic import SemanticError, Type, Proto
 from .tools.semantic.context import Context
 from .tools.semantic.scope import Scope
 from .tools import visitor
 from .ast import *
-from typing import Union
 
 
 def get_safe_type(typename: str | None, ctx: Context):
@@ -34,8 +35,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.value, scope)
 
         if not is_assignable(node.target):
-            self.errors.append(
-                f"Expression '' does not support destructive assignment")
+            self.errors.append(f"Expression '' does not support destructive assignment")
 
         return self.errors
 
@@ -127,8 +127,7 @@ class TypeBuilder(object):
         try:
             params = [(n, get_safe_type(t, ctx)) for n, t in node.params]
             self.current_type.define_method(
-                node.id, params, node.body, get_safe_type(
-                    node.return_type, ctx)
+                node.id, params, get_safe_type(node.return_type, ctx)
             )
         except SemanticError as se:
             self.errors.append(se.text)

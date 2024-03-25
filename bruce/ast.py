@@ -1,6 +1,5 @@
-from .tools.semantic import ASTNode, ExprNode
+from .tools.semantic.ast import ASTNode, ExprNode
 from dataclasses import dataclass
-from typing import Union
 
 
 @dataclass
