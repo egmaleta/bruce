@@ -1,5 +1,7 @@
 from typing import Union
 
+from bruce.tools.graph import topological_order
+
 from .tools.semantic import SemanticError, Type, Proto
 from .tools.semantic.context import Context
 from .tools.semantic.scope import Scope
@@ -166,9 +168,14 @@ class TypeChecker:
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope=None):
         scope = Scope()
-        for declaration in node.declarations:
-            self.visit(declaration, ctx, scope.create_child())
-        self.visit(node.expr, ctx, scope.create_child())
+        types_node = [member for member in node.declarations if isinstance(member, TypeNode)]
+        order = topological_order(types_node)
+        if len(order) != len(types_node):
+            self.errors.append("Circular inheritance")
+        else:
+            for declaration in order:           
+                self.visit(declaration, ctx, scope.create_child())
+            self.visit(node.expr, ctx, scope.create_child())
         return scope
 
     @visitor.when(TypeNode)
