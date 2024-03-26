@@ -169,12 +169,14 @@ class TypeChecker:
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope=None):
         scope = Scope()
-        types_node = [member for member in node.declarations if isinstance(member, TypeNode)]
+        types_node = [
+            member for member in node.declarations if isinstance(member, TypeNode)
+        ]
         order = topological_order(types_node)
         if len(order) != len(types_node):
             self.errors.append("Circular inheritance")
         else:
-            for declaration in order:           
+            for declaration in order:
                 self.visit(declaration, ctx, scope.create_child())
             self.visit(node.expr, ctx, scope.create_child())
         return scope
@@ -187,19 +189,19 @@ class TypeChecker:
             scope.define_variable(param[0], get_safe_type(param[1], ctx))
         # This is to know if the args of the parents are ok
         if node.parent_type:
-            if node.params:                    
+            if node.params:
                 parent_type = get_safe_type(node.parent_type, ctx)
-                parent_args_size = len(
-                    parent_type.params) if parent_type.params else 0
-                node_parent_args_size = len(
-                    node.parent_args) if node.parent_args else 0
+                parent_args_size = len(parent_type.params) if parent_type.params else 0
+                node_parent_args_size = len(node.parent_args) if node.parent_args else 0
                 if parent_args_size != node_parent_args_size:
                     self.errors.append(
                         f"Type {node.parent_type} expects {parent_args_size} arguments but {node_parent_args_size} were given"
                     )
-                    
+
                 if parent_type.params and node.parent_args:
-                    for parent_arg, node_arg in zip(parent_type.params, node.parent_args):
+                    for parent_arg, node_arg in zip(
+                        parent_type.params, node.parent_args
+                    ):
                         arg_type = self.visit(node_arg, ctx, scope.create_child())
                         parent_arg_type = scope.find_variable(parent_arg).type
                         if not arg_type.conforms_to(parent_arg_type):
@@ -262,9 +264,7 @@ class TypeChecker:
         # Check the size of args of the type and the instance
         current_type = get_safe_type(node.type, ctx)
         node_args_size = len(node.args) if node.args else 0
-        type_args_size = (
-            len(current_type.params) if current_type.params else 0
-        )
+        type_args_size = len(current_type.params) if current_type.params else 0
         if type_args_size != node_args_size:
             self.errors.append(
                 f"Type {node.type} expects {type_args_size} arguments, but {node_args_size} were given"
@@ -282,7 +282,7 @@ class TypeChecker:
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
         self.current_type = BOOLEAN_TYPE
-        
+
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
         return scope.find_variable(node.value).type
