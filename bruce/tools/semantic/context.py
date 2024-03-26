@@ -57,3 +57,7 @@ class Context:
 
     def __repr__(self):
         return str(self)
+
+
+def get_safe_type(typename: str | None, ctx: Context):
+    return ctx.get_type_or_proto(typename) if typename is not None else typename
