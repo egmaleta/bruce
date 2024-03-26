@@ -1,4 +1,4 @@
-from .tools.semantic import Type
+from .tools.semantic import Type, Proto
 
 
 class ObjectType(Type):
@@ -43,3 +43,7 @@ STRING_TYPE.set_parent(OBJECT_TYPE)
 
 BOOLEAN_TYPE = BooleanType()
 BOOLEAN_TYPE.set_parent(OBJECT_TYPE)
+
+ITERABLE_PROTO = Proto("Iterable")
+ITERABLE_PROTO.add_method_spec("next", [], BOOLEAN_TYPE)
+ITERABLE_PROTO.add_method_spec("current", [], OBJECT_TYPE)

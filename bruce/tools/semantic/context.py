@@ -2,9 +2,9 @@ from . import SemanticError, Type, Proto
 
 
 class Context:
-    def __init__(self):
-        self.types: dict[str, Type] = {}
-        self.protocols: dict[str, Proto] = {}
+    def __init__(self, types: list[Type] = [], protos: list[Proto] = []):
+        self.types: dict[str, Type] = {t.name: t for t in types}
+        self.protocols: dict[str, Proto] = {t.name: t for t in protos}
 
     def create_type(self, name: str):
         if name in self.types:

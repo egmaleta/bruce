@@ -1,5 +1,7 @@
 from .tools.lexer import create_lexer, keyword_row
+from .tools.semantic.context import Context
 from . import grammar as g
+from . import types as t
 
 
 lexer = create_lexer(
@@ -60,4 +62,9 @@ lexer = create_lexer(
         (None, "\n*"),
     ],
     g.GRAMMAR.EOF,
+)
+
+
+ctx = Context(
+    [t.OBJECT_TYPE, t.NUMBER_TYPE, t.STRING_TYPE, t.BOOLEAN_TYPE], [t.ITERABLE_PROTO]
 )
