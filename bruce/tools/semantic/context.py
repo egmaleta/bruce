@@ -1,4 +1,3 @@
-from bruce.types import NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE, OBJECT_TYPE
 from . import SemanticError, Type, Proto
 
 
@@ -6,11 +5,6 @@ class Context:
     def __init__(self):
         self.types: dict[str, Type] = {}
         self.protocols: dict[str, Proto] = {}
-        
-        self.types["Number"] = NUMBER_TYPE
-        self.types["String"] = STRING_TYPE
-        self.types["Boolean"] = BOOLEAN_TYPE
-        self.types["Object"] = OBJECT_TYPE
 
     def create_type(self, name: str):
         if name in self.types:
