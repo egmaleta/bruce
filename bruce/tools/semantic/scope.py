@@ -1,7 +1,7 @@
 from itertools import islice
 from typing import Union
 
-from . import Variable, Function, Type, Proto
+from . import Variable, Constant, Function, Type, Proto
 
 
 class Scope:
@@ -22,6 +22,11 @@ class Scope:
 
     def define_variable(self, name: str, type: Union[Type, Proto, None] = None):
         info = Variable(name, type)
+        self.local_vars.append(info)
+        return info
+
+    def define_constant(self, name: str, type: Union[Type, Proto]):
+        info = Constant(name, type)
         self.local_vars.append(info)
         return info
 

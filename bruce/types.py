@@ -6,6 +6,20 @@ class ObjectType(Type):
         super().__init__("Object")
 
 
+class FunctionType(Type):
+    """Function type is used only for type inference and type checking
+    of identifiers representing functions, like `print` or `rand`.
+
+    It cannot be typed because its name is lowercase."""
+
+    def __init__(self):
+        super().__init__("function")
+
+    @property
+    def is_inheritable(self):
+        return False
+
+
 class NumberType(Type):
     def __init__(self):
         super().__init__("Number")
@@ -34,6 +48,8 @@ class StringType(Type):
 
 
 OBJECT_TYPE = ObjectType()
+
+FUNCTION_TYPE = FunctionType()
 
 NUMBER_TYPE = NumberType()
 NUMBER_TYPE.set_parent(OBJECT_TYPE)

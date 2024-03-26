@@ -1,5 +1,6 @@
 from .tools.lexer import create_lexer, keyword_row
 from .tools.semantic.context import Context
+from .tools.semantic.scope import Scope
 from . import grammar as g
 from . import types as t
 
@@ -53,7 +54,7 @@ lexer = create_lexer(
         (g.given, r"\|\|"),
         keyword_row(g.bind),
         keyword_row(g.mut),
-        (g.builtin_identifier, r"E|PI|self|base|print|range|sqrt|exp|log|rand|sin|cos"),
+        (g.builtin_identifier, r"E|PI|base|print|range|sqrt|exp|log|rand|sin|cos"),
         (g.type_identifier, r"A-Z(a-z|A-Z|0-9|_)*"),
         (g.identifier, r"(a-z|_)(a-z|A-Z|0-9|_)*"),
         (g.number, r"(0|1-90-9*)(.0-90-9*)?"),
@@ -65,6 +66,23 @@ lexer = create_lexer(
 )
 
 
-ctx = Context(
-    [t.OBJECT_TYPE, t.NUMBER_TYPE, t.STRING_TYPE, t.BOOLEAN_TYPE], [t.ITERABLE_PROTO]
+context = Context(
+    [t.OBJECT_TYPE, t.FUNCTION_TYPE, t.NUMBER_TYPE, t.STRING_TYPE, t.BOOLEAN_TYPE],
+    [t.ITERABLE_PROTO],
 )
+
+scope = Scope()
+scope.define_constant("E", t.NUMBER_TYPE)
+scope.define_constant("PI", t.NUMBER_TYPE)
+scope.define_function("print", [("obj", t.OBJECT_TYPE)], t.OBJECT_TYPE)
+scope.define_function(
+    "range", [("min", t.NUMBER_TYPE), ("max", t.NUMBER_TYPE)], t.ITERABLE_PROTO
+)
+scope.define_function("sqrt", [("value", t.NUMBER_TYPE)], t.NUMBER_TYPE)
+scope.define_function("exp", [("value", t.NUMBER_TYPE)], t.NUMBER_TYPE)
+scope.define_function(
+    "log", [("base", t.NUMBER_TYPE), ("value", t.NUMBER_TYPE)], t.NUMBER_TYPE
+)
+scope.define_function("rand", [], t.NUMBER_TYPE)
+scope.define_function("sin", [("angle", t.NUMBER_TYPE)], t.NUMBER_TYPE)
+scope.define_function("cos", [("angle", t.NUMBER_TYPE)], t.NUMBER_TYPE)
