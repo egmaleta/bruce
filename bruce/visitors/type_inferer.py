@@ -6,7 +6,6 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import BASE_FUNC_NAME
 
 
 class TypeInferer:
@@ -52,9 +51,6 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
-        if node.is_builtin and node.value == BASE_FUNC_NAME:
-            return t.FUNCTION_TYPE
-
         var = scope.find_variable(node.value)
         if var is not None:
             return var.type
@@ -185,10 +181,6 @@ class TypeInferer:
 
     @visitor.when(ast.LoopNode)
     def visit(self, node: ast.LoopNode, ctx: Context, scope: Scope):
-        pass
-
-    @visitor.when(ast.IteratorNode)
-    def visit(self, node: ast.IteratorNode, ctx: Context, scope: Scope):
         pass
 
     @visitor.when(ast.ConditionalNode)
