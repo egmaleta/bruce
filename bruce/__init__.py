@@ -67,7 +67,7 @@ lexer = create_lexer(
 
 
 context = Context(
-    [t.OBJECT_TYPE, t.FUNCTION_TYPE, t.NUMBER_TYPE, t.STRING_TYPE, t.BOOLEAN_TYPE],
+    [t.OBJECT_TYPE, t.NUMBER_TYPE, t.STRING_TYPE, t.BOOLEAN_TYPE],
     [t.ITERABLE_PROTO],
 )
 
