@@ -195,11 +195,7 @@ class TypeChecker:
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        variable = scope.find_variable(node.value)
-        if variable.name == "base":
-            return variable.type.get_method(self.current_method.name).type
-        else:
-            return variable.type
+        return scope.find_variable(node.value).type
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
