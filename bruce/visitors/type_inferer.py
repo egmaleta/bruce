@@ -5,7 +5,7 @@ from ..tools.semantic import Type, Proto
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
-from .. import types
+from .. import types as t
 
 
 class TypeInferer:
@@ -21,15 +21,15 @@ class TypeInferer:
                 var.set_type(new_type)
                 self.occurs = True
 
-            elif isinstance(var.type, types.UnionType):
+            elif isinstance(var.type, t.UnionType):
                 itsc = var.type & new_type
                 l = len(itsc)
                 if 0 < l < len(var.type):
                     self.occurs = True
 
                     if l == 1:
-                        t, *_ = itsc
-                        var.set_type(t)
+                        type, *_ = itsc
+                        var.set_type(type)
                     else:
                         var.set_type(itsc)
 
@@ -39,26 +39,26 @@ class TypeInferer:
 
     @visitor.when(ast.NumberNode)
     def visit(self, node: ast.NumberNode, ctx: Context, scope: Scope):
-        return types.NUMBER_TYPE
+        return t.NUMBER_TYPE
 
     @visitor.when(ast.StringNode)
     def visit(self, node: ast.StringNode, ctx: Context, scope: Scope):
-        return types.STRING_TYPE
+        return t.STRING_TYPE
 
     @visitor.when(ast.BooleanNode)
     def visit(self, node: ast.BooleanNode, ctx: Context, scope: Scope):
-        return types.BOOLEAN_TYPE
+        return t.BOOLEAN_TYPE
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
         if node.is_builtin and node.value == "base":
-            return types.FUNCTION_TYPE
+            return t.FUNCTION_TYPE
 
         var = scope.find_variable(node.value)
         if var is not None:
             return var.type
 
-        return types.FUNCTION_TYPE
+        return t.FUNCTION_TYPE
 
     @visitor.when(ast.TypeInstancingNode)
     def visit(self, node: ast.TypeInstancingNode, ctx: Context, scope: Scope):
@@ -68,40 +68,40 @@ class TypeInferer:
     def visit(self, node: ast.VectorNode, ctx: Context, scope: Scope):
         item_types = []
         for expr in node.items:
-            t = self.visit(expr, ctx, scope)
-            if t is not None:
-                item_types.append(t)
+            expr_t = self.visit(expr, ctx, scope)
+            if expr_t is not None:
+                item_types.append(expr_t)
 
         if len(item_types) > 0:
-            ut = types.UnionType(*item_types)
+            ut = t.UnionType(*item_types)
             for expr in node.items:
                 self._infer(expr, scope, ut)
 
-            return types.VectorType(ut)
+            return t.VectorType(ut)
 
-        return types.VectorType(types.OBJECT_TYPE)
+        return t.VectorType(t.OBJECT_TYPE)
 
     @visitor.when(ast.MappedIterableNode)
     def visit(self, node: ast.MappedIterableNode, ctx: Context, scope: Scope):
-        t = get_safe_type(node.item_type, ctx)
+        it = get_safe_type(node.item_type, ctx)
         iterable_t = self.visit(node, ctx, scope)
 
-        if t is None:
-            if isinstance(iterable_t, types.VectorType):
-                t = iterable_t.item_type
+        if it is None:
+            if isinstance(iterable_t, t.VectorType):
+                it = iterable_t.item_type
             elif isinstance(iterable_t, Type) and iterable_t.implements(
-                types.ITERABLE_PROTO
+                t.ITERABLE_PROTO
             ):
-                # t = ...
+                # it = ...
                 pass
-            elif iterable_t == types.ITERABLE_PROTO:
-                t = types.OBJECT_TYPE
+            elif iterable_t == t.ITERABLE_PROTO:
+                it = t.OBJECT_TYPE
 
         child_scope = scope.create_child()
-        child_scope.define_variable(node.item_id, t)
+        child_scope.define_variable(node.item_id, it)
         mapped_t = self.visit(node.map_expr, ctx, child_scope)
 
-        return types.VectorType(mapped_t if mapped_t is not None else types.OBJECT_TYPE)
+        return t.VectorType(mapped_t if mapped_t is not None else t.OBJECT_TYPE)
 
     @visitor.when(ast.MemberAccessingNode)
     def visit(self, node: ast.MemberAccessingNode, ctx: Context, scope: Scope):
@@ -125,29 +125,29 @@ class TypeInferer:
 
     @visitor.when(ast.NegOpNode)
     def visit(self, node: ast.NegOpNode, ctx: Context, scope: Scope):
-        t = self.visit(node.operand, ctx, scope)
+        self.visit(node.operand, ctx, scope)
 
-        self._infer(node.operand, scope, types.BOOLEAN_TYPE)
+        self._infer(node.operand, scope, t.BOOLEAN_TYPE)
 
-        return types.BOOLEAN_TYPE
+        return t.BOOLEAN_TYPE
 
     @visitor.when(ast.ArithNegOpNode)
     def visit(self, node: ast.ArithNegOpNode, ctx: Context, scope: Scope):
-        t = self.visit(node.operand, ctx, scope)
+        self.visit(node.operand, ctx, scope)
 
-        self._infer(node.operand, scope, types.NUMBER_TYPE)
+        self._infer(node.operand, scope, t.NUMBER_TYPE)
 
-        return types.NUMBER_TYPE
+        return t.NUMBER_TYPE
 
     @visitor.when(ast.LogicOpNode)
     def visit(self, node: ast.LogicOpNode, ctx: Context, scope: Scope):
         self.visit(node.left, ctx, scope)
         self.visit(node.right, ctx, scope)
 
-        self._infer(node.left, scope, types.BOOLEAN_TYPE)
-        self._infer(node.right, scope, types.BOOLEAN_TYPE)
+        self._infer(node.left, scope, t.BOOLEAN_TYPE)
+        self._infer(node.right, scope, t.BOOLEAN_TYPE)
 
-        return types.BOOLEAN_TYPE
+        return t.BOOLEAN_TYPE
 
     @visitor.when(ast.ComparisonOpNode)
     def visit(self, node: ast.ComparisonOpNode, ctx: Context, scope: Scope):
@@ -158,21 +158,21 @@ class TypeInferer:
         self.visit(node.left, ctx, scope)
         self.visit(node.right, ctx, scope)
 
-        self._infer(node.left, scope, types.NUMBER_TYPE)
-        self._infer(node.right, scope, types.NUMBER_TYPE)
+        self._infer(node.left, scope, t.NUMBER_TYPE)
+        self._infer(node.right, scope, t.NUMBER_TYPE)
 
-        return types.NUMBER_TYPE
+        return t.NUMBER_TYPE
 
     @visitor.when(ast.ConcatOpNode)
     def visit(self, node: ast.ConcatOpNode, ctx: Context, scope: Scope):
         self.visit(node.left, ctx, scope)
         self.visit(node.right, ctx, scope)
 
-        ut = types.UnionType(types.NUMBER_TYPE, types.STRING_TYPE)
+        ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
         self._infer(node.left, scope, ut)
         self._infer(node.right, scope, ut)
 
-        return types.STRING_TYPE
+        return t.STRING_TYPE
 
     @visitor.when(ast.TypeMatchingNode)
     def visit(self, node: ast.TypeMatchingNode, ctx: Context, scope: Scope):
@@ -211,7 +211,7 @@ class TypeInferer:
         pass
 
     @visitor.when(ast.ProgramNode)
-    def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope):
+    def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
         pass
 
 
