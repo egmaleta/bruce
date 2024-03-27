@@ -108,6 +108,9 @@ class UnionType(Type):
     def __len__(self):
         return len(self.types)
 
+    def __iter__(self):
+        return iter(self.types)
+
 
 class VectorType(Type):
     """Vector type is used only for type inference and type checking

@@ -118,7 +118,9 @@ class TypeInferer:
 
     @visitor.when(ast.DowncastingNode)
     def visit(self, node: ast.DowncastingNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.target, ctx, scope)
+
+        return get_safe_type(node.type, ctx)
 
     @visitor.when(ast.NegOpNode)
     def visit(self, node: ast.NegOpNode, ctx: Context, scope: Scope):
@@ -173,19 +175,56 @@ class TypeInferer:
 
     @visitor.when(ast.TypeMatchingNode)
     def visit(self, node: ast.TypeMatchingNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.target, ctx, scope)
+
+        return t.BOOLEAN_TYPE
 
     @visitor.when(ast.BlockNode)
     def visit(self, node: ast.BlockNode, ctx: Context, scope: Scope):
-        pass
+        type = None
+        for expr in node.exprs:
+            type = self.visit(expr, ctx, scope.create_child())
+
+        return type
 
     @visitor.when(ast.LoopNode)
     def visit(self, node: ast.LoopNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.condition, ctx, scope)
+        bt = self.visit(node.body, ctx, scope)
+        ft = self.visit(node.fallback_expr, ctx, scope)
+
+        self._infer(node.condition, scope, t.BOOLEAN_TYPE)
+
+        if bt is None or ft is None:
+            return None
+
+        return bt if bt == ft else t.UnionType(bt, ft)
 
     @visitor.when(ast.ConditionalNode)
     def visit(self, node: ast.ConditionalNode, ctx: Context, scope: Scope):
-        pass
+        branch_types = []
+
+        for cond, branch in node.condition_branchs:
+            self.visit(cond, ctx, scope)
+
+            bt = self.visit(branch, ctx, scope)
+            branch_types.append(bt)
+
+        ft = self.visit(node.fallback_branch, ctx, scope)
+        branch_types.append(ft)
+
+        for cond, _ in node.condition_branchs:
+            self._infer(cond, scope, t.BOOLEAN_TYPE)
+
+        if any(bt is None for bt in branch_types):
+            return None
+
+        ut = t.UnionType(*branch_types)
+        if len(ut) == 1:
+            type, *_ = ut
+            return type
+
+        return ut
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
