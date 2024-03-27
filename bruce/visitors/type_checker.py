@@ -1,9 +1,9 @@
-from ..tools.semantic import Type
+from ..tools.semantic import SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..tools.graph import topological_order
 from ..tools import visitor
-from ..types import BOOLEAN_TYPE
+from ..types import BOOLEAN_TYPE, NUMBER_TYPE
 from ..ast import *
 
 
@@ -34,8 +34,7 @@ class TypeChecker:
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
-        current_type: Type = get_safe_type(node.type, ctx)
-        scope.define_variable("self", current_type)
+        self.current_type: Type = get_safe_type(node.type, ctx)
         for param in node.params:
             scope.define_variable(param[0], get_safe_type(param[1], ctx))
         # This is to know if the args of the parents are ok
@@ -54,24 +53,34 @@ class TypeChecker:
                         parent_type.params, node.parent_args
                     ):
                         arg_type = self.visit(node_arg, ctx, scope.create_child())
-                        parent_arg_type = scope.find_variable(parent_arg).type
+                        parent_arg_type = parent_type.params[parent_arg]
                         if not arg_type.conforms_to(parent_arg_type):
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
                             )
             else:
                 parent_type = get_safe_type(node.parent_type, ctx)
-                current_type.set_parent(parent_type.params)
+                self.current_type.set_parent(parent_type.params)
 
         for member in node.members:
-            self.visit(member, ctx, scope.create_child())
+            if isinstance(member, TypePropertyNode):
+                self.visit(member, ctx, scope.create_child())
+
+        for member in node.members:
+            if isinstance(member, FunctionNode):
+                scope.define_variable("self", self.current_type)
+                scope.define_variable("base", self.current_type.parent)
+                self.visit(member, ctx, scope.create_child())
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)
         for param in node.params:
             self.visit(param, ctx, scope)
-        self.visit(node.body, ctx, scope.create_child())
+        body_type = self.visit(node.body, ctx, scope.create_child())
+        return_type = get_safe_type(node.return_type, ctx)
+        if not body_type.conforms_to(return_type):
+            self.errors.append(f"Cannot convert {body_type.name} in {node.return_type}")
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
@@ -84,16 +93,51 @@ class TypeChecker:
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
-        stack = []
         for member in node.exprs:
-            stack.append(self.visit(member, ctx, scope.create_child()))
-        return_type = get_safe_type("Object", ctx)
-        while len(stack) > 0:
-            if stack[len(stack) - 1]:
-                return_type = stack.pop()
-                break
-            stack.pop()
-        return return_type
+            self.visit(member, ctx, scope.create_child())
+
+    @visitor.when(MemberAccessingNode)
+    def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
+        try:
+            target = self.visit(node.target, ctx, scope.create_child())
+            if not target:
+                self.errors.append(f"Variable {node.target} not defined")
+            else:
+                try:
+                    return target.get_method(node.member_id)
+                except SemanticError as se:
+                    if (
+                        target == self.current_type
+                        and isinstance(node.target, IdentifierNode)
+                        and node.target.value == "self"
+                    ):
+                        return target.get_attribute(node.member_id).type
+                    else:
+                        self.errors.append(se.text)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(FunctionCallNode)
+    def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
+        try:
+            method = self.visit(node.target, ctx, scope.create_child())
+            if not method:
+                self.errors.append(f"Method {node.target} not defined")
+            else:
+                if len(node.args) != len(method.params):
+                    self.errors.append(
+                        f"Method {node.target} expects {len(method.params)} arguments but {len(node.args)} were given"
+                    )
+                else:
+                    for arg, param in zip(node.args, method.params):
+                        arg_type = self.visit(arg, ctx, scope.create_child())
+                        if not arg_type.conforms_to(param.type):
+                            self.errors.append(
+                                f"Cannot convert {arg_type.name} to {param.type.name}"
+                            )
+            return method.type
+        except SemanticError as se:
+            self.errors.append(se.text)
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
@@ -130,10 +174,33 @@ class TypeChecker:
                 )
         return get_safe_type(node.type, ctx)
 
+    @visitor.when(ArithOpNode)
+    def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
+        try:
+            left = self.visit(node.left, ctx, scope.create_child())
+            right = self.visit(node.right, ctx, scope.create_child())
+            if left != NUMBER_TYPE or right != NUMBER_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        except AttributeError as ae:
+            pass  # TODO Fix this when left or right return None
+        return NUMBER_TYPE
+
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
         self.current_type = BOOLEAN_TYPE
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        return scope.find_variable(node.value).type
+        variable = scope.find_variable(node.value)
+        if variable.name == "base":
+            return variable.type.get_method(self.current_method.name).type
+        else:
+            return variable.type
+
+    @visitor.when(NumberNode)
+    def visit(self, node: NumberNode, ctx: Context, scope: Scope):
+        return NUMBER_TYPE
