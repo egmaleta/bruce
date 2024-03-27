@@ -160,15 +160,6 @@ class LetExprNode(ExprNode):
     body: ExprNode
 
 
-def desugar_let_expr(bindings: list[tuple[str, str | None, ExprNode]], body: ExprNode):
-    head, *tail = bindings
-    id, type, value = head
-
-    return LetExprNode(
-        id, type, value, body if len(tail) == 0 else desugar_let_expr(tail, body)
-    )
-
-
 @dataclass
 class FunctionNode(ASTNode):
     id: str
