@@ -1,6 +1,7 @@
 from typing import Union
 
 from .tools.semantic import Type, Proto
+from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME
 
 
 class ObjectType(Type):
@@ -117,8 +118,8 @@ class VectorType(Type):
     def __init__(self, item_type: Union[Type, Proto]):
         super().__init__(f"vector_of_{item_type.name}")
         self.item_type = item_type
-        self.define_method("next", [], BOOLEAN_TYPE)
-        self.define_method("current", [], item_type)
+        self.define_method(NEXT_METHOD_NAME, [], BOOLEAN_TYPE)
+        self.define_method(CURRENT_METHOD_NAME, [], item_type)
 
     @property
     def is_inheritable(self):
@@ -129,5 +130,5 @@ class VectorType(Type):
 
 
 ITERABLE_PROTO = Proto("Iterable")
-ITERABLE_PROTO.add_method_spec("next", [], BOOLEAN_TYPE)
-ITERABLE_PROTO.add_method_spec("current", [], OBJECT_TYPE)
+ITERABLE_PROTO.add_method_spec(NEXT_METHOD_NAME, [], BOOLEAN_TYPE)
+ITERABLE_PROTO.add_method_spec(CURRENT_METHOD_NAME, [], OBJECT_TYPE)

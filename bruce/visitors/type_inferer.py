@@ -6,6 +6,7 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
+from ..names import BASE_FUNC_NAME
 
 
 class TypeInferer:
@@ -51,7 +52,7 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
-        if node.is_builtin and node.value == "base":
+        if node.is_builtin and node.value == BASE_FUNC_NAME:
             return t.FUNCTION_TYPE
 
         var = scope.find_variable(node.value)

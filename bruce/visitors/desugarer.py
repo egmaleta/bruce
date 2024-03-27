@@ -1,6 +1,7 @@
 from ..tools import visitor
 from .. import ast
 from ..types import OBJECT_TYPE
+from ..names import INSTANCE_NAME, NEXT_METHOD_NAME, CURRENT_METHOD_NAME, BASE_FUNC_NAME
 
 
 def desugar_let_expr(
@@ -50,14 +51,17 @@ class Desugarer:
             iterable_expr,
             ast.LoopNode(
                 ast.FunctionCallNode(
-                    ast.MemberAccessingNode(ast.IdentifierNode(iterable_id), "next"), []
+                    ast.MemberAccessingNode(
+                        ast.IdentifierNode(iterable_id), NEXT_METHOD_NAME
+                    ),
+                    [],
                 ),
                 ast.LetExprNode(
                     node.item_id,
                     node.item_type,
                     ast.FunctionCallNode(
                         ast.MemberAccessingNode(
-                            ast.IdentifierNode(iterable_id), "current"
+                            ast.IdentifierNode(iterable_id), CURRENT_METHOD_NAME
                         ),
                         [],
                     ),
@@ -71,7 +75,7 @@ class Desugarer:
     def visit(self, node: ast.IdentifierNode):
         if (
             node.is_builtin
-            and node.value == "base"
+            and node.value == BASE_FUNC_NAME
             and self.current_method_name is not None
         ):
             type = (
@@ -80,7 +84,7 @@ class Desugarer:
                 else OBJECT_TYPE.name
             )
             return ast.MemberAccessingNode(
-                ast.DowncastingNode(ast.IdentifierNode("self"), type),
+                ast.DowncastingNode(ast.IdentifierNode(INSTANCE_NAME), type),
                 self.current_method_name,
             )
 
