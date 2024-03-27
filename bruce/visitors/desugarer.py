@@ -1,5 +1,6 @@
 from ..tools import visitor
 from .. import ast
+from ..types import OBJECT_TYPE
 
 
 def desugar_let_expr(
@@ -16,6 +17,9 @@ def desugar_let_expr(
 class Desugarer:
     def __init__(self):
         self.iterable_count = 0
+
+        self.current_method_name: str | None = None
+        self.current_type_parent_name: str | None = None
 
     def next_iterable_id(self):
         self.iterable_count += 1
@@ -62,3 +66,22 @@ class Desugarer:
                 fallback_expr,
             ),
         )
+
+    @visitor.when(ast.IdentifierNode)
+    def visit(self, node: ast.IdentifierNode):
+        if (
+            node.is_builtin
+            and node.value == "base"
+            and self.current_method_name is not None
+        ):
+            type = (
+                self.current_type_parent_name
+                if self.current_type_parent_name is not None
+                else OBJECT_TYPE.name
+            )
+            return ast.MemberAccessingNode(
+                ast.DowncastingNode(ast.IdentifierNode("self"), type),
+                self.current_method_name,
+            )
+
+        return node
