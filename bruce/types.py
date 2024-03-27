@@ -8,6 +8,48 @@ class ObjectType(Type):
         super().__init__("Object")
 
 
+OBJECT_TYPE = ObjectType()
+
+
+class NumberType(Type):
+    def __init__(self):
+        super().__init__("Number")
+
+    @property
+    def is_inheritable(self):
+        return False
+
+
+NUMBER_TYPE = NumberType()
+NUMBER_TYPE.set_parent(OBJECT_TYPE)
+
+
+class BooleanType(Type):
+    def __init__(self):
+        super().__init__("Boolean")
+
+    @property
+    def is_inheritable(self):
+        return False
+
+
+BOOLEAN_TYPE = BooleanType()
+BOOLEAN_TYPE.set_parent(OBJECT_TYPE)
+
+
+class StringType(Type):
+    def __init__(self):
+        super().__init__("String")
+
+    @property
+    def is_inheritable(self):
+        return False
+
+
+STRING_TYPE = StringType()
+STRING_TYPE.set_parent(OBJECT_TYPE)
+
+
 class FunctionType(Type):
     """Function type is used only for type inference and type checking
     of identifiers representing functions, like `print` or `rand`.
@@ -20,6 +62,9 @@ class FunctionType(Type):
     @property
     def is_inheritable(self):
         return False
+
+
+FUNCTION_TYPE = FunctionType()
 
 
 class UnionType(Type):
@@ -72,6 +117,8 @@ class VectorType(Type):
     def __init__(self, item_type: Union[Type, Proto]):
         super().__init__(f"vector_of_{item_type.name}")
         self.item_type = item_type
+        self.define_method("next", [], BOOLEAN_TYPE)
+        self.define_method("current", [], item_type)
 
     @property
     def is_inheritable(self):
@@ -80,46 +127,6 @@ class VectorType(Type):
     def __eq__(self, other):
         return isinstance(other, VectorType) and self.item_type == other.item_type
 
-
-class NumberType(Type):
-    def __init__(self):
-        super().__init__("Number")
-
-    @property
-    def is_inheritable(self):
-        return False
-
-
-class BooleanType(Type):
-    def __init__(self):
-        super().__init__("Boolean")
-
-    @property
-    def is_inheritable(self):
-        return False
-
-
-class StringType(Type):
-    def __init__(self):
-        super().__init__("String")
-
-    @property
-    def is_inheritable(self):
-        return False
-
-
-OBJECT_TYPE = ObjectType()
-
-FUNCTION_TYPE = FunctionType()
-
-NUMBER_TYPE = NumberType()
-NUMBER_TYPE.set_parent(OBJECT_TYPE)
-
-STRING_TYPE = StringType()
-STRING_TYPE.set_parent(OBJECT_TYPE)
-
-BOOLEAN_TYPE = BooleanType()
-BOOLEAN_TYPE.set_parent(OBJECT_TYPE)
 
 ITERABLE_PROTO = Proto("Iterable")
 ITERABLE_PROTO.add_method_spec("next", [], BOOLEAN_TYPE)
