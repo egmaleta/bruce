@@ -149,7 +149,7 @@ class LoopNode(ExprNode):
 @dataclass
 class ConditionalNode(ExprNode):
     condition_branchs: list[tuple[ExprNode, ExprNode]]
-    fallback_branck: ExprNode
+    fallback_branch: ExprNode
 
 
 @dataclass

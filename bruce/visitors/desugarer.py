@@ -163,7 +163,7 @@ class Desugarer:
     def visit(self, node: ast.ConditionalNode):
         return ast.ConditionalNode(
             [(self.visit(c), self.visit(b)) for c, b in node.condition_branchs],
-            self.visit(node.fallback_branck),
+            self.visit(node.fallback_branch),
         )
 
     @visitor.when(ast.ProgramNode)
