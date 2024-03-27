@@ -159,7 +159,7 @@ MoreMembers %= GRAMMAR.Epsilon, lambda h, s: []
 
 Expr %= (
     let + Binding + MoreBindings + in_k + Expr,
-    lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
+    lambda h, s: ast.MultipleLetExprNode([s[2], *s[3]], s[5]),
 )
 Expr %= (
     if_k + lparen + Expr + rparen + Expr + ElseBranch,
@@ -239,7 +239,7 @@ MoreConjs %= GRAMMAR.Epsilon, lambda h, s: h[0]
 # if the expression is inline, otherwise the semicolon is optional
 Stmt %= (
     let + Binding + MoreBindings + in_k + Stmt,
-    lambda h, s: ast.desugar_let_expr([s[2], *s[3]], s[5]),
+    lambda h, s: ast.MultipleLetExprNode([s[2], *s[3]], s[5]),
 )
 Stmt %= (
     if_k + lparen + Expr + rparen + Expr + ElseStmtBranch,

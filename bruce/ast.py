@@ -147,15 +147,6 @@ class LoopNode(ExprNode):
 
 
 @dataclass
-class IteratorNode(ExprNode):
-    item_id: str
-    item_type: str | None
-    iterable_expr: ExprNode
-    body: ExprNode
-    fallback_expr: ExprNode
-
-
-@dataclass
 class ConditionalNode(ExprNode):
     condition_branchs: list[tuple[ExprNode, ExprNode]]
     fallback_branck: ExprNode
@@ -219,3 +210,25 @@ class TypeNode(ASTNode):
 def is_assignable(node: ASTNode):
     is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
     return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
+
+
+# SYNTACTIC SUGAR
+
+
+@dataclass
+class IteratorNode:
+    """Desugars into a let expression with a loop as body."""
+
+    item_id: str
+    item_type: str | None
+    iterable_expr: ExprNode
+    body: ExprNode
+    fallback_expr: ExprNode
+
+
+@dataclass
+class MultipleLetExprNode:
+    """Desugars recursively into a single let expression."""
+
+    bindings: list[tuple[str, str | None, ExprNode]]
+    body: ExprNode
