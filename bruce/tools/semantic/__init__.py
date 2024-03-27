@@ -19,8 +19,7 @@ class Variable:
         return True
 
     def set_type(self, type: Union["Type", "Proto"]):
-        if self.type is None:
-            self.type = type
+        self.type = type
 
     def __str__(self):
         typename = self.type.name if self.type is not None else "Unknown"
@@ -226,7 +225,10 @@ class Type:
         return str(self)
 
     def __eq__(self, other):
-        return self.name == other.name
+        return isinstance(other, Type) and self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class MethodSpec:
@@ -302,7 +304,7 @@ class Proto:
         return other in self._ancestors()
 
     def __eq__(self, other):
-        return self.name == other.name
+        return isinstance(other, Proto) and self.name == other.name
 
     def __hash__(self):
         return hash(self.name)

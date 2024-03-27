@@ -76,7 +76,9 @@ scope.define_constant("E", t.NUMBER_TYPE)
 scope.define_constant("PI", t.NUMBER_TYPE)
 scope.define_function("print", [("obj", t.OBJECT_TYPE)], t.OBJECT_TYPE)
 scope.define_function(
-    "range", [("min", t.NUMBER_TYPE), ("max", t.NUMBER_TYPE)], t.ITERABLE_PROTO
+    "range",
+    [("min", t.NUMBER_TYPE), ("max", t.NUMBER_TYPE)],
+    t.VectorType(t.NUMBER_TYPE),
 )
 scope.define_function("sqrt", [("value", t.NUMBER_TYPE)], t.NUMBER_TYPE)
 scope.define_function("exp", [("value", t.NUMBER_TYPE)], t.NUMBER_TYPE)
