@@ -123,6 +123,8 @@ class VectorType(Type):
         self.item_type = item_type
         self.define_method(NEXT_METHOD_NAME, [], BOOLEAN_TYPE)
         self.define_method(CURRENT_METHOD_NAME, [], item_type)
+        self.define_method("size", [], NUMBER_TYPE)
+        self.set_parent(OBJECT_TYPE)
 
     @property
     def is_inheritable(self):
