@@ -30,7 +30,7 @@ class TypeCollector(object):
             self.errors.append(se.text)
 
     @visitor.when(ProtocolNode)
-    def visit(self, node: TypeNode, ctx: Context):
+    def visit(self, node: ProtocolNode, ctx: Context):
         try:
             ctx.create_protocol(node.type)
         except SemanticError as se:
