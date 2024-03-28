@@ -90,6 +90,9 @@ class UnionType(Type):
     def is_inheritable(self):
         return False
 
+    def conforms_to(self, other: "Type"):
+        return any(t.conforms_to(other) for t in self.types)
+
     def __eq__(self, other):
         return isinstance(other, UnionType) and self.types == other.types
 
