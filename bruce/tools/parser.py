@@ -3,6 +3,31 @@ from itertools import islice
 from .grammar import Symbol, Sentence, Grammar, NonTerminal, Terminal, Production, EOF
 from .token import Token
 
+class ParsingError(Exception):
+    """
+    Base class for all parsing exceptions.
+    """
+    pass
+
+class BadEOFError(ParsingError):
+    """
+    Unexpected EOF error.
+    """
+    
+    def __init__(self):
+        ParsingError.__init__(self, "Unexpected EOF")
+        
+class UnexpectedToken(ParsingError):
+    """
+    Unexpected token error.
+    """
+    
+    def __init__(self, token,token_expected = None, line = None):
+        if token_expected:
+            ParsingError.__init__(self,f'Unexpected token: {token} at {line}', f'expected: {token_expected}')
+        else:
+            ParsingError.__init__(self, f'Unexpected token: {token} at {line}')
+ 
 
 class ContainerSet:
     def __init__(self, *values: Symbol, contains_epsilon=False):
@@ -191,18 +216,35 @@ def create_parser(
             follows = compute_follows(G, firsts)
         M = build_parsing_table(G, firsts, follows)
 
-    def parser(token_types: list[Terminal]) -> list[Production]:
+    def parser(tokens: list[Token]) -> list[Production]:
+        token_types = []
+        
+        for t in tokens:
+            token_types.append(t.token_type)
+
         cursor = 0
-        p = M[G.start_symbol, token_types[cursor]][0]
+        try :
+            M[G.start_symbol, token_types[cursor]][0]
+        except KeyError:
+            raise UnexpectedToken(tokens[cursor].lex)
+        else:
+            p = M[G.start_symbol, token_types[cursor]][0]
         output = [p]
         stack = [*reversed(p.right)]
+        errors = []
 
         while True:
             top = stack.pop()
             a = token_types[cursor]
+            current_token = tokens[cursor]
 
             if top.is_non_terminal:
-                p = M[top, a][0]
+                try:
+                    M[top,a][0]
+                except KeyError:
+                    raise UnexpectedToken(current_token.lex) 
+                else:
+                    p = M[top, a][0]
                 output.append(p)
                 if not p.is_epsilon:
                     stack.extend(reversed(p.right))
@@ -213,7 +255,7 @@ def create_parser(
                     cursor += 1
                 else:
                     # TODO: use our own errors
-                    raise Exception("Parsing Error: Malformed Expression!")
+                    raise UnexpectedToken(current_token.lex,top)
 
             if not stack:
                 break
@@ -268,3 +310,7 @@ def evaluate(
             synteticed[i] = evaluate(next_production, left_parse, tokens, inherited[i])
 
     return attributes[0](inherited, synteticed)
+
+
+
+

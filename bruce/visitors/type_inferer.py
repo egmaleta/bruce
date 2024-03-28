@@ -1,18 +1,22 @@
 from typing import Union
 
 from ..tools import visitor
-from ..tools.semantic import Type, Proto, SemanticError
+from ..tools.semantic import Type, Proto, SemanticError, Method
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import SIZE_METHOD_NAME
+from ..names import SIZE_METHOD_NAME, INSTANCE_NAME
 
 
 class TypeInferer:
     def __init__(self):
         self.errors: list[str] = []
         self.occurs = False
+
+        # set before read
+        self.current_type: Type = None
+        self.current_method: Method = None
 
     def _infer(self, node: ast.ExprNode, scope: Scope, new_type: Union[Type, Proto]):
         if isinstance(node, ast.IdentifierNode):
@@ -52,6 +56,11 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
+        if node.value == INSTANCE_NAME:
+            if node.value not in self.current_method.params:
+                # 'self' refers to current type
+                return self.current_type
+
         var = scope.find_variable(node.value)
         if var is not None:
             return var.type
@@ -104,6 +113,18 @@ class TypeInferer:
     @visitor.when(ast.MemberAccessingNode)
     def visit(self, node: ast.MemberAccessingNode, ctx: Context, scope: Scope):
         self.visit(node.target, ctx, scope)
+
+        if (
+            isinstance(node.target, ast.IdentifierNode)
+            and node.target.value == INSTANCE_NAME
+        ):
+            # accessing to 'self'
+            if node.target.value not in self.current_method.params:
+                # 'self' refers to current type
+                try:
+                    return self.current_type.get_attribute(node.member_id)
+                except SemanticError:
+                    return t.FUNCTION_TYPE
 
         canditate_types = []
 

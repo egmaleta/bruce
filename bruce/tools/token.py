@@ -2,9 +2,10 @@ from .grammar import Terminal
 
 
 class Token:
-    def __init__(self, lex: str, token_type: Terminal):
+    def __init__(self, lex: str, token_type: Terminal, line:str = None, column:str = None):
         self.lex = lex
         self.token_type = token_type
+        self.line = line
 
     def __str__(self):
         return f"{self.token_type}: {self.lex}"
