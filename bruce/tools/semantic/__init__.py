@@ -308,3 +308,17 @@ class Proto:
 
     def __hash__(self):
         return hash(self.name)
+
+
+class ErrorType(Type):
+    def __init__(self):
+        Type.__init__(self, "<error>")
+
+    def conforms_to(self, other):
+        return True
+
+    def bypass(self):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, Type)
