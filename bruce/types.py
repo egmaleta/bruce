@@ -1,7 +1,7 @@
 from typing import Union
 
 from .tools.semantic import Type, Proto
-from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME
+from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME, SIZE_METHOD_NAME
 
 
 class ObjectType(Type):
@@ -123,7 +123,7 @@ class VectorType(Type):
         self.item_type = item_type
         self.define_method(NEXT_METHOD_NAME, [], BOOLEAN_TYPE)
         self.define_method(CURRENT_METHOD_NAME, [], item_type)
-        self.define_method("size", [], NUMBER_TYPE)
+        self.define_method(SIZE_METHOD_NAME, [], NUMBER_TYPE)
         self.set_parent(OBJECT_TYPE)
 
     @property

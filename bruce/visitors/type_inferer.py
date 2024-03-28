@@ -1,11 +1,12 @@
 from typing import Union
 
 from ..tools import visitor
-from ..tools.semantic import Type, Proto
+from ..tools.semantic import Type, Proto, SemanticError
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
+from ..names import SIZE_METHOD_NAME
 
 
 class TypeInferer:
@@ -102,7 +103,29 @@ class TypeInferer:
 
     @visitor.when(ast.MemberAccessingNode)
     def visit(self, node: ast.MemberAccessingNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.target, ctx, scope)
+
+        canditate_types = []
+
+        if node.member_id == SIZE_METHOD_NAME:
+            canditate_types.append(t.VectorType(t.OBJECT_TYPE))
+
+        for type in ctx.types.values():
+            try:
+                type.get_method(node.member_id)
+            except SemanticError:
+                pass
+            else:
+                canditate_types.append(type)
+
+        for proto in ctx.protocols.values():
+            if any(ms.name == node.member_id for ms in proto.all_method_specs()):
+                canditate_types.append(proto)
+
+        ut = t.UnionType(*canditate_types)
+        self._infer(node.target, scope, ut)
+
+        return t.FUNCTION_TYPE
 
     @visitor.when(ast.FunctionCallNode)
     def visit(self, node: ast.FunctionCallNode, ctx: Context, scope: Scope):
