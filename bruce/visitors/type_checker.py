@@ -160,23 +160,23 @@ class TypeChecker:
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
-        # Check the size of args of the type and the instance
-        current_type = get_safe_type(node.type, ctx)
-        node_args_size = len(node.args) if node.args else 0
-        type_args_size = len(current_type.params) if current_type.params else 0
-        if type_args_size != node_args_size:
-            self.errors.append(
-                f"Type {node.type} expects {type_args_size} arguments, but {node_args_size} were given"
-            )
-
-        for arg in node.args:
-            arg_type = self.visit(arg, ctx, scope.create_child())
-            node_type = self.context.get_type(node.type)
-            if not node_type.conforms_to(arg_type):
-                self.errors.append(
-                    f"Cannot convert {arg_type.name} to {node_type.name}"
-                )
-        return get_safe_type(node.type, ctx)
+        try:
+            instance_type = get_safe_type(node.type, ctx)
+            if instance_type.params:
+                if len(node.args) != len(instance_type.params):
+                    self.errors.append(
+                        f"Type {node.type} expects {len(type.params)} arguments but {len(node.args)} were given"
+                    )
+                else:
+                    for arg, param in zip(node.args, type.params):
+                        arg_type = self.visit(arg, ctx, scope.create_child())
+                        if not arg_type.conforms_to(param):
+                            self.errors.append(
+                                f"Cannot convert {arg_type.name} to {param.name}"
+                            )
+            return type
+        except SemanticError as se:
+            self.errors.append(se.text)
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
@@ -189,8 +189,6 @@ class TypeChecker:
                 )
         except SemanticError as se:
             self.errors.append(se.text)
-        except AttributeError as ae:
-            pass  # TODO Fix this when left or right return None
         return NUMBER_TYPE
 
     @visitor.when(BooleanNode)
