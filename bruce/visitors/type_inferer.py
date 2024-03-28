@@ -150,7 +150,27 @@ class TypeInferer:
 
     @visitor.when(ast.ComparisonOpNode)
     def visit(self, node: ast.ComparisonOpNode, ctx: Context, scope: Scope):
-        pass
+        lt = self.visit(node.left, ctx, scope)
+        rt = self.visit(node.right, ctx, scope)
+
+        if node.operator not in ("==", "!="):
+            if (lt == t.NUMBER_TYPE or lt == t.STRING_TYPE) and (
+                rt is None or isinstance(rt, t.UnionType)
+            ):
+                self._infer(node.right, scope, lt)
+            elif (rt == t.NUMBER_TYPE or rt == t.STRING_TYPE) and (
+                lt is None or isinstance(lt, t.UnionType)
+            ):
+                self._infer(node.left, scope, rt)
+            else:
+                ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
+                self._infer(node.left, scope, ut)
+                self._infer(node.right, scope, ut)
+        else:
+            # NOT FOR NOW
+            pass
+
+        return t.BOOLEAN_TYPE
 
     @visitor.when(ast.ArithOpNode)
     def visit(self, node: ast.ArithOpNode, ctx: Context, scope: Scope):
@@ -228,7 +248,13 @@ class TypeInferer:
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
-        pass
+        vt = self.visit(node.value, ctx, scope)
+        at = get_safe_type(node.type, ctx)
+
+        child_scope = scope.create_child()
+        child_scope.define_variable(node.id, at if at is not None else vt)
+
+        return self.visit(node.body, ctx, child_scope)
 
     @visitor.when(ast.FunctionNode)
     def visit(self, node: ast.FunctionNode, ctx: Context, scope: Scope):
