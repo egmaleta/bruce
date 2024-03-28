@@ -68,3 +68,9 @@ class Scope:
 
     def is_local(self, name: str):
         return any(True for x in self.locals if x.name == name)
+
+    def delete_variable(self, name: str):
+        try:
+            self.local_vars.remove(self.find_variable(name))
+        except ValueError:
+            pass
