@@ -6,13 +6,17 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import SIZE_METHOD_NAME
+from ..names import SIZE_METHOD_NAME, INSTANCE_NAME
 
 
 class TypeInferer:
     def __init__(self):
         self.errors: list[str] = []
         self.occurs = False
+
+        # set before read
+        self.current_type: Type = None
+        self.current_method_name: str = None
 
     def _infer(self, node: ast.ExprNode, scope: Scope, new_type: Union[Type, Proto]):
         if isinstance(node, ast.IdentifierNode):
@@ -52,6 +56,11 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
+        if node.value == INSTANCE_NAME:
+            method = self.current_type.get_method(self.current_method_name)
+            if node.value not in method.params:
+                return self.current_type
+
         var = scope.find_variable(node.value)
         if var is not None:
             return var.type
