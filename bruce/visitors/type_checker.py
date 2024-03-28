@@ -1,10 +1,18 @@
 from inspect import isdatadescriptor
+
 from ..tools.semantic import SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..tools.graph import topological_order
 from ..tools import visitor
-from ..types import BOOLEAN_TYPE, NUMBER_TYPE, OBJECT_TYPE, STRING_TYPE, UnionType
+from ..types import (
+    BOOLEAN_TYPE,
+    NUMBER_TYPE,
+    OBJECT_TYPE,
+    STRING_TYPE,
+    UnionType,
+    VectorType,
+)
 from ..ast import *
 
 
@@ -159,6 +167,22 @@ class TypeChecker:
             scope.define_variable(bind[0], value_type)
         return self.visit(node.body, ctx, scope.create_child())
 
+    @visitor.when(MutationNode)
+    def visit(self, node: MutationNode, ctx: Context, scope: Scope):
+        try:
+            target = self.visit(node.target, ctx, scope.create_child())
+            if not target:
+                self.errors.append(f"Variable {node.target} not defined")
+            else:
+                value_type = self.visit(node.value, ctx, scope.create_child())
+                if not value_type.conforms_to(target.type):
+                    self.errors.append(
+                        f"Cannot convert {value_type.name} to {target.type.name}"
+                    )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return value_type if value_type else OBJECT_TYPE
+
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
         try:
@@ -179,6 +203,33 @@ class TypeChecker:
             self.errors.append(se.text)
         return get_safe_type(node.type, ctx)
 
+    @visitor.when(ConditionalNode)
+    def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
+        try:
+            for cond, expr in node.condition_branchs:
+                cond_type = self.visit(cond, ctx, scope.create_child())
+                if cond_type != BOOLEAN_TYPE:
+                    self.errors.append(
+                        f"Condition must be boolean, not {cond_type.name}"
+                    )
+            types = [
+                self.visit(expr, ctx, scope) for cond, expr in node.condition_branchs
+            ]
+            types += [self.visit(node.fallback_branch, ctx, scope)]
+            return UnionType(*types)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(LoopNode)
+    def visit(self, node: LoopNode, ctx: Context, scope: Scope):
+        try:
+            cond_type = self.visit(node.condition, ctx, scope.create_child())
+            if cond_type != BOOLEAN_TYPE:
+                self.errors.append(f"Condition must be boolean, not {cond_type.name}")
+            return self.visit(node.body, ctx, scope)
+        except SemanticError as se:
+            self.errors.append(se.text)
+
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
         try:
@@ -192,6 +243,99 @@ class TypeChecker:
             self.errors.append(se.text)
         return NUMBER_TYPE
 
+    @visitor.when(PowerOpNode)
+    def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
+        try:
+            left = self.visit(node.left, ctx, scope.create_child())
+            right = self.visit(node.right, ctx, scope.create_child())
+            if left != NUMBER_TYPE or right != NUMBER_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return NUMBER_TYPE
+
+    @visitor.when(ComparisonOpNode)
+    def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
+        try:
+            left = self.visit(node.left, ctx, scope.create_child())
+            right = self.visit(node.right, ctx, scope.create_child())
+            if left != NUMBER_TYPE or right != NUMBER_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return BOOLEAN_TYPE
+
+    @visitor.when(ConcatOpNode)
+    def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
+        try:
+            left = self.visit(node.left, ctx, scope.create_child())
+            right = self.visit(node.right, ctx, scope.create_child())
+            if left != STRING_TYPE or right != STRING_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return STRING_TYPE
+
+    @visitor.when(LogicOpNode)
+    def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
+        try:
+            left = self.visit(node.left, ctx, scope.create_child())
+            right = self.visit(node.right, ctx, scope.create_child())
+            if left != BOOLEAN_TYPE or right != BOOLEAN_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return BOOLEAN_TYPE
+
+    @visitor.when(ArithNegOpNode)
+    def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
+        try:
+            value = self.visit(node.value, ctx, scope.create_child())
+            if value != NUMBER_TYPE:
+                self.errors.append(
+                    f"Operation '{node.operator}' is not defined for {value.name}"
+                )
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return NUMBER_TYPE
+
+    @visitor.when(MappedIterableNode)
+    def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
+        pass  # TODO implement this
+
+    @visitor.when(VectorNode)
+    def visit(self, node: VectorNode, ctx: Context, scope: Scope):
+        try:
+            types = [
+                self.visit(expr, ctx, scope.create_child()) for expr in node.elements
+            ]
+            if len(set(types)) != 1:
+                self.errors.append(f"Vector elements must have the same type")
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return VectorType(types[0])
+
+    @visitor.when(IndexingNode)
+    def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
+        try:
+            vector_type = self.visit(node.target, ctx, scope.create_child())
+            if not isinstance(vector_type, VectorType):
+                self.errors.append(f"Type {vector_type.name} does not support indexing")
+            index_type = self.visit(node.index, ctx, scope.create_child())
+            if index_type != NUMBER_TYPE:
+                self.errors.append(f"Index must be a number, not {index_type.name}")
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return OBJECT_TYPE
+
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
         return BOOLEAN_TYPE
@@ -203,3 +347,7 @@ class TypeChecker:
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
         return NUMBER_TYPE
+
+    @visitor.when(StringNode)
+    def visit(self, node: StringNode, ctx: Context, scope: Scope):
+        return STRING_TYPE
