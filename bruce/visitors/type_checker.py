@@ -1,9 +1,10 @@
+from inspect import isdatadescriptor
 from ..tools.semantic import SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..tools.graph import topological_order
 from ..tools import visitor
-from ..types import BOOLEAN_TYPE, NUMBER_TYPE
+from ..types import BOOLEAN_TYPE, NUMBER_TYPE, OBJECT_TYPE, STRING_TYPE, UnionType
 from ..ast import *
 
 
@@ -18,8 +19,7 @@ class TypeChecker:
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node: ProgramNode, ctx: Context, scope=None):
-        scope = Scope()
+    def visit(self, node: ProgramNode, ctx: Context, scope):
         types_node = [
             member for member in node.declarations if isinstance(member, TypeNode)
         ]
@@ -30,7 +30,6 @@ class TypeChecker:
             for declaration in order:
                 self.visit(declaration, ctx, scope.create_child())
             self.visit(node.expr, ctx, scope.create_child())
-        return scope
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
@@ -66,10 +65,15 @@ class TypeChecker:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope.create_child())
 
+        for param in node.params:
+            scope.delete_variable(param[0])
+
+        if scope.is_defined("self"):
+            self.errors.append("Cannot redefine self")
+        else:
+            scope.define_variable("self", self.current_type)
         for member in node.members:
             if isinstance(member, FunctionNode):
-                scope.define_variable("self", self.current_type)
-                scope.define_variable("base", self.current_type.parent)
                 self.visit(member, ctx, scope.create_child())
 
     @visitor.when(FunctionNode)
@@ -93,8 +97,11 @@ class TypeChecker:
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
-        for member in node.exprs:
-            self.visit(member, ctx, scope.create_child())
+        try:
+            types = [self.visit(expr, ctx, scope.create_child()) for expr in node.exprs]
+            return UnionType(*types)
+        except SemanticError as se:
+            self.errors.append(se.text)
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
@@ -139,20 +146,17 @@ class TypeChecker:
         except SemanticError as se:
             self.errors.append(se.text)
 
-    @visitor.when(LetExprNode)
-    def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
-        # node.type = self.context.get_type("object").name if not node.type else node.type
-        if scope.is_defined(node.id):
-            self.errors.append(f"Variable {node.id} already defined")
-        self.visit(node.value, ctx, scope.create_child())
-        if node.type:
-            node_type = self.context.get_type(node.type)
-            if not self.current_type.conforms_to(node_type):
-                self.errors.append(
-                    f"Cannot convert {self.current_type.name} to {node_type.name}"
-                )
-        scope.define_variable(node.id, self.current_type)
-        self.visit(node.body, ctx, scope.create_child())
+    @visitor.when(MultipleLetExprNode)
+    def visit(self, node: MultipleLetExprNode, ctx: Context, scope: Scope):
+        for bind in node.bindings:
+            if scope.is_defined(bind[0]):
+                self.errors.append(f"Variable {bind[0]} already defined")
+            value_type = self.visit(bind[2], ctx, scope.create_child())
+            bind_type = get_safe_type(bind[1], ctx)
+            if not value_type.conforms_to(bind_type):
+                self.errors.append(f"Cannot convert {value_type} to {bind_type.name}")
+            scope.define_variable(bind[0], value_type)
+        return self.visit(node.body, ctx, scope.create_child())
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -191,7 +195,7 @@ class TypeChecker:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        self.current_type = BOOLEAN_TYPE
+        return BOOLEAN_TYPE
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
