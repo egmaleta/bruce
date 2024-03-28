@@ -110,7 +110,14 @@ class TypeInferer:
 
     @visitor.when(ast.IndexingNode)
     def visit(self, node: ast.IndexingNode, ctx: Context, scope: Scope):
-        pass
+        tt = self.visit(node.target, ctx, scope)
+        self.visit(node.index, ctx, scope)
+
+        if isinstance(tt, t.VectorType):
+            return tt.item_type
+
+        self._infer(node.target, scope, t.VectorType(t.OBJECT_TYPE))
+        return t.OBJECT_TYPE
 
     @visitor.when(ast.MutationNode)
     def visit(self, node: ast.MutationNode, ctx: Context, scope: Scope):
