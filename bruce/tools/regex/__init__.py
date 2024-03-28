@@ -110,7 +110,7 @@ class Regex:
     def __init__(self, text):
         tokens = regex_tokenizer(text, GRAMMAR, symbol)
         parser = create_parser(GRAMMAR)
-        left_parse = parser([token.token_type for token in tokens])
+        left_parse = parser([token for token in tokens])
         ast = evaluate_parse(left_parse, tokens)
         nfa = ast.evaluate()
         self.automaton = nfa_to_dfa(nfa)
