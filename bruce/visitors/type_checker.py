@@ -102,6 +102,7 @@ class TypeChecker:
             return UnionType(*types)
         except SemanticError as se:
             self.errors.append(se.text)
+        # TODO return OBJECT_TYPE?
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
@@ -174,9 +175,9 @@ class TypeChecker:
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} to {param.name}"
                             )
-            return type
         except SemanticError as se:
             self.errors.append(se.text)
+        return get_safe_type(node.type, ctx)
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
