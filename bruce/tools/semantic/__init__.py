@@ -9,10 +9,14 @@ class SemanticError(Exception):
 
 
 class Variable:
-    def __init__(self, name: str, type: Union["Type", "Proto", None] = None):
+    def __init__(
+        self, name: str, type: Union["Type", "Proto", None] = None, owner_scope=None
+    ):
         self.name = name
         self.type = type
         self._label = "[var]"
+
+        self.owner_scope = owner_scope
 
     @property
     def is_mutable():
