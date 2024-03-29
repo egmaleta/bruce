@@ -6,7 +6,7 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import SIZE_METHOD_NAME, INSTANCE_NAME
+from ..names import SIZE_METHOD_NAME, INSTANCE_NAME, CURRENT_METHOD_NAME
 
 
 class TypeInferer:
@@ -107,8 +107,7 @@ class TypeInferer:
             elif isinstance(iterable_t, Type) and iterable_t.implements(
                 t.ITERABLE_PROTO
             ):
-                # it = ...
-                pass
+                it = iterable_t.get_method(CURRENT_METHOD_NAME).type
             elif iterable_t == t.ITERABLE_PROTO:
                 it = t.OBJECT_TYPE
 
@@ -209,7 +208,13 @@ class TypeInferer:
 
     @visitor.when(ast.MutationNode)
     def visit(self, node: ast.MutationNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.target, ctx, scope)
+
+        vt = self.visit(node.value, ctx, scope)
+        if vt is not None:
+            self._infer(node.target, scope, vt)
+
+        return vt
 
     @visitor.when(ast.DowncastingNode)
     def visit(self, node: ast.DowncastingNode, ctx: Context, scope: Scope):
