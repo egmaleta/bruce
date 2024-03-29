@@ -22,9 +22,6 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
         return self.errors    
 
-    # @visitor.when(LiteralNode)
-    # def visit(self, node: LiteralNode, scope: Scope):
-    #     return self.errors
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, scope: Scope):
@@ -35,16 +32,20 @@ class SemanticChecker(object):  # TODO implement all the nodes
     
     @visitor.when(FunctionCallNode)
     def visit(self, node:FunctionCallNode, scope:Scope):
-        if not scope.is_func_defined(node.target):
+        if not scope.is_func_defined(node.target.value):
+           # print(node.target.value)
             self.errors.append(f"Function {node.target} not defined")
-
+    
         for arg in node.args:
             self.visit(arg,scope)    
     
 
     @visitor.when(FunctionNode)
     def visit(self, node:FunctionNode, scope:Scope):
-        scope.define_function(node.id,node.params)
+        if not scope.is_func_defined(node.id):
+            scope.define_function(node.id,node.params)
+        else:
+            self.errors.append(f"Function {node.id} alredy defined. Cannot define more than one function with the same name")    
 
         func_scope = scope.create_child()
 
@@ -52,25 +53,27 @@ class SemanticChecker(object):  # TODO implement all the nodes
             func_scope.define_variable(param[0])
 
         # body es un BlockNode o  una expresion
-        self.visit(node.body,func_scope.create_child())
+        self.visit(node.body,func_scope)
 
 
     @visitor.when(BlockNode)
     def visit(self,node:BlockNode, scope:Scope):
+        my_scope = scope.create_child()
         for expr in node.exprs:
-            self.visit(expr, scope.create_child())
+            self.visit(expr, my_scope.create_child())
 
 
     @visitor.when(BinaryOpNode)
     def visit(self, node:BinaryOpNode,scope:Scope):
-        self.visit(node.left,scope.create_child())
-        self.visit(node.right,scope.create_child())
+        self.visit(node.left,scope)
+        self.visit(node.right,scope)
     
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, scope: Scope):
-        self.visit(node.target, scope.create_child())
-        self.visit(node.value, scope.create_child())
+        my_scope = scope.create_child()
+        self.visit(node.target, my_scope.create_child())
+        self.visit(node.value, my_scope.create_child())
 
         if not is_assignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
@@ -105,6 +108,9 @@ class SemanticChecker(object):  # TODO implement all the nodes
     def visit(self, node:UnaryOpNode, scope: Scope):
         my_scope = scope.create_child()
         self.visit(node.operand,my_scope)
+
+
+        
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, scope:Scope):
