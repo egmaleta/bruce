@@ -1,5 +1,5 @@
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto
+from ..tools.semantic import Type, Method, Proto, allow_type
 from ..types import (
     NUMBER_TYPE,
     STRING_TYPE,
@@ -111,7 +111,13 @@ class Evaluator:
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
-        pass
+        for cond, expr in node.condition_branchs:
+            value, value_type = self.visit(cond, ctx, scope)
+            if value:
+                return self.visit(expr, ctx, scope)
+                break
+        return self.visit(node.fallback_branch, ctx, scope)
+
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
@@ -239,7 +245,9 @@ class Evaluator:
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = self.visit(node.target, ctx, scope)
+        node_type = get_safe_type(node.type)
+        return allow_type(value_type, node_type)
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
