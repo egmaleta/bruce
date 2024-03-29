@@ -50,9 +50,14 @@ class Attribute(Variable):
         name: str,
         type: Union["Type", "Proto", None] = None,
         value: tuple[Any, "Type"] = None,
+        init_expr: ExprNode = None,
     ):
         super().__init__(name, type, value)
         self._label = "[attrib]"
+        self.init_expr = init_expr
+
+    def set_init_expr(self, init_expr: ExprNode):
+        self.init_expr = init_expr
 
 
 class Constant(Variable):
@@ -323,7 +328,8 @@ class Type:
 
         new_type.methods = self.methods
         new_type.attributes = [
-            Attribute(attr.name, attr.type) for attr in self.attributes
+            Attribute(attr.name, attr.type, None, attr.init_expr)
+            for attr in self.attributes
         ]
 
         return new_type
