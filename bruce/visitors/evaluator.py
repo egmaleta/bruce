@@ -80,10 +80,9 @@ class Evaluator:
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
-        child = scope.create_child()
         value, value_type = None, None
         for expr in node.exprs:
-            value, value_type = self.visit(expr, ctx, child)
+            value, value_type = self.visit(expr, ctx, scope.create_child())
         return value, value_type
 
     @visitor.when(MemberAccessingNode)
@@ -133,11 +132,10 @@ class Evaluator:
         return value, value_type
 
     @visitor.when(TypeInstancingNode)
-    # def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
-    #     instance = ctx.get_type(node.type).clone()
-    #     for arg in node.args:
-    #         value, value_type = self.visit(arg, ctx, scope.create_child())
-    #         instance.set_attribute(arg.id, value)
+    def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
+        instance = ctx.get_type(node.type).clone()
+        global_scope = scope.get_top_scope()
+        args_exprs = [self.visit(arg, ctx, global_scope) for arg in node.args]
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
