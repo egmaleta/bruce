@@ -117,14 +117,14 @@ class TypeInferer:
         if (
             isinstance(node.target, ast.IdentifierNode)
             and node.target.value == INSTANCE_NAME
+            and node.target.value not in self.current_method.params
+            and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
-            # accessing to 'self'
-            if node.target.value not in self.current_method.params:
-                # 'self' refers to current type
-                try:
-                    return self.current_type.get_attribute(node.member_id)
-                except SemanticError:
-                    return t.FUNCTION_TYPE
+            # 'self' is current type
+            try:
+                return self.current_type.get_attribute(node.member_id)
+            except SemanticError:
+                return t.FUNCTION_TYPE
 
         canditate_types = []
 
