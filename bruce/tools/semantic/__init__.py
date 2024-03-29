@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from typing import Union, Any
 
+from .ast import ExprNode
+
 
 class SemanticError(Exception):
     @property
@@ -74,13 +76,13 @@ class Function:
         name: str,
         params: list[tuple[str, Union["Type", "Proto", None]]],
         type: Union["Type", "Proto", None] = None,
-        body = None
+        body=None,
     ):
         self.name = name
         self.params = OrderedDict(params)
         self.type = type
         self._label = "[func]"
-        self.body = body
+        self.body: ExprNode = body
 
     def set_type(self, type: Union["Type", "Proto"]):
         if self.type is None:
@@ -90,7 +92,7 @@ class Function:
         if name in self.params and self.params[name] is None:
             self.params[name] = type
 
-    def set_body(self, body):
+    def set_body(self, body: ExprNode):
         self.body = body
 
     def __str__(self):
