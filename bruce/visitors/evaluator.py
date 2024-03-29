@@ -80,7 +80,10 @@ class Evaluator:
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = None, None
+        for expr in node.exprs:
+            value, value_type = self.visit(expr, ctx, scope)
+        return value, value_type
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
@@ -98,7 +101,9 @@ class Evaluator:
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = self.visit(node.value, ctx, scope)
+        scope.find_variable(node.id).set_value(value)
+        return value, value_type
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -110,12 +115,18 @@ class Evaluator:
             value, value_type = self.visit(cond, ctx, scope)
             if value:
                 return self.visit(expr, ctx, scope)
-                break
         return self.visit(node.fallback_branch, ctx, scope)
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        pass
+        condition, condition_type = self.visit(node.condition, ctx, scope)
+        if not condition:
+            fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope)
+            return fb_expr, fb_type
+        else:
+            while condition:
+                body, body_type = self.visit(node.body, ctx, scope)
+            return body, body_type
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
@@ -191,7 +202,8 @@ class Evaluator:
                 child_scope = top_scope.create_child(is_function_scope=True)
                 child_scope.define_variable(INSTANCE_NAME, iterable)
                 cond, _ = self.visit(
-                    iterable.get_method(NEXT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(
+                        NEXT_METHOD_NAME).body, ctx, child_scope
                 )
 
                 if not cond:
@@ -200,7 +212,8 @@ class Evaluator:
                 child_scope = top_scope.create_child(is_function_scope=True)
                 child_scope.define_variable(INSTANCE_NAME, iterable)
                 item_value = self.visit(
-                    iterable.get_method(CURRENT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(
+                        CURRENT_METHOD_NAME).body, ctx, child_scope
                 )
 
                 child_scope = scope.create_child()
