@@ -1,5 +1,5 @@
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type
+from ..tools.semantic import Type, Method, Proto, allow_type, Attribute, Function
 from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -90,10 +90,33 @@ class Evaluator:
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
         # evaluates only attribute accessing
         # method handling is done in FunctionCall visitor
-        pass
+        assert isinstance(node.target, IdentifierNode)
+        assert node.target.value == INSTANCE_NAME
+
+        receiver, _ = self.visit(node.target, ctx, scope)
+        assert isinstance(receiver, Type)
+
+        attr = receiver.get_attribute(node.member_id)
+        assert isinstance(attr, Attribute)
+
+        return attr.value
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
+        if isinstance(node.target, IdentifierNode):
+            f, _ = self.visit(node.target, ctx, scope)
+            arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+
+            f: Function
+
+            top_scope = scope.get_top_scope()
+            child_scope = top_scope.create_child(is_function_scope=True)
+            for name, value in zip(f.params, arg_values):
+                child_scope.define_variable(name, None, value)
+
+            return self.visit(f.body, ctx, child_scope)
+
+        assert isinstance(node.target, MemberAccessingNode)
         pass
 
     @visitor.when(LetExprNode)
@@ -282,7 +305,7 @@ class Evaluator:
         if var is not None:
             return var.value
 
-        return (scope.find_function(node.value).body, FUNCTION_TYPE)
+        return (scope.find_function(node.value), FUNCTION_TYPE)
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
