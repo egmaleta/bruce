@@ -113,6 +113,12 @@ class Type:
                 )
             self.params[name] = type
 
+    def inherit_params(self):
+        if len(self.params) == 0 and self.parent is not None:
+            self.parent.inherit_params()
+            for name, pt in self.parent.params.items():
+                self.params[name] = pt
+
     def set_param_type(self, name: str, type: Union["Type", "Proto"]):
         if name in self.params and self.params[name] is None:
             self.params[name] = type

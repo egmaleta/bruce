@@ -22,6 +22,9 @@ class ObjectType(Type):
     def __init__(self):
         super().__init__("Object")
 
+    def inherit_params(self):
+        pass
+
 
 OBJECT_TYPE = ObjectType()
 

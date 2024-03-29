@@ -1,5 +1,7 @@
 from typing import Union
 
+from bruce.types import OBJECT_TYPE
+
 from ..tools.semantic import SemanticError, Type, Proto
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools import visitor
@@ -53,6 +55,9 @@ class TypeBuilder(object):
         for declaration in node.declarations:
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
+
+        for type in ctx.types.values():
+            type.inherit_params()
 
         return self.errors
 
