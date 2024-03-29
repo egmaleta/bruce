@@ -80,9 +80,10 @@ class Evaluator:
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
+        child = scope.create_child()
         value, value_type = None, None
         for expr in node.exprs:
-            value, value_type = self.visit(expr, ctx, scope)
+            value, value_type = self.visit(expr, ctx, child)
         return value, value_type
 
     @visitor.when(MemberAccessingNode)
@@ -97,37 +98,43 @@ class Evaluator:
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
-        value, value_type = self.visit(node.value, ctx, scope)
-        scope.define_variable(node.id, node.type, (value, value_type))
-        return self.visit(node.expr, ctx, scope)
+        child = scope.create_child()
+        value, value_type = self.visit(node.value, ctx, child)
+        child.define_variable(node.id, node.type, (value, value_type))
+        return self.visit(node.expr, ctx, child)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        value, value_type = self.visit(node.value, ctx, scope)
+        value, value_type = self.visit(node.value, ctx, scope.create_child())
         scope.find_variable(node.id).set_value(value)
         return value, value_type
 
     @visitor.when(TypeInstancingNode)
-    def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
-        pass
+    # def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
+    #     instance = ctx.get_type(node.type).clone()
+    #     for arg in node.args:
+    #         value, value_type = self.visit(arg, ctx, scope.create_child())
+    #         instance.set_attribute(arg.id, value)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
         for cond, expr in node.condition_branchs:
-            value, value_type = self.visit(cond, ctx, scope)
+            value, value_type = self.visit(cond, ctx, scope.create_child())
             if value:
-                return self.visit(expr, ctx, scope)
-        return self.visit(node.fallback_branch, ctx, scope)
+                return self.visit(expr, ctx, scope.create_child())
+        return self.visit(node.fallback_branch, ctx, scope.create_child())
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        condition, condition_type = self.visit(node.condition, ctx, scope)
+        condition, condition_type = self.visit(
+            node.condition, ctx, scope.create_child()
+        )
         if not condition:
-            fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope)
+            fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
         else:
             while condition:
-                body, body_type = self.visit(node.body, ctx, scope)
+                body, body_type = self.visit(node.body, ctx, scope.create_child())
             return body, body_type
 
     @visitor.when(ArithOpNode)
