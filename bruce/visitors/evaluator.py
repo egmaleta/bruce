@@ -110,7 +110,13 @@ class Evaluator:
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
-        pass
+        for cond, expr in node.condition_branchs:
+            value, value_type = self.visit(cond, ctx, scope)
+            if value:
+                return self.visit(expr, ctx, scope)
+                break
+        return self.visit(node.fallback_branch, ctx, scope)
+
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
