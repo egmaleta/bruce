@@ -6,7 +6,7 @@ from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME, SIZE_METHOD_NAME
 
 class ErrorType(Type):
     def __init__(self):
-        super().__init__(self, "ErrorType")
+        super().__init__("ErrorType")
 
     def conforms_to(self, other):
         return True
