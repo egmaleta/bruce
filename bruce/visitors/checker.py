@@ -108,12 +108,14 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, scope: Scope):
         my_scope = scope.create_child()
+ 
+        if node.params is not None:
+            for param in node.params:
+                my_scope.define_variable(param[0])
 
-        for param in node.params:
-            my_scope.define_variable(param[0])
-
-        for expr in node.parent_args:
-            self.visit(expr, my_scope)
+        if node.parent_args is not None:
+            for expr in node.parent_args:
+                self.visit(expr, my_scope)
 
         for member in node.members:
             self.visit(member, my_scope)
