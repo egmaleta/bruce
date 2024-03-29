@@ -2,7 +2,7 @@ from ..tools.semantic.scope import Scope
 from ..tools import visitor
 from ..ast import *
 
-Context = []
+from ..tools.semantic import SemanticError
 
 
 class SemanticChecker(object):  # TODO implement all the nodes
@@ -127,19 +127,10 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, scope: Scope):
         try:
-            self.context.types[node.type]
-        except KeyError:
+            self.context.get_type(node.type)
+        except SemanticError:
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
-            )
-
-        try:  # revisar esto
-            self.context.protocols[node.type]
-        except KeyError:
-            pass
-        else:
-            self.errors.append(
-                f"Type {node.type},  cannot instance a Protocol as a Type"
             )
 
         my_scope = scope.create_child()
@@ -149,21 +140,27 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, scope: Scope):
+        try:
+            self.context.get_type(node.type)
+        except SemanticError:
+            self.errors.append(
+                f"Type {node.type} does not exist in the current context"
+            )
         my_scope = scope.create_child()
-        self.visit(node.target)
+        self.visit(node.target, my_scope)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, scope: Scope):
-        my_context = scope.create_child()
-
         for expr in node.items:
-            self.visit(expr, my_context)
+            self.visit(expr, scope)
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, scope: Scope):
-        my_context = scope.create_child()
+        self.visit(ExprNode, scope)
 
-        pass
+        my_scope = scope.create_child()
+        my_scope.define_variable(node.item_id)
+        self.visit(node.map_expr, my_scope)
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, scope: Scope):
@@ -173,6 +170,12 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, scope: Scope):
+        try:
+            self.context.get_type(node.type)
+        except SemanticError:
+            self.errors.append(
+                f"Type {node.type} does not exist in the current context"
+            )
         my_scope = scope.create_child()
         self.visit(node.target, my_scope)
 
