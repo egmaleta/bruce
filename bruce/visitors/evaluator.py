@@ -1,4 +1,5 @@
-from ..tools.semantic import visitor as visitor
+from ..tools import visitor
+from ..tools.semantic import Type, Method
 from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -9,26 +10,50 @@ class Evaluator:
     def __init__(self, errors=[]) -> None:
         self.errors = errors
 
+        self.current_type: Type = None
+        self.current_method: Method = None
+
     @visitor.on("node")
     def visit(self, node, context: Context, scope: Scope):
         pass
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope: Scope):
-        self.visit(node.expr, ctx, scope)
-        return self.errors
+        # seed function bodies and type attrs
+        for decl in node.declarations:
+            if not isinstance(decl, ProtocolNode):
+                self.visit(decl, ctx, scope)
+
+        return self.visit(node.expr, ctx, scope)[0]
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
-        pass
+        self.current_type = ctx.get_type(node.type)
+
+        for member in node.members:
+            if isinstance(member, TypePropertyNode):
+                self.visit(member, ctx, scope)
+            else:
+                self.current_method = scope.find_function(member.id)
+                self.visit(member, ctx, scope)
+                self.current_method = None
+
+        self.current_type = None
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
-        pass
+        is_method = self.current_method is not None
+
+        if is_method:
+            self.current_method.set_body(node.body)
+        else:
+            f = scope.find_function(node.id)
+            f.set_body(node.id)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
-        pass
+        attr = self.current_type.get_attribute(node.id)
+        attr.set_init_expr(node.value)
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
