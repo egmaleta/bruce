@@ -1,11 +1,6 @@
 from ..tools import visitor
 from ..tools.semantic import Type, Method, Proto, allow_type
-from ..types import (
-    NUMBER_TYPE,
-    STRING_TYPE,
-    OBJECT_TYPE,
-    BOOLEAN_TYPE,
-)
+from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
@@ -92,6 +87,8 @@ class Evaluator:
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
+        # evaluates only attribute accessing
+        # method handling is done in FunctionCall visitor
         pass
 
     @visitor.when(FunctionCallNode)
@@ -274,10 +271,11 @@ class Evaluator:
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        try:
-            return scope.find_variable(node.value).value
-        except AttributeError as ae:
-            return scope.find_function(node.value).body
+        var = scope.find_variable(node.value)
+        if var is not None:
+            return var.value
+
+        return (scope.find_function(node.value).body, FUNCTION_TYPE)
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
