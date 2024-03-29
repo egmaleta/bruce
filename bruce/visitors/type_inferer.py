@@ -485,6 +485,3 @@ class TypeInferer:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
                 )
-
-
-# PD: I AM COOKING HERE...
