@@ -74,6 +74,8 @@ class TypeBuilder(object):
                 self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
+        else:
+            self.current_type.set_param_type(OBJECT_TYPE)
 
         if node.params is not None:
             try:
