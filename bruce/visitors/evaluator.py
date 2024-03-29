@@ -1,5 +1,5 @@
 from ..tools import visitor
-from ..tools.semantic import Type, Method
+from ..tools.semantic import Type, Method, Proto
 from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -135,9 +135,16 @@ class Evaluator:
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
-        if target_value[1].conforms_to(node_type):
+        if (
+            target_value[1] is Type
+            and target_value[1].conforms_to(node_type)
+            or target_value[1] is Proto
+            and target_value[1].implements(node_type)
+        ):
             return target_value[0], node_type
-        raise Exception(f"Downcasting error: {target_value[1]} does not conform to {node_type}")
+        raise Exception(
+            f"Downcasting error: {target_value[1]} does not conform to {node_type}"
+        )
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
