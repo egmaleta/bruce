@@ -138,12 +138,17 @@ class Evaluator:
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
-        pass
+        target_value = self.visit(node.target, ctx, scope)
+        node_type = get_safe_type(node.type, ctx)
+        return target_value[1].conforms_to(node_type)
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
+        if target_value[1].conforms_to(node_type):
+            return target_value[0], node_type
+        raise Exception(f"Downcasting error: {target_value[1]} does not conform to {node_type}")
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
@@ -160,7 +165,7 @@ class Evaluator:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        return True if node.value == "true" else False
+        return (True, BOOLEAN_TYPE) if node.value == "true" else (False, BOOLEAN_TYPE)
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
