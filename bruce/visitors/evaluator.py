@@ -5,12 +5,11 @@ from ..types import (
     STRING_TYPE,
     OBJECT_TYPE,
     BOOLEAN_TYPE,
-    UnionType,
-    VectorType,
 )
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
+from ..names import NEXT_METHOD_NAME, CURRENT_METHOD_NAME, INSTANCE_NAME
 
 
 class Evaluator:
@@ -124,10 +123,38 @@ class Evaluator:
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        pass
+        condition, condition_type = self.visit(node.condition,ctx,scope)
+        if not condition:
+            fb_expr, fb_type = self.visit(node.fallback_expr,ctx,scope)
+            return fb_expr, fb_type
+        else:
+            while condition:
+                body, body_type = self.visit(node.body, ctx, scope)
+            return body, body_type    
+
+
+
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
+<<<<<<< HEAD
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        return Evaluator.artih_op_funcs[node.operator](left_value, right_value), NUMBER_TYPE
+
+    @visitor.when(PowerOpNode)
+    def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        return left_value ** right_value, NUMBER_TYPE
+
+    @visitor.when(ComparisonOpNode)
+    def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        return Evaluator.comparison_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
+        
+=======
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
         return (
@@ -149,6 +176,7 @@ class Evaluator:
             Evaluator.comparison_funcs[node.operator](left_value, right_value),
             BOOLEAN_TYPE,
         )
+>>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
@@ -159,6 +187,21 @@ class Evaluator:
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
+<<<<<<< HEAD
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        
+        return Evaluator.logic_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
+
+    @visitor.when(ArithNegOpNode)
+    def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
+        value, node_type = self.visit(node.operand,ctx,scope)
+        return (- value), NUMBER_TYPE
+
+    @visitor.when(NegOpNode)
+    def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
+        value, node_type = self.visit(node.operand,ctx,scope)
+=======
 
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
@@ -176,11 +219,56 @@ class Evaluator:
     @visitor.when(NegOpNode)
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
         value, node_type = self.visit(node.operand, ctx, scope)
+>>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
         return not value, node_type
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
-        pass
+        iterable, iterable_type = self.visit(node.iterable_expr, ctx, scope)
+
+        tuples = []
+
+        if isinstance(iterable, list):
+            for item in iterable:
+                child_scope = scope.create_child()
+                child_scope.define_variable(
+                    node.item_id, None, (item, iterable_type.item_type)
+                )
+                tuples.append(self.visit(node.map_expr, ctx, child_scope))
+        else:
+            # iterable is a type instance
+
+            top_scope = scope.get_top_scope()
+
+            while True:
+                child_scope = top_scope.create_child(is_function_scope=True)
+                child_scope.define_variable(INSTANCE_NAME, iterable)
+                cond, _ = self.visit(
+                    iterable.get_method(NEXT_METHOD_NAME).body, ctx, child_scope
+                )
+
+                if not cond:
+                    break
+
+                child_scope = top_scope.create_child(is_function_scope=True)
+                child_scope.define_variable(INSTANCE_NAME, iterable)
+                item_value = self.visit(
+                    iterable.get_method(CURRENT_METHOD_NAME).body, ctx, child_scope
+                )
+
+                child_scope = scope.create_child()
+                child_scope.define_variable(node.item_id, None, item_value)
+
+                value = self.visit(node.map_expr, ctx, child_scope)
+                tuples.append(value)
+
+        values = []
+        types = []
+        for v, t in tuples:
+            values.append(v)
+            types.append(t)
+
+        return (values, types)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
@@ -192,11 +280,7 @@ class Evaluator:
             values.append(v)
             types.append(t)
 
-        t = UnionType(*types)
-        if len(t) == 1:
-            t, *_ = t
-
-        return (values, VectorType(t))
+        return (values, types)
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
