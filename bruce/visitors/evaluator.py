@@ -1,6 +1,6 @@
-from bruce.grammar import BlockExpr
-from bruce.tools.semantic import Type, visitor as visitor
-from bruce.tools.semantic.context import Context
+from bruce.tools.semantic import visitor as visitor
+from bruce.types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
+from bruce.tools.semantic.context import Context, get_safe_type
 from bruce.tools.semantic.scope import Scope
 from bruce.ast import *
 
@@ -104,24 +104,30 @@ class Evaluator:
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
-        pass
+        target_value = self.visit(node.target, ctx, scope)
+        node_type = get_safe_type(node.type, ctx)
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
-        pass
+        vector_value = self.visit(node.target, ctx, scope)
+        index = self.visit(node.index, ctx, scope)
+        return vector_value[index]
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        pass
+        try:
+            return scope.find_variable(node.value).value
+        except AttributeError as ae:
+            return scope.find_function(node.value).body
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        pass
+        return True if node.value == "true" else False
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
-        pass
+        return (float(node.value), NUMBER_TYPE)
 
     @visitor.when(StringNode)
     def visit(self, node: StringNode, ctx: Context, scope: Scope):
-        pass
+        return (node.value, STRING_TYPE)
