@@ -1,8 +1,9 @@
-from bruce.tools.semantic import visitor as visitor
+from bruce.tools import visitor as visitor
 from bruce.types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
 from bruce.tools.semantic.context import Context, get_safe_type
 from bruce.tools.semantic.scope import Scope
 from bruce.ast import *
+from bruce.grammar import GRAMMAR as g
 
 
 class Evaluator:
@@ -64,15 +65,39 @@ class Evaluator:
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        print(node.operator)
+        funcs = {
+            '+' : lambda x,y : x + y,
+            '-' : lambda x,y : x - y,
+            '*': lambda x,y : x * y,
+            '/': lambda x,y : x / y,
+            '%': lambda x,y : x % y,
+        }
+        v = funcs[node.operator](left_value, right_value)
+        print(v)
 
     @visitor.when(PowerOpNode)
     def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        return left_value ** right_value
 
     @visitor.when(ComparisonOpNode)
     def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        funcs = {
+            '>' : lambda x,y : x > y,
+            '<' : lambda x,y : x < y,
+            '<=': lambda x,y : x <= y,
+            '>=': lambda x,y : x >= y,
+            '==': lambda x,y : x == y,
+            '!=': lambda x,y : x != y,
+        }
+        return funcs[node.operator](left_value, right_value)
+        
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
@@ -80,15 +105,23 @@ class Evaluator:
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        funcs = {
+            '&': lambda x,y : x and y,
+            '|': lambda x,y : x or y,
+        }
+        return funcs[node.operator](left_value, right_value)
 
     @visitor.when(ArithNegOpNode)
     def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
-        pass
+        value, node_type = self.visit(node.operand,ctx,scope)
+        return (- value)
 
     @visitor.when(NegOpNode)
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
-        pass
+        value, node_type = self.visit(node.operand,ctx,scope)
+        return not value
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
