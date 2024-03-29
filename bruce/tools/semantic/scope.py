@@ -72,10 +72,10 @@ class Scope:
         return self.find_function(name) is not None
     
     def is_local_var(self, name: str):
-        return any(True for x in self.local_vars if x.name == name)
+        return any(x.name == name for x in self.local_vars)
 
     def is_local_func(self, name: str):
-        return any(True for x in self.local_funcs if x.name == name)
+        return any(x.name == name for x in self.local_funcs )
 
     def delete_variable(self, name: str):
         try:
