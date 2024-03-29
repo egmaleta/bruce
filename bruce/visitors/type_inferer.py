@@ -360,17 +360,59 @@ class TypeInferer:
     def visit(self, node: ast.FunctionNode, ctx: Context, scope: Scope):
         pass
 
-    @visitor.when(ast.ProtocolNode)
-    def visit(self, node: ast.ProtocolNode, ctx: Context, scope: Scope):
-        pass
-
     @visitor.when(ast.TypeNode)
     def visit(self, node: ast.TypeNode, ctx: Context, scope: Scope):
         pass
 
     @visitor.when(ast.ProgramNode)
     def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
-        pass
+        while True:
+            self.occurs = False
+
+            for decl in node.declarations:
+                if not isinstance(decl, ast.ProtocolNode):
+                    self.visit(decl, ctx, scope)
+
+            self.visit(node.expr, ctx, scope)
+
+            if self.occurs == False:
+                break
+
+        for type in ctx.types.values():
+            for name, ptype in type.params:
+                if ptype is None:
+                    self.errors.append(
+                        f"Couldn't infer type of constructor param '{name}' of type '{type.name}'."
+                    )
+
+            for attr in type.attributes:
+                if attr.type is None:
+                    self.errors.append(
+                        f"Couldn't infer type of attribute '{attr.name}' of type '{type.name}'."
+                    )
+
+            for method in type.methods:
+                for name, ptype in method.params.items():
+                    self.errors.append(
+                        f"Couldn't infer type of param '{name}' of method '{type.name}.{method.name}'."
+                    )
+
+                if method.type is None:
+                    self.errors.append(
+                        f"Couldn't infer return type of method '{type.name}.{method.name}'."
+                    )
+
+        for f in scope.local_funcs:
+            for name, type in f.params.items():
+                if type is None:
+                    self.errors.append(
+                        f"Couldn't infer type of param '{name}' of function '{f.name}'."
+                    )
+
+            if f.type is None:
+                self.errors.append(
+                    f"Couldn't infer return type of function '{f.name}'."
+                )
 
 
 # PD: I AM COOKING HERE...
