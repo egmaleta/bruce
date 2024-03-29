@@ -1,5 +1,5 @@
 from itertools import islice
-from typing import Union
+from typing import Union, Any
 
 from . import Variable, Constant, Function, Type, Proto
 
@@ -22,13 +22,20 @@ class Scope:
         self.children.append(child)
         return child
 
-    def define_variable(self, name: str, type: Union[Type, Proto, None] = None):
-        info = Variable(name, type, self)
+    def define_variable(
+        self,
+        name: str,
+        type: Union[Type, Proto, None] = None,
+        value: tuple[Any, Type] = None,
+    ):
+        info = Variable(name, type, value, owner_scope=self)
         self.local_vars.append(info)
         return info
 
-    def define_constant(self, name: str, type: Union[Type, Proto]):
-        info = Constant(name, type)
+    def define_constant(
+        self, name: str, type: Union[Type, Proto], value: tuple[Any, Type]
+    ):
+        info = Constant(name, type, value)
         self.local_vars.append(info)
         return info
 
