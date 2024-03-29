@@ -10,13 +10,18 @@ class SemanticError(Exception):
 
 class Variable:
     def __init__(
-        self, name: str, type: Union["Type", "Proto", None] = None, owner_scope=None
+        self,
+        name: str,
+        type: Union["Type", "Proto", None] = None,
+        owner_scope=None,
+        value=None,
     ):
         self.name = name
         self.type = type
         self._label = "[var]"
 
         self.owner_scope = owner_scope
+        self.value = value
 
     @property
     def is_mutable():
@@ -289,6 +294,20 @@ class Type:
 
     def __hash__(self):
         return hash(self.name)
+
+    def __deep_copy__(self, memo):
+        if self in memo:
+            return memo[self]
+
+        new_type = Type(self.name)
+        memo[self] = new_type
+
+        new_type.parent = self.parent
+        new_type.params = {k: v for k, v in self.params.items()}
+        new_type.attributes = [x.__deep_copy__(memo) for x in self.attributes]
+        new_type.methods = [x.__deep_copy__(memo) for x in self.methods]
+
+        return new_type
 
 
 class MethodSpec:
