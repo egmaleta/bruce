@@ -6,9 +6,17 @@ class Context:
         self.types: dict[str, Type] = {t.name: t for t in types}
         self.protocols: dict[str, Proto] = {t.name: t for t in protos}
 
-    def create_type(self, name: str):
+    def _already_exists(self, name: str):
         if name in self.types:
             raise SemanticError(f"Type with the same name '{name}' already in context.")
+        if name in self.protocols:
+            raise SemanticError(
+                f"Protocol with the same name '{name}' already in context."
+            )
+
+    def create_type(self, name: str):
+        self._already_exists(name)
+
         type = self.types[name] = Type(name)
         return type
 
@@ -20,10 +28,8 @@ class Context:
         return type
 
     def create_protocol(self, name: str):
-        if name in self.protocols:
-            raise SemanticError(
-                f"Protocol with the same name '{name}' already in context."
-            )
+        self._already_exists(name)
+
         protocol = self.protocols[name] = Proto(name)
         return protocol
 

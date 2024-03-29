@@ -324,6 +324,16 @@ class TypeChecker:
             self.errors.append(se.text)
         return NUMBER_TYPE
 
+    @visitor.when(NegOpNode)
+    def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
+        try:
+            value = self.visit(node.operand, ctx, scope.create_child())
+            if value != BOOLEAN_TYPE:
+                self.errors.append(f"Cannot negate a non-boolean value")
+        except SemanticError as se:
+            self.errors.append(se.text)
+        return BOOLEAN_TYPE
+
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
         try:
@@ -352,6 +362,34 @@ class TypeChecker:
             if len(set(types)) != 1:
                 self.errors.append(f"Vector elements must have the same type")
             return VectorType(types[0])
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(TypeMatchingNode)
+    def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
+        try:
+            target_type = self.visit(node.target, ctx, scope.create_child())
+            if not target_type.conforms_to(
+                get_safe_type(node.type, ctx)
+            ) and not get_safe_type(node.type, ctx).conforms_to(target_type):
+                self.errors.append(
+                    f"Cannot convert {target_type.name} to {node.type.name}"
+                )
+            return BOOLEAN_TYPE
+        except SemanticError as se:
+            self.errors.append(se.text)
+
+    @visitor.when(DowncastingNode)
+    def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
+        try:
+            target_type = self.visit(node.target, ctx, scope.create_child())
+            if not target_type.conforms_to(
+                get_safe_type(node.type, ctx)
+            ) and not get_safe_type(node.type, ctx).conforms_to(target_type):
+                self.errors.append(
+                    f"Cannot cast {target_type.name} to {node.type.name}"
+                )
+            return get_safe_type(node.type, ctx)
         except SemanticError as se:
             self.errors.append(se.text)
 

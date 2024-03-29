@@ -1,5 +1,7 @@
 from typing import Union
 
+from bruce.types import OBJECT_TYPE
+
 from ..tools.semantic import SemanticError, Type, Proto
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools import visitor
@@ -54,6 +56,9 @@ class TypeBuilder(object):
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
 
+        for type in ctx.types.values():
+            type.inherit_params()
+
         return self.errors
 
     @visitor.when(TypeNode)
@@ -69,6 +74,8 @@ class TypeBuilder(object):
                 self.current_type.set_parent(parent_type)
             except SemanticError as se:
                 self.errors.append(se.text)
+        else:
+            self.current_type.set_param_type(OBJECT_TYPE)
 
         if node.params is not None:
             try:
