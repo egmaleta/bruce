@@ -106,8 +106,6 @@ class Evaluator:
             f, _ = self.visit(node.target, ctx, scope)
             arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
 
-            f: Function
-
             top_scope = scope.get_top_scope()
             child_scope = top_scope.create_child(is_function_scope=True)
             for name, value in zip(f.params, arg_values):
@@ -116,7 +114,23 @@ class Evaluator:
             return self.visit(f.body, ctx, child_scope)
 
         assert isinstance(node.target, MemberAccessingNode)
-        pass
+        target = node.target.target
+        method_name = node.target.member_id
+
+        inst, inst_type = self.visit(target, ctx, scope)
+        method = inst.get_method(method_name)
+
+        arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+
+        top_scope = scope.get_top_scope()
+        child_scope = top_scope.create_child(is_function_scope=True)
+        for name, value in zip(method.params, arg_values):
+            child_scope.define_variable(name, None, value)
+
+        if INSTANCE_NAME not in method.params:
+            child_scope.define_variable(INSTANCE_NAME, None, (inst, inst_type))
+
+        return self.visit(method.body, ctx, child_scope)
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
