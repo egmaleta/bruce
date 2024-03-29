@@ -208,7 +208,13 @@ class TypeInferer:
 
     @visitor.when(ast.MutationNode)
     def visit(self, node: ast.MutationNode, ctx: Context, scope: Scope):
-        pass
+        self.visit(node.target, ctx, scope)
+
+        vt = self.visit(node.value, ctx, scope)
+        if vt is not None:
+            self._infer(node.target, scope, vt)
+
+        return vt
 
     @visitor.when(ast.DowncastingNode)
     def visit(self, node: ast.DowncastingNode, ctx: Context, scope: Scope):
