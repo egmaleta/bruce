@@ -60,7 +60,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
     def visit(self,node:BlockNode, scope:Scope):
         my_scope = scope.create_child()
         for expr in node.exprs:
-            self.visit(expr, my_scope.create_child())
+            self.visit(expr, my_scope)
 
 
     @visitor.when(BinaryOpNode)
@@ -72,8 +72,8 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, scope: Scope):
         my_scope = scope.create_child()
-        self.visit(node.target, my_scope.create_child())
-        self.visit(node.value, my_scope.create_child())
+        self.visit(node.target, my_scope)
+        self.visit(node.value, my_scope)
 
         if not is_assignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
@@ -106,8 +106,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(UnaryOpNode)
     def visit(self, node:UnaryOpNode, scope: Scope):
-        my_scope = scope.create_child()
-        self.visit(node.operand,my_scope)
+        self.visit(node.operand,scope)
 
 
         
@@ -134,8 +133,17 @@ class SemanticChecker(object):  # TODO implement all the nodes
     
     @visitor.when(TypeInstancingNode)
     def visit(self,node: TypeInstancingNode, scope:Scope):
-        if not node.type in self.context:
+        try:
+            self.context.types[node.type]
+        except KeyError:    
             self.errors.append(f"Type {node.type} does not exist in the current context")
+
+        try : # revisar esto
+            self.context.protocols[node.type]
+        except KeyError:
+            pass    
+        else:
+            self.errors.append(f"Type {node.type},  cannot instance a Protocol as a Type")    
 
         my_scope = scope.create_child()
 
