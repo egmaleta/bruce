@@ -1,5 +1,5 @@
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto
+from ..tools.semantic import Type, Method, Proto, allow_type
 from ..types import (
     NUMBER_TYPE,
     STRING_TYPE,
@@ -175,7 +175,9 @@ class Evaluator:
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = self.visit(node.target, ctx, scope)
+        node_type = get_safe_type(node.type)
+        return allow_type(value_type, node_type)
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
