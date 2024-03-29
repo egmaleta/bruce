@@ -11,7 +11,6 @@ from ..types import (
     ERROR_TYPE,
     UnionType,
     VectorType,
-    ErrorType
 )
 from ..ast import *
 
@@ -111,13 +110,12 @@ class TypeChecker:
         except SemanticError as se:
             self.errors.append(se.text)
         return ERROR_TYPE
-        # TODO return OBJECT_TYPE?
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
         try:
             target = self.visit(node.target, ctx, scope.create_child())
-            if isinstance(target, ErrorType):
+            if target == ERROR_TYPE:
                 return target
             if not target:
                 self.errors.append(f"Variable {node.target} not defined")
@@ -138,12 +136,13 @@ class TypeChecker:
                         self.errors.append(se.text)
         except SemanticError as se:
             self.errors.append(se.text)
-        return ERROR_TYPE
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         try:
             method = self.visit(node.target, ctx, scope.create_child())
+            if method == ERROR_TYPE:
+                return ERROR_TYPE
             if not method:
                 self.errors.append(f"Method {node.target} not defined")
             else:
@@ -161,18 +160,23 @@ class TypeChecker:
             return method.type
         except SemanticError as se:
             self.errors.append(se.text)
-        return ERROR_TYPE
 
-    @visitor.when(LetExprNode):
+    @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
-        if scope.is_defined(node.id):
-            self.errors.append(f"Variable {node.id} already defined")
-        value_type = self.visit(node.value, ctx, scope.create_child())
-        node_type = get_safe_type(node.type, ctx)
-        if not value_type.conforms_to(node_type):
-            self.errors.append(f"Cannot convert {value_type.name} to {node_type.name}")
-        scope.define_variable(node.id, value_type)
-        return self.visit(node.body, ctx, scope.create_child())
+        try:
+            if scope.is_defined(node.id):
+                self.errors.append(f"Variable {node.id} already defined")
+            value_type = self.visit(node.value, ctx, scope.create_child())
+            node_type = get_safe_type(node.type, ctx)
+            if not value_type.conforms_to(node_type):
+                self.errors.append(
+                    f"Cannot convert {value_type.name} to {node_type.name}"
+                )
+            scope.define_variable(node.id, node.type)
+            return self.visit(node.body, ctx, scope.create_child())
+        except SemanticError as se:
+            self.errors.append(se.text)
+
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
         try:
@@ -181,13 +185,13 @@ class TypeChecker:
                 self.errors.append(f"Variable {node.target} not defined")
             else:
                 value_type = self.visit(node.value, ctx, scope.create_child())
-                if not value_type.conforms_to(target.type):
+                if not value_type.conforms_to(target):
                     self.errors.append(
                         f"Cannot convert {value_type.name} to {target.type.name}"
                     )
+                return value_type
         except SemanticError as se:
             self.errors.append(se.text)
-        return value_type if value_type else ERROR_TYPE
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
