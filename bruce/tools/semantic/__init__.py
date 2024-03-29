@@ -316,17 +316,15 @@ class Type:
     def __hash__(self):
         return hash(self.name)
 
-    def __deep_copy__(self, memo):
-        if self in memo:
-            return memo[self]
-
+    def clone(self):
         new_type = Type(self.name)
-        memo[self] = new_type
+        new_type.set_parent(self.parent.clone())
+        new_type.set_params(self.params)
 
-        new_type.parent = self.parent
-        new_type.params = {k: v for k, v in self.params.items()}
-        new_type.attributes = [x.__deep_copy__(memo) for x in self.attributes]
-        new_type.methods = [x.__deep_copy__(memo) for x in self.methods]
+        new_type.methods = self.methods
+        new_type.attributes = [
+            Attribute(attr.name, attr.type) for attr in self.attributes
+        ]
 
         return new_type
 
