@@ -118,7 +118,6 @@ class Evaluator:
                 break
         return self.visit(node.fallback_branch, ctx, scope)
 
-
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
         pass
