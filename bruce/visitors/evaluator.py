@@ -202,8 +202,7 @@ class Evaluator:
                 child_scope = top_scope.create_child(is_function_scope=True)
                 child_scope.define_variable(INSTANCE_NAME, iterable)
                 cond, _ = self.visit(
-                    iterable.get_method(
-                        NEXT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(NEXT_METHOD_NAME).body, ctx, child_scope
                 )
 
                 if not cond:
@@ -212,8 +211,7 @@ class Evaluator:
                 child_scope = top_scope.create_child(is_function_scope=True)
                 child_scope.define_variable(INSTANCE_NAME, iterable)
                 item_value = self.visit(
-                    iterable.get_method(
-                        CURRENT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(CURRENT_METHOD_NAME).body, ctx, child_scope
                 )
 
                 child_scope = scope.create_child()
