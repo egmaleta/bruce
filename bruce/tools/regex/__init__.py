@@ -83,6 +83,8 @@ Quantifier %= GRAMMAR.Epsilon, lambda h, s: h[0]
 
 # endregion
 
+parser = create_parser(GRAMMAR)
+
 
 def regex_tokenizer(text: str, G: Grammar, char_terminal: Terminal):
     tokens: list[Token] = []
@@ -109,7 +111,6 @@ def regex_tokenizer(text: str, G: Grammar, char_terminal: Terminal):
 class Regex:
     def __init__(self, text):
         tokens = regex_tokenizer(text, GRAMMAR, symbol)
-        parser = create_parser(GRAMMAR)
         left_parse = parser([token for token in tokens])
         ast = evaluate_parse(left_parse, tokens)
         nfa = ast.evaluate()
