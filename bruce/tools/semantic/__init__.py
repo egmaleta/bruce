@@ -50,9 +50,14 @@ class Attribute(Variable):
         name: str,
         type: Union["Type", "Proto", None] = None,
         value: tuple[Any, "Type"] = None,
+        init_expr: ExprNode = None,
     ):
         super().__init__(name, type, value)
         self._label = "[attrib]"
+        self.init_expr = init_expr
+
+    def set_init_expr(self, init_expr: ExprNode):
+        self.init_expr = init_expr
 
 
 class Constant(Variable):
@@ -316,17 +321,16 @@ class Type:
     def __hash__(self):
         return hash(self.name)
 
-    def __deep_copy__(self, memo):
-        if self in memo:
-            return memo[self]
-
+    def clone(self):
         new_type = Type(self.name)
-        memo[self] = new_type
+        new_type.set_parent(self.parent.clone())
+        new_type.set_params(self.params)
 
-        new_type.parent = self.parent
-        new_type.params = {k: v for k, v in self.params.items()}
-        new_type.attributes = [x.__deep_copy__(memo) for x in self.attributes]
-        new_type.methods = [x.__deep_copy__(memo) for x in self.methods]
+        new_type.methods = self.methods
+        new_type.attributes = [
+            Attribute(attr.name, attr.type, None, attr.init_expr)
+            for attr in self.attributes
+        ]
 
         return new_type
 
