@@ -123,9 +123,6 @@ class Type:
         if target is not None:
             return target
 
-        if self.parent is not None:
-            return self.parent.get_attribute(name)
-
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
 
     def define_attribute(self, name: str, type: Union["Type", "Proto", None]):
@@ -150,10 +147,12 @@ class Type:
         if target is not None:
             return target
 
-        if self.parent is not None:
+        if self.parent is None:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
+        try:
             return self.parent.get_method(name)
-
-        raise SemanticError(f"Method '{name}' is not defined in type '{self.name}'.")
+        except SemanticError:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
     def define_method(
         self,
@@ -312,7 +311,7 @@ class Proto:
 
 class ErrorType(Type):
     def __init__(self):
-        Type.__init__(self, "<error>")
+        super().__init__(self, "ErrorType")
 
     def conforms_to(self, other):
         return True
