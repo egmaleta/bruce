@@ -114,11 +114,20 @@ class Evaluator:
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        pass
+        condition, condition_type = self.visit(node.condition,ctx,scope)
+        if not condition:
+            fb_expr, fb_type = self.visit(node.fallback_expr,ctx,scope)
+            return fb_expr, fb_type
+        else:
+            while condition:
+                body, body_type = self.visit(node.body, ctx, scope)
+            return body, body_type    
+
+
+
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
-<<<<<<< HEAD
         left_value,left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right,ctx, scope)
         return Evaluator.artih_op_funcs[node.operator](left_value, right_value), NUMBER_TYPE
@@ -135,40 +144,6 @@ class Evaluator:
         right_value, right_type = self.visit(node.right,ctx, scope)
         return Evaluator.comparison_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
         
-=======
-        left_value, left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right, ctx, scope)
-        print(node.operator)
-        funcs = {
-            "+": lambda x, y: x + y,
-            "-": lambda x, y: x - y,
-            "*": lambda x, y: x * y,
-            "/": lambda x, y: x / y,
-            "%": lambda x, y: x % y,
-        }
-        v = funcs[node.operator](left_value, right_value)
-        print(v)
-
-    @visitor.when(PowerOpNode)
-    def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
-        left_value, left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right, ctx, scope)
-        return left_value**right_value
-
-    @visitor.when(ComparisonOpNode)
-    def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
-        left_value, left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right, ctx, scope)
-        funcs = {
-            ">": lambda x, y: x > y,
-            "<": lambda x, y: x < y,
-            "<=": lambda x, y: x <= y,
-            ">=": lambda x, y: x >= y,
-            "==": lambda x, y: x == y,
-            "!=": lambda x, y: x != y,
-        }
-        return funcs[node.operator](left_value, right_value)
->>>>>>> f269e4e332436e212f39c14a0570e9fb76360613
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
@@ -179,7 +154,6 @@ class Evaluator:
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
-<<<<<<< HEAD
         left_value,left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right,ctx, scope)
         
@@ -194,25 +168,6 @@ class Evaluator:
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
         value, node_type = self.visit(node.operand,ctx,scope)
         return not value, node_type
-=======
-        left_value, left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right, ctx, scope)
-        funcs = {
-            "&": lambda x, y: x and y,
-            "|": lambda x, y: x or y,
-        }
-        return funcs[node.operator](left_value, right_value)
-
-    @visitor.when(ArithNegOpNode)
-    def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
-        value, node_type = self.visit(node.operand, ctx, scope)
-        return -value
-
-    @visitor.when(NegOpNode)
-    def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
-        value, node_type = self.visit(node.operand, ctx, scope)
-        return not value
->>>>>>> f269e4e332436e212f39c14a0570e9fb76360613
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
