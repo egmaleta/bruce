@@ -75,7 +75,7 @@ class TypeChecker:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope_params.create_child())
 
-        if scope.is_defined("self"):
+        if scope.is_var_defined("self"):
             self.errors.append("Cannot redefine self")
         else:
             scope.define_variable("self", self.current_type)
@@ -106,10 +106,9 @@ class TypeChecker:
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
         try:
             types = [self.visit(expr, ctx, scope.create_child()) for expr in node.exprs]
-            return UnionType(*types)
+            return types[-1]
         except SemanticError as se:
             self.errors.append(se.text)
-        return ERROR_TYPE
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
@@ -164,7 +163,7 @@ class TypeChecker:
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
         try:
-            if scope.is_defined(node.id):
+            if scope.is_var_defined(node.id):
                 self.errors.append(f"Variable {node.id} already defined")
             value_type = self.visit(node.value, ctx, scope.create_child())
             node_type = get_safe_type(node.type, ctx)
@@ -172,7 +171,7 @@ class TypeChecker:
                 self.errors.append(
                     f"Cannot convert {value_type.name} to {node_type.name}"
                 )
-            scope.define_variable(node.id, node.type)
+            scope.define_variable(node.id, node_type)
             return self.visit(node.body, ctx, scope.create_child())
         except SemanticError as se:
             self.errors.append(se.text)
@@ -203,9 +202,9 @@ class TypeChecker:
                         f"Type {node.type} expects {len(type.params)} arguments but {len(node.args)} were given"
                     )
                 else:
-                    for arg, param in zip(node.args, type.params):
+                    for arg, param in zip(node.args, instance_type.params):
                         arg_type = self.visit(arg, ctx, scope.create_child())
-                        if not arg_type.conforms_to(param):
+                        if not arg_type.conforms_to(instance_type.params[param]):
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} to {param.name}"
                             )
@@ -236,7 +235,9 @@ class TypeChecker:
             cond_type = self.visit(node.condition, ctx, scope.create_child())
             if cond_type != BOOLEAN_TYPE:
                 self.errors.append(f"Condition must be boolean, not {cond_type.name}")
-            return self.visit(node.body, ctx, scope)
+            types = self.visit(node.body, ctx, scope)
+            types += [self.visit(node.fallback_expr, ctx, scope)]
+            return UnionType(*types)
         except SemanticError as se:
             self.errors.append(se.text)
 
@@ -284,7 +285,12 @@ class TypeChecker:
         try:
             left = self.visit(node.left, ctx, scope.create_child())
             right = self.visit(node.right, ctx, scope.create_child())
-            if left != STRING_TYPE or right != STRING_TYPE:
+            if (
+                left != STRING_TYPE
+                and left != NUMBER_TYPE
+                or right != STRING_TYPE
+                and right != NUMBER_TYPE
+            ):
                 self.errors.append(
                     f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
                 )

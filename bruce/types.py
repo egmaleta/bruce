@@ -6,16 +6,13 @@ from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME, SIZE_METHOD_NAME
 
 class ErrorType(Type):
     def __init__(self):
-        super().__init__("ErrorType")
+        super().__init__("errortype")
 
     def conforms_to(self, other):
         return True
 
     def bypass(self):
         return True
-
-    def __eq__(self, other):
-        return isinstance(other, Type)
 
 
 ERROR_TYPE = ErrorType()
