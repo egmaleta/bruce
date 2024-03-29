@@ -14,6 +14,7 @@ lexer = create_lexer(
         keyword_row(g.else_k),
         keyword_row(g.elif_k),
         keyword_row(g.for_k),
+        keyword_row(g.while_k),
         keyword_row(g.func),
         keyword_row(g.type_k),
         keyword_row(g.new),
