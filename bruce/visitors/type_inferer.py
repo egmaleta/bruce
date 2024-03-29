@@ -56,10 +56,14 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
-        if node.value == INSTANCE_NAME:
-            if node.value not in self.current_method.params:
-                # 'self' refers to current type
-                return self.current_type
+        if (
+            self.current_method is not None
+            and node.value == INSTANCE_NAME
+            and node.value not in self.current_method.params
+            and scope.find_variable(node.value).owner_scope.is_function_scope
+        ):
+            # 'self' refers to current type
+            return self.current_type
 
         var = scope.find_variable(node.value)
         if var is not None:
@@ -122,14 +126,15 @@ class TypeInferer:
         self.visit(node.target, ctx, scope)
 
         if (
-            isinstance(node.target, ast.IdentifierNode)
+            self.current_method is not None
+            and isinstance(node.target, ast.IdentifierNode)
             and node.target.value == INSTANCE_NAME
             and node.target.value not in self.current_method.params
             and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
-            # 'self' is current type
+            # 'self' refers to current type
             try:
-                return self.current_type.get_attribute(node.member_id)
+                return self.current_type.get_attribute(node.member_id).type
             except SemanticError:
                 return t.FUNCTION_TYPE
 
