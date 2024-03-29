@@ -10,50 +10,26 @@ class Evaluator:
     def __init__(self, errors=[]) -> None:
         self.errors = errors
 
-        self.current_type: Type = None
-        self.current_method: Method = None
-
     @visitor.on("node")
     def visit(self, node, context: Context, scope: Scope):
         pass
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope: Scope):
-        # seed function bodies and type attrs
-        for decl in node.declarations:
-            if not isinstance(decl, ProtocolNode):
-                self.visit(decl, ctx, scope)
-
-        return self.visit(node.expr, ctx, scope)[0]
+        self.visit(node.expr, ctx, scope)
+        return self.errors
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
-        self.current_type = ctx.get_type(node.type)
-
-        for member in node.members:
-            if isinstance(member, TypePropertyNode):
-                self.visit(member, ctx, scope)
-            else:
-                self.current_method = scope.find_function(member.id)
-                self.visit(member, ctx, scope)
-                self.current_method = None
-
-        self.current_type = None
+        pass
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
-        is_method = self.current_method is not None
-
-        if is_method:
-            self.current_method.set_body(node.body)
-        else:
-            f = scope.find_function(node.id)
-            f.set_body(node.id)
+        pass
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
-        attr = self.current_type.get_attribute(node.id)
-        attr.set_init_expr(node.value)
+        pass
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
@@ -89,15 +65,39 @@ class Evaluator:
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        print(node.operator)
+        funcs = {
+            '+' : lambda x,y : x + y,
+            '-' : lambda x,y : x - y,
+            '*': lambda x,y : x * y,
+            '/': lambda x,y : x / y,
+            '%': lambda x,y : x % y,
+        }
+        v = funcs[node.operator](left_value, right_value)
+        print(v)
 
     @visitor.when(PowerOpNode)
     def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        return left_value ** right_value
 
     @visitor.when(ComparisonOpNode)
     def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        funcs = {
+            '>' : lambda x,y : x > y,
+            '<' : lambda x,y : x < y,
+            '<=': lambda x,y : x <= y,
+            '>=': lambda x,y : x >= y,
+            '==': lambda x,y : x == y,
+            '!=': lambda x,y : x != y,
+        }
+        return funcs[node.operator](left_value, right_value)
+        
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
@@ -105,15 +105,23 @@ class Evaluator:
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
-        pass
+        left_value,left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right,ctx, scope)
+        funcs = {
+            '&': lambda x,y : x and y,
+            '|': lambda x,y : x or y,
+        }
+        return funcs[node.operator](left_value, right_value)
 
     @visitor.when(ArithNegOpNode)
     def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
-        pass
+        value, node_type = self.visit(node.operand,ctx,scope)
+        return (- value)
 
     @visitor.when(NegOpNode)
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
-        pass
+        value, node_type = self.visit(node.operand,ctx,scope)
+        return not value
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
@@ -121,15 +129,11 @@ class Evaluator:
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
-        values = [self.visit(item, ctx, scope) for item in node.items]
-        # for val in values:
-        #     if val[1]
+        pass
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
-        target_value = self.visit(node.target, ctx, scope)
-        node_type = get_safe_type(node.type, ctx)
-        return target_value[1].conforms_to(node_type)
+        pass
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
@@ -161,7 +165,7 @@ class Evaluator:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        return (True, BOOLEAN_TYPE) if node.value == "true" else (False, BOOLEAN_TYPE)
+        return True if node.value == "true" else False
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
