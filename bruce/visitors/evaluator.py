@@ -137,24 +137,6 @@ class Evaluator:
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
-<<<<<<< HEAD
-        left_value,left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right,ctx, scope)
-        return Evaluator.artih_op_funcs[node.operator](left_value, right_value), NUMBER_TYPE
-
-    @visitor.when(PowerOpNode)
-    def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
-        left_value,left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right,ctx, scope)
-        return left_value ** right_value, NUMBER_TYPE
-
-    @visitor.when(ComparisonOpNode)
-    def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
-        left_value,left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right,ctx, scope)
-        return Evaluator.comparison_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
-        
-=======
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
         return (
@@ -176,7 +158,6 @@ class Evaluator:
             Evaluator.comparison_funcs[node.operator](left_value, right_value),
             BOOLEAN_TYPE,
         )
->>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
@@ -187,21 +168,6 @@ class Evaluator:
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
-<<<<<<< HEAD
-        left_value,left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right,ctx, scope)
-        
-        return Evaluator.logic_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
-
-    @visitor.when(ArithNegOpNode)
-    def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
-        value, node_type = self.visit(node.operand,ctx,scope)
-        return (- value), NUMBER_TYPE
-
-    @visitor.when(NegOpNode)
-    def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
-        value, node_type = self.visit(node.operand,ctx,scope)
-=======
 
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
@@ -219,7 +185,6 @@ class Evaluator:
     @visitor.when(NegOpNode)
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
         value, node_type = self.visit(node.operand, ctx, scope)
->>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
         return not value, node_type
 
     @visitor.when(MappedIterableNode)
