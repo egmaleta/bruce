@@ -65,21 +65,18 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
         for expr in node.exprs:
-            self.visit(expr, ctx, my_scope)
+            self.visit(expr, ctx, scope)
 
     @visitor.when(BinaryOpNode)
     def visit(self, node: BinaryOpNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-        self.visit(node.left, ctx, my_scope)
-        self.visit(node.right, ctx, my_scope)
+        self.visit(node.left, ctx, scope)
+        self.visit(node.right, ctx, scope)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-        self.visit(node.target, ctx, my_scope)
-        self.visit(node.value, ctx, my_scope)
+        self.visit(node.target, ctx, scope)
+        self.visit(node.value, ctx, scope)
 
         if not is_assignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
@@ -93,13 +90,11 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-
         for branch in node.condition_branchs:
-            self.visit(branch[0], ctx, my_scope)
-            self.visit(branch[1], ctx, my_scope)
+            self.visit(branch[0], ctx, scope.create_child())
+            self.visit(branch[1], ctx, scope.create_child())
 
-        self.visit(node.fallback_branch, ctx, my_scope)
+        self.visit(node.fallback_branch, ctx, scope.create_child())
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
@@ -107,12 +102,11 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
         self.visit(node.condition, ctx, my_scope)
         self.visit(node.body, ctx, my_scope)
-        self.visit(node.fallback_expr, ctx, my_scope)
+        self.visit(node.fallback_expr, ctx, my_scope.create_child())
 
     @visitor.when(UnaryOpNode)
     def visit(self, node: UnaryOpNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-        self.visit(node.operand, ctx, my_scope)
+        self.visit(node.operand, ctx, scope)
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
@@ -131,9 +125,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-
-        self.visit(node.value, ctx, my_scope)
+        self.visit(node.value, ctx, scope)
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -157,14 +149,12 @@ class SemanticChecker(object):  # TODO implement all the nodes
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
-        my_scope = scope.create_child()
-        self.visit(node.target, ctx, my_scope)
+        self.visit(node.target, ctx, scope)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
         for expr in node.items:
-            self.visit(expr, ctx, my_scope)
+            self.visit(expr, ctx, scope)
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
@@ -176,9 +166,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-
-        self.visit(node.target, ctx, my_scope)
+        self.visit(node.target, ctx, scope)
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
@@ -188,8 +176,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
-        my_scope = scope.create_child()
-        self.visit(node.target, ctx, my_scope)
+        self.visit(node.target, ctx, scope)
 
     @visitor.when(MethodSpecNode)
     def visit(self, node: MethodSpecNode, ctx: Context, scope: Scope):
