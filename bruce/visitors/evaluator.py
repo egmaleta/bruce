@@ -129,11 +129,11 @@ class Evaluator:
         for v, t in tuples:
             values.append(v)
             types.append(t)
-        
+
         t = UnionType(*types)
         if len(t) == 1:
             t, *_ = t
-        
+
         return (values, VectorType(t))
 
     @visitor.when(TypeMatchingNode)
@@ -148,7 +148,9 @@ class Evaluator:
         node_type = get_safe_type(node.type, ctx)
         if target_value[1].conforms_to(node_type):
             return target_value[0], node_type
-        raise Exception(f"Downcasting error: {target_value[1]} does not conform to {node_type}")
+        raise Exception(
+            f"Downcasting error: {target_value[1]} does not conform to {node_type}"
+        )
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
