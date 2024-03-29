@@ -5,8 +5,6 @@ from ..types import (
     STRING_TYPE,
     OBJECT_TYPE,
     BOOLEAN_TYPE,
-    UnionType,
-    VectorType,
 )
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -220,11 +218,7 @@ class Evaluator:
             values.append(v)
             types.append(t)
 
-        t = UnionType(*types)
-        if len(t) == 1:
-            t, *_ = t
-
-        return (values, VectorType(t))
+        return (values, types)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
@@ -236,11 +230,7 @@ class Evaluator:
             values.append(v)
             types.append(t)
 
-        t = UnionType(*types)
-        if len(t) == 1:
-            t, *_ = t
-
-        return (values, VectorType(t))
+        return (values, types)
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
