@@ -1,7 +1,6 @@
 from typing import Union
 
-from bruce.types import OBJECT_TYPE
-
+from ..types import OBJECT_TYPE
 from ..tools.semantic import SemanticError, Type, Proto
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools import visitor

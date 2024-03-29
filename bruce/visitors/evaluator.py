@@ -1,8 +1,8 @@
-from bruce.tools.semantic import visitor as visitor
-from bruce.types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
-from bruce.tools.semantic.context import Context, get_safe_type
-from bruce.tools.semantic.scope import Scope
-from bruce.ast import *
+from ..tools.semantic import visitor as visitor
+from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE
+from ..tools.semantic.context import Context, get_safe_type
+from ..tools.semantic.scope import Scope
+from ..ast import *
 
 
 class Evaluator:
