@@ -1,5 +1,7 @@
 from collections import OrderedDict
-from typing import Union
+from typing import Union, Any
+
+from .ast import ExprNode
 
 
 class SemanticError(Exception):
@@ -13,8 +15,9 @@ class Variable:
         self,
         name: str,
         type: Union["Type", "Proto", None] = None,
+        value: tuple[Any, "Type"] = None,
+        *,
         owner_scope=None,
-        value=None,
     ):
         self.name = name
         self.type = type
@@ -30,6 +33,9 @@ class Variable:
     def set_type(self, type: Union["Type", "Proto"]):
         self.type = type
 
+    def set_value(self, value: tuple[Any, "Type"]):
+        self.value = value
+
     def __str__(self):
         typename = self.type.name if self.type is not None else "Unknown"
         return f"{self._label} {self.name} : {typename};"
@@ -39,15 +45,25 @@ class Variable:
 
 
 class Attribute(Variable):
-    def __init__(self, name: str, type: Union["Type", "Proto", None] = None):
-        super().__init__(name, type)
+    def __init__(
+        self,
+        name: str,
+        type: Union["Type", "Proto", None] = None,
+        value: tuple[Any, "Type"] = None,
+    ):
+        super().__init__(name, type, value)
         self._label = "[attrib]"
 
 
 class Constant(Variable):
-    def __init__(self, name: str, type: Union["Type", "Proto"]):
-        super().__init__(name, type)
+    def __init__(
+        self, name: str, type: Union["Type", "Proto"], value: tuple[Any, "Type"]
+    ):
+        super().__init__(name, type, value)
         self._label = "[const]"
+
+    def set_value(self, value: tuple[Any, "Type"]):
+        raise SemanticError(f"Constant '{self.name}' is inmutable.")
 
     @property
     def is_mutable(self):
@@ -60,13 +76,13 @@ class Function:
         name: str,
         params: list[tuple[str, Union["Type", "Proto", None]]],
         type: Union["Type", "Proto", None] = None,
-        body = None
+        body=None,
     ):
         self.name = name
         self.params = OrderedDict(params)
         self.type = type
         self._label = "[func]"
-        self.body = body
+        self.body: ExprNode = body
 
     def set_type(self, type: Union["Type", "Proto"]):
         if self.type is None:
@@ -76,7 +92,7 @@ class Function:
         if name in self.params and self.params[name] is None:
             self.params[name] = type
 
-    def set_body(self, body):
+    def set_body(self, body: ExprNode):
         self.body = body
 
     def __str__(self):
