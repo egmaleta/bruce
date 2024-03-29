@@ -5,6 +5,7 @@ from ..tools.graph import topological_order
 from ..tools import visitor
 from ..types import (
     BOOLEAN_TYPE,
+    ITERABLE_PROTO,
     NUMBER_TYPE,
     OBJECT_TYPE,
     STRING_TYPE,
@@ -126,8 +127,8 @@ class TypeChecker:
                         target == self.current_type
                         and isinstance(node.target, IdentifierNode)
                         and node.target.value == "self"
-                        and not (
-                            "self" in [pn for pn in self.current_type.params.keys()]
+                        and (
+                            "self" not in [pn for pn in self.current_type.params.keys()]
                         )
                     ):
                         return target.get_attribute(node.member_id).type
@@ -152,7 +153,7 @@ class TypeChecker:
                 else:
                     for arg, param in zip(node.args, method.params):
                         arg_type = self.visit(arg, ctx, scope.create_child())
-                        if not arg_type.conforms_to(param.type):
+                        if not arg_type.conforms_to(method.params[param]):
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} to {param.type.name}"
                             )
@@ -235,7 +236,7 @@ class TypeChecker:
             cond_type = self.visit(node.condition, ctx, scope.create_child())
             if cond_type != BOOLEAN_TYPE:
                 self.errors.append(f"Condition must be boolean, not {cond_type.name}")
-            types = self.visit(node.body, ctx, scope)
+            types = [self.visit(node.body, ctx, scope)]
             types += [self.visit(node.fallback_expr, ctx, scope)]
             return UnionType(*types)
         except SemanticError as se:
@@ -325,19 +326,34 @@ class TypeChecker:
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
-        pass  # TODO implement this
+        try:
+            iterable_type = self.visit(node.iterable_expr, ctx, scope.create_child())
+            if iterable_type == ERROR_TYPE:
+                return ERROR_TYPE
+            if not iterable_type.implements(ITERABLE_PROTO):
+                self.errors.append(
+                    f"Type {iterable_type.name} does not implement Iterable"
+                )
+            scope_mapped = scope.create_child()
+            scope_mapped.define(node.item_id, iterable_type)
+            map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
+            if not map_expr_type.conforms_to(get_safe_type(node.item_type, ctx)):
+                self.errors.append(
+                    f"Cannot convert {map_expr_type.name} to {node.item_type}"
+                )
+            return VectorType(map_expr_type)
+        except SemanticError as se:
+            self.errors.append(se.text)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
         try:
-            types = [
-                self.visit(expr, ctx, scope.create_child()) for expr in node.elements
-            ]
+            types = [self.visit(expr, ctx, scope.create_child()) for expr in node.items]
             if len(set(types)) != 1:
                 self.errors.append(f"Vector elements must have the same type")
+            return VectorType(types[0])
         except SemanticError as se:
             self.errors.append(se.text)
-        return VectorType(types[0])
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):

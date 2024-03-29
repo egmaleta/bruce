@@ -56,10 +56,14 @@ class TypeInferer:
 
     @visitor.when(ast.IdentifierNode)
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
-        if node.value == INSTANCE_NAME:
-            if node.value not in self.current_method.params:
-                # 'self' refers to current type
-                return self.current_type
+        if (
+            self.current_method is not None
+            and node.value == INSTANCE_NAME
+            and node.value not in self.current_method.params
+            and scope.find_variable(node.value).owner_scope.is_function_scope
+        ):
+            # 'self' refers to current type
+            return self.current_type
 
         var = scope.find_variable(node.value)
         if var is not None:
@@ -122,14 +126,15 @@ class TypeInferer:
         self.visit(node.target, ctx, scope)
 
         if (
-            isinstance(node.target, ast.IdentifierNode)
+            self.current_method is not None
+            and isinstance(node.target, ast.IdentifierNode)
             and node.target.value == INSTANCE_NAME
             and node.target.value not in self.current_method.params
             and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
-            # 'self' is current type
+            # 'self' refers to current type
             try:
-                return self.current_type.get_attribute(node.member_id)
+                return self.current_type.get_attribute(node.member_id).type
             except SemanticError:
                 return t.FUNCTION_TYPE
 
@@ -358,11 +363,80 @@ class TypeInferer:
 
     @visitor.when(ast.FunctionNode)
     def visit(self, node: ast.FunctionNode, ctx: Context, scope: Scope):
-        pass
+        is_method = self.current_method is not None
+
+        f = self.current_method if is_method else scope.find_function(node.id)
+
+        child_scope = scope.create_child(is_function_scope=True)
+        for name, pt in f.params.items():
+            child_scope.define_variable(name, pt)
+
+        if is_method and not INSTANCE_NAME in f.params:
+            child_scope.define_variable(INSTANCE_NAME, self.current_type)
+
+        rt = self.visit(node.body, ctx, child_scope)
+
+        # infer function param types
+        for name, pt in f.params.items():
+            if pt is None:
+                var = child_scope.find_variable(name)
+                if var.type is not None:
+                    f.set_param_type(name, var.type)
+
+        if f.type is None and rt is not None:
+            f.set_type(rt)
+            self.occurs = True
 
     @visitor.when(ast.TypeNode)
     def visit(self, node: ast.TypeNode, ctx: Context, scope: Scope):
-        pass
+        type = get_safe_type(node.type, ctx)
+        self.current_type = type
+
+        child_scope = scope.create_child()
+        for name, pt in type.params.items():
+            child_scope.define_variable(name, pt)
+
+        # infer attr types
+        property_nodes = [
+            node for node in node.members if isinstance(node, ast.TypePropertyNode)
+        ]
+        for attr, pn in zip(type.attributes, property_nodes):
+            pnt = self.visit(pn.value, ctx, child_scope)
+            if attr.type is None and pnt is not None:
+                attr.set_type(pnt)
+                self.occurs = True
+
+        # infer type param types by attr init
+        for name, pt in type.params.items():
+            if pt is None:
+                var = child_scope.find_variable(name)
+                if var.type is not None:
+                    type.set_param_type(name, var.type)
+
+        if node.parent_args:
+            child_scope = scope.create_child()
+            for name, pt in type.params.items():
+                child_scope.define_variable(name, pt)
+
+            for arg in node.parent_args:
+                self.visit(arg, ctx, child_scope)
+
+            # infer type param types by parent type args
+            for name, pt in type.params.items():
+                if pt is None:
+                    var = child_scope.find_variable(name)
+                    if var.type is not None:
+                        type.set_param_type(name, var.type)
+
+        method_nodes = [
+            node for node in node.members if isinstance(node, ast.FunctionNode)
+        ]
+        for method, mnode in zip(type.methods, method_nodes):
+            self.current_method = method
+            self.visit(mnode, ctx, scope)
+            self.current_method = None
+
+        self.current_type = None
 
     @visitor.when(ast.ProgramNode)
     def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
@@ -372,8 +446,6 @@ class TypeInferer:
             for decl in node.declarations:
                 if not isinstance(decl, ast.ProtocolNode):
                     self.visit(decl, ctx, scope)
-
-            self.visit(node.expr, ctx, scope)
 
             if self.occurs == False:
                 break
@@ -413,6 +485,3 @@ class TypeInferer:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
                 )
-
-
-# PD: I AM COOKING HERE...
