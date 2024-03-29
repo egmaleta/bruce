@@ -1,5 +1,3 @@
-from inspect import isdatadescriptor
-
 from ..tools.semantic import SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -10,8 +8,10 @@ from ..types import (
     NUMBER_TYPE,
     OBJECT_TYPE,
     STRING_TYPE,
+    ERROR_TYPE,
     UnionType,
     VectorType,
+    ErrorType
 )
 from ..ast import *
 
@@ -42,8 +42,9 @@ class TypeChecker:
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
         self.current_type: Type = get_safe_type(node.type, ctx)
+        scope_params = scope.create_child()
         for param in node.params:
-            scope.define_variable(param[0], get_safe_type(param[1], ctx))
+            scope_params.define_variable(param[0], get_safe_type(param[1], ctx))
         # This is to know if the args of the parents are ok
         if node.parent_type:
             if node.params:
@@ -59,7 +60,9 @@ class TypeChecker:
                     for parent_arg, node_arg in zip(
                         parent_type.params, node.parent_args
                     ):
-                        arg_type = self.visit(node_arg, ctx, scope.create_child())
+                        arg_type = self.visit(
+                            node_arg, ctx, scope_params.create_child()
+                        )
                         parent_arg_type = parent_type.params[parent_arg]
                         if not arg_type.conforms_to(parent_arg_type):
                             self.errors.append(
@@ -71,10 +74,7 @@ class TypeChecker:
 
         for member in node.members:
             if isinstance(member, TypePropertyNode):
-                self.visit(member, ctx, scope.create_child())
-
-        for param in node.params:
-            scope.delete_variable(param[0])
+                self.visit(member, ctx, scope_params.create_child())
 
         if scope.is_defined("self"):
             self.errors.append("Cannot redefine self")
@@ -110,12 +110,15 @@ class TypeChecker:
             return UnionType(*types)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
         # TODO return OBJECT_TYPE?
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
         try:
             target = self.visit(node.target, ctx, scope.create_child())
+            if isinstance(target, ErrorType):
+                return target
             if not target:
                 self.errors.append(f"Variable {node.target} not defined")
             else:
@@ -126,12 +129,16 @@ class TypeChecker:
                         target == self.current_type
                         and isinstance(node.target, IdentifierNode)
                         and node.target.value == "self"
+                        and not (
+                            "self" in [pn for pn in self.current_type.params.keys()]
+                        )
                     ):
                         return target.get_attribute(node.member_id).type
                     else:
                         self.errors.append(se.text)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
@@ -154,19 +161,18 @@ class TypeChecker:
             return method.type
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
-    @visitor.when(MultipleLetExprNode)
-    def visit(self, node: MultipleLetExprNode, ctx: Context, scope: Scope):
-        for bind in node.bindings:
-            if scope.is_defined(bind[0]):
-                self.errors.append(f"Variable {bind[0]} already defined")
-            value_type = self.visit(bind[2], ctx, scope.create_child())
-            bind_type = get_safe_type(bind[1], ctx)
-            if not value_type.conforms_to(bind_type):
-                self.errors.append(f"Cannot convert {value_type} to {bind_type.name}")
-            scope.define_variable(bind[0], value_type)
+    @visitor.when(LetExprNode):
+    def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
+        if scope.is_defined(node.id):
+            self.errors.append(f"Variable {node.id} already defined")
+        value_type = self.visit(node.value, ctx, scope.create_child())
+        node_type = get_safe_type(node.type, ctx)
+        if not value_type.conforms_to(node_type):
+            self.errors.append(f"Cannot convert {value_type.name} to {node_type.name}")
+        scope.define_variable(node.id, value_type)
         return self.visit(node.body, ctx, scope.create_child())
-
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
         try:
@@ -181,7 +187,7 @@ class TypeChecker:
                     )
         except SemanticError as se:
             self.errors.append(se.text)
-        return value_type if value_type else OBJECT_TYPE
+        return value_type if value_type else ERROR_TYPE
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -334,7 +340,7 @@ class TypeChecker:
                 self.errors.append(f"Index must be a number, not {index_type.name}")
         except SemanticError as se:
             self.errors.append(se.text)
-        return OBJECT_TYPE
+        return ERROR_TYPE
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
@@ -342,7 +348,10 @@ class TypeChecker:
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        return scope.find_variable(node.value).type
+        try:
+            return scope.find_variable(node.value).type
+        except AttributeError as ae:
+            return scope.find_function(node.value)
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):

@@ -9,10 +9,14 @@ class SemanticError(Exception):
 
 
 class Variable:
-    def __init__(self, name: str, type: Union["Type", "Proto", None] = None):
+    def __init__(
+        self, name: str, type: Union["Type", "Proto", None] = None, owner_scope=None
+    ):
         self.name = name
         self.type = type
         self._label = "[var]"
+
+        self.owner_scope = owner_scope
 
     @property
     def is_mutable():
@@ -123,9 +127,6 @@ class Type:
         if target is not None:
             return target
 
-        if self.parent is not None:
-            return self.parent.get_attribute(name)
-
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
 
     def define_attribute(self, name: str, type: Union["Type", "Proto", None]):
@@ -150,10 +151,12 @@ class Type:
         if target is not None:
             return target
 
-        if self.parent is not None:
+        if self.parent is None:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
+        try:
             return self.parent.get_method(name)
-
-        raise SemanticError(f"Method '{name}' is not defined in type '{self.name}'.")
+        except SemanticError:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
     def define_method(
         self,
@@ -186,8 +189,59 @@ class Type:
         return self.parent is not None and self.parent.conforms_to(other)
 
     def implements(self, proto: "Proto"):
-        # TODO
-        raise NotImplementedError()
+        for spec in proto.all_method_specs():
+            try:
+                method = self.get_method(spec.name)
+            except SemanticError:
+                return False
+            else:
+                if len(method.params) != len(spec.params):
+                    return False
+
+                # spec param <= method param
+                for pt, spt in zip(method.params.values(), spec.params.values()):
+                    if pt is None:
+                        continue
+
+                    pt_is_type = isinstance(pt, Type)
+                    spt_is_type = isinstance(spt, Type)
+                    pt_is_proto = not pt_is_type
+                    spt_is_proto = not spt_is_type
+                    if (
+                        (pt_is_type and spt_is_type and not spt.conforms_to(pt))
+                        or (pt_is_type and spt_is_proto and not pt.implements(spt))
+                        or (pt_is_proto and spt_is_proto and not pt.extends(spt))
+                        or (pt_is_proto and spt_is_type)
+                    ):
+                        return False
+
+                # method type <= spec type
+                if method.type is not None:
+                    mt_is_type = isinstance(method.type, Type)
+                    st_is_type = isinstance(spec.type, Type)
+                    mt_is_proto = not mt_is_type
+                    st_is_proto = not st_is_type
+                    if (
+                        (
+                            mt_is_type
+                            and spt_is_type
+                            and not method.type.conforms_to(spec.type)
+                        )
+                        or (
+                            mt_is_type
+                            and st_is_proto
+                            and not method.type.implements(spec.type)
+                        )
+                        or (
+                            mt_is_proto
+                            and st_is_proto
+                            and not method.type.extends(spec.type)
+                        )
+                        or (mt_is_proto and st_is_type)
+                    ):
+                        return False
+
+        return True
 
     def set_parent(self, parent: "Type"):
         if self.parent is not None:

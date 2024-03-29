@@ -5,23 +5,25 @@ from . import Variable, Constant, Function, Type, Proto
 
 
 class Scope:
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, is_function_scope=False):
         self.local_vars: list[Variable] = []
         self.local_funcs: list[Function] = []
         self.parent = parent
         self.children = []
         self.index = 0 if parent is None else len(parent)
 
+        self.is_function_scope = is_function_scope
+
     def __len__(self):
         return len(self.local_vars)
 
-    def create_child(self):
-        child = Scope(self)
+    def create_child(self, *, is_function_scope=False):
+        child = Scope(self, is_function_scope=is_function_scope)
         self.children.append(child)
         return child
 
     def define_variable(self, name: str, type: Union[Type, Proto, None] = None):
-        info = Variable(name, type)
+        info = Variable(name, type, self)
         self.local_vars.append(info)
         return info
 
