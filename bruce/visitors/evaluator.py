@@ -1,5 +1,5 @@
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto
+from ..tools.semantic import Type, Method, Proto, allow_type
 from ..types import (
     NUMBER_TYPE,
     STRING_TYPE,
@@ -15,25 +15,25 @@ from ..ast import *
 
 class Evaluator:
     artih_op_funcs = {
-        '+' : lambda x,y : x + y,
-        '-' : lambda x,y : x - y,
-        '*': lambda x,y : x * y,
-        '/': lambda x,y : x / y,
-        '%': lambda x,y : x % y,
+        "+": lambda x, y: x + y,
+        "-": lambda x, y: x - y,
+        "*": lambda x, y: x * y,
+        "/": lambda x, y: x / y,
+        "%": lambda x, y: x % y,
     }
 
     comparison_funcs = {
-        '>' : lambda x,y : x > y,
-        '<' : lambda x,y : x < y,
-        '<=': lambda x,y : x <= y,
-        '>=': lambda x,y : x >= y,
-        '==': lambda x,y : x == y,
-        '!=': lambda x,y : x != y,
+        ">": lambda x, y: x > y,
+        "<": lambda x, y: x < y,
+        "<=": lambda x, y: x <= y,
+        ">=": lambda x, y: x >= y,
+        "==": lambda x, y: x == y,
+        "!=": lambda x, y: x != y,
     }
 
     logic_funcs = {
-        '&': lambda x,y : x and y,
-        '|': lambda x,y : x or y,
+        "&": lambda x, y: x and y,
+        "|": lambda x, y: x or y,
     }
 
     def __init__(self, errors=[]) -> None:
@@ -110,7 +110,13 @@ class Evaluator:
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
-        pass
+        for cond, expr in node.condition_branchs:
+            value, value_type = self.visit(cond, ctx, scope)
+            if value:
+                return self.visit(expr, ctx, scope)
+                break
+        return self.visit(node.fallback_branch, ctx, scope)
+
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
@@ -128,6 +134,7 @@ class Evaluator:
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
+<<<<<<< HEAD
         left_value,left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right,ctx, scope)
         return Evaluator.artih_op_funcs[node.operator](left_value, right_value), NUMBER_TYPE
@@ -144,16 +151,40 @@ class Evaluator:
         right_value, right_type = self.visit(node.right,ctx, scope)
         return Evaluator.comparison_funcs[node.operator](left_value, right_value), BOOLEAN_TYPE
         
+=======
+        left_value, left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right, ctx, scope)
+        return (
+            Evaluator.artih_op_funcs[node.operator](left_value, right_value),
+            NUMBER_TYPE,
+        )
+
+    @visitor.when(PowerOpNode)
+    def visit(self, node: PowerOpNode, ctx: Context, scope: Scope):
+        left_value, left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right, ctx, scope)
+        return left_value**right_value, NUMBER_TYPE
+
+    @visitor.when(ComparisonOpNode)
+    def visit(self, node: ComparisonOpNode, ctx: Context, scope: Scope):
+        left_value, left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right, ctx, scope)
+        return (
+            Evaluator.comparison_funcs[node.operator](left_value, right_value),
+            BOOLEAN_TYPE,
+        )
+>>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
 
     @visitor.when(ConcatOpNode)
     def visit(self, node: ConcatOpNode, ctx: Context, scope: Scope):
-        left_value,left_type = self.visit(node.left, ctx, scope)
-        right_value, right_type = self.visit(node.right,ctx, scope)
+        left_value, left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right, ctx, scope)
 
         return str(left_value) + str(right_value), STRING_TYPE
 
     @visitor.when(LogicOpNode)
     def visit(self, node: LogicOpNode, ctx: Context, scope: Scope):
+<<<<<<< HEAD
         left_value,left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right,ctx, scope)
         
@@ -167,6 +198,25 @@ class Evaluator:
     @visitor.when(NegOpNode)
     def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
         value, node_type = self.visit(node.operand,ctx,scope)
+=======
+
+        left_value, left_type = self.visit(node.left, ctx, scope)
+        right_value, right_type = self.visit(node.right, ctx, scope)
+
+        return (
+            Evaluator.logic_funcs[node.operator](left_value, right_value),
+            BOOLEAN_TYPE,
+        )
+
+    @visitor.when(ArithNegOpNode)
+    def visit(self, node: ArithNegOpNode, ctx: Context, scope: Scope):
+        value, node_type = self.visit(node.operand, ctx, scope)
+        return (-value), NUMBER_TYPE
+
+    @visitor.when(NegOpNode)
+    def visit(self, node: NegOpNode, ctx: Context, scope: Scope):
+        value, node_type = self.visit(node.operand, ctx, scope)
+>>>>>>> 862ec04bc26e414a4a1316564ff8958cf46974f9
         return not value, node_type
 
     @visitor.when(MappedIterableNode)
@@ -191,7 +241,9 @@ class Evaluator:
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = self.visit(node.target, ctx, scope)
+        node_type = get_safe_type(node.type)
+        return allow_type(value_type, node_type)
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
