@@ -1,3 +1,5 @@
+from math import pi, e
+
 from .tools.lexer import create_lexer, keyword_row
 from .tools.semantic.context import Context
 from .tools.semantic.scope import Scope
@@ -90,8 +92,8 @@ context = Context(
 )
 
 scope = Scope()
-scope.define_constant(n.E_CONST_NAME, t.NUMBER_TYPE)
-scope.define_constant(n.PI_CONST_NAME, t.NUMBER_TYPE)
+scope.define_constant(n.E_CONST_NAME, t.NUMBER_TYPE, (e, t.NUMBER_TYPE))
+scope.define_constant(n.PI_CONST_NAME, t.NUMBER_TYPE, (pi, t.NUMBER_TYPE))
 scope.define_function(n.PRINT_FUNC_NAME, [("obj", t.OBJECT_TYPE)], t.OBJECT_TYPE)
 scope.define_function(
     n.RANGE_FUNC_NAME,
