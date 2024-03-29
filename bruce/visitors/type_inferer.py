@@ -69,7 +69,15 @@ class TypeInferer:
 
     @visitor.when(ast.TypeInstancingNode)
     def visit(self, node: ast.TypeInstancingNode, ctx: Context, scope: Scope):
-        pass
+        for arg in node.args:
+            self.visit(arg, ctx, scope)
+
+        it = get_safe_type(node.type, ctx)
+        for arg, pt in zip(node.args, it.params.values()):
+            if pt is not None:
+                self._infer(arg, scope, pt)
+
+        return it
 
     @visitor.when(ast.VectorNode)
     def visit(self, node: ast.VectorNode, ctx: Context, scope: Scope):
@@ -117,14 +125,14 @@ class TypeInferer:
         if (
             isinstance(node.target, ast.IdentifierNode)
             and node.target.value == INSTANCE_NAME
+            and node.target.value not in self.current_method.params
+            and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
-            # accessing to 'self'
-            if node.target.value not in self.current_method.params:
-                # 'self' refers to current type
-                try:
-                    return self.current_type.get_attribute(node.member_id)
-                except SemanticError:
-                    return t.FUNCTION_TYPE
+            # 'self' is current type
+            try:
+                return self.current_type.get_attribute(node.member_id)
+            except SemanticError:
+                return t.FUNCTION_TYPE
 
         canditate_types = []
 
@@ -150,7 +158,43 @@ class TypeInferer:
 
     @visitor.when(ast.FunctionCallNode)
     def visit(self, node: ast.FunctionCallNode, ctx: Context, scope: Scope):
-        pass
+        if isinstance(node.target, ast.MemberAccessingNode):
+            receiver = node.target.target
+            member = node.target.member_id
+
+            rt = self.visit(receiver, ctx, scope)
+            for arg in node.args:
+                self.visit(arg, ctx, scope)
+
+            if rt is not None:
+                try:
+                    method = rt.get_method(member)
+                except SemanticError:
+                    pass
+                else:
+                    for arg, pt in zip(node.args, method.params.values()):
+                        if pt is not None:
+                            self._infer(arg, scope, pt)
+
+                return rt
+        else:
+            tt = self.visit(node.target, ctx, scope)
+            for arg in node.args:
+                self.visit(arg, ctx, scope)
+
+            if tt != t.FUNCTION_TYPE:
+                return None
+
+            if isinstance(node.target, ast.IdentifierNode):
+                f = scope.find_function(node.target.value)
+                if f is not None:
+                    for arg, pt in zip(node.args, f.params.values()):
+                        if pt is not None:
+                            self._infer(arg, scope, pt)
+
+                    return f.type
+
+        return None
 
     @visitor.when(ast.IndexingNode)
     def visit(self, node: ast.IndexingNode, ctx: Context, scope: Scope):
