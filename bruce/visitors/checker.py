@@ -33,7 +33,11 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
-        self.visit(node.target, ctx, scope)
+        my_scope = scope.get_top_scope().create_child(is_function_scope=True)
+        for p in node.args:
+            self.visit(p,ctx,my_scope)
+
+        self.visit(node.target, ctx, my_scope)
         if not (
             isinstance(node.target, MemberAccessingNode)
             or isinstance(node.target, IdentifierNode)
@@ -41,8 +45,6 @@ class SemanticChecker(object):  # TODO implement all the nodes
             self.errors.append(
                 f"Cannot call a Function with targets that ar not MemeberAccesing or Identifier"
             )
-        for arg in node.args:
-            self.visit(arg, ctx, scope)
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
@@ -69,8 +71,9 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(BinaryOpNode)
     def visit(self, node: BinaryOpNode, ctx: Context, scope: Scope):
-        self.visit(node.left, ctx, scope)
-        self.visit(node.right, ctx, scope)
+        my_scope = scope.create_child()
+        self.visit(node.left, ctx, my_scope)
+        self.visit(node.right, ctx, my_scope)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
@@ -83,10 +86,10 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
-        scope.define_variable(node.id)
-        self.visit(node.value, ctx, scope)
-        let_scope = scope.create_child()
-        self.visit(node.body, ctx, let_scope)
+        my_scope = scope.create_child()
+        my_scope.define_variable(node.id)
+        self.visit(node.value, ctx, my_scope)
+        self.visit(node.body, ctx, my_scope)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
@@ -108,7 +111,8 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(UnaryOpNode)
     def visit(self, node: UnaryOpNode, ctx: Context, scope: Scope):
-        self.visit(node.operand, ctx, scope)
+        my_scope = scope.create_child()
+        self.visit(node.operand, ctx, my_scope)
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
@@ -158,8 +162,9 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
+        my_scope = scope.create_child()
         for expr in node.items:
-            self.visit(expr, ctx, scope)
+            self.visit(expr, ctx, my_scope)
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
