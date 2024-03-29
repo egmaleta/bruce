@@ -120,7 +120,9 @@ class Evaluator:
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
-        pass
+        value, value_type = self.visit(node.value, ctx, scope)
+        scope.define_variable(node.id, node.type, (value, value_type))
+        return self.visit(node.expr, ctx, scope)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
