@@ -35,7 +35,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         my_scope = scope.get_top_scope().create_child(is_function_scope=True)
         for p in node.args:
-            self.visit(p,ctx,my_scope)
+            self.visit(p, ctx, my_scope)
 
         self.visit(node.target, ctx, my_scope)
         if not (
