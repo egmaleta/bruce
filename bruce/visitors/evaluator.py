@@ -11,6 +11,7 @@ from ..types import (
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
+from ..names import NEXT_METHOD_NAME, CURRENT_METHOD_NAME, INSTANCE_NAME
 
 
 class Evaluator:
@@ -170,7 +171,55 @@ class Evaluator:
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
-        pass
+        iterable, iterable_type = self.visit(node.iterable_expr, ctx, scope)
+
+        tuples = []
+
+        if isinstance(iterable, list):
+            for item in iterable:
+                child_scope = scope.create_child()
+                child_scope.define_variable(
+                    node.item_id, None, (item, iterable_type.item_type)
+                )
+                tuples.append(self.visit(node.map_expr, ctx, child_scope))
+        else:
+            # iterable is a type instance
+
+            top_scope = scope.get_top_scope()
+
+            while True:
+                child_scope = top_scope.create_child(is_function_scope=True)
+                child_scope.define_variable(INSTANCE_NAME, iterable)
+                cond, _ = self.visit(
+                    iterable.get_method(NEXT_METHOD_NAME).body, ctx, child_scope
+                )
+
+                if not cond:
+                    break
+
+                child_scope = top_scope.create_child(is_function_scope=True)
+                child_scope.define_variable(INSTANCE_NAME, iterable)
+                item_value = self.visit(
+                    iterable.get_method(CURRENT_METHOD_NAME).body, ctx, child_scope
+                )
+
+                child_scope = scope.create_child()
+                child_scope.define_variable(node.item_id, None, item_value)
+
+                value = self.visit(node.map_expr, ctx, child_scope)
+                tuples.append(value)
+
+        values = []
+        types = []
+        for v, t in tuples:
+            values.append(v)
+            types.append(t)
+
+        t = UnionType(*types)
+        if len(t) == 1:
+            t, *_ = t
+
+        return (values, VectorType(t))
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
