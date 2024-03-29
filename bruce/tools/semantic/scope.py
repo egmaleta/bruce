@@ -91,3 +91,9 @@ class Scope:
             self.local_vars.remove(self.find_variable(name))
         except ValueError:
             pass
+
+    def get_top_scope(self):
+        if self.parent is None:
+            return self
+
+        return self.parent.get_top_scope()
