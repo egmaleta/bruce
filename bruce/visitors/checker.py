@@ -27,15 +27,20 @@ class SemanticChecker(object):  # TODO implement all the nodes
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, scope: Scope):
-        if not scope.is_var_defined(node.value):
+
+        if node.value != "self" and not scope.is_var_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, scope: Scope):
-        if not scope.is_func_defined(node.target.value):
-            # print(node.target.value)
-            self.errors.append(f"Function {node.target} not defined")
-
+        self.visit(node.target, scope)
+        if not (
+            isinstance(node.target, MemberAccessingNode)
+            or isinstance(node.target, IdentifierNode)
+        ):
+            self.errors.append(
+                f"Cannot call a Function with targets that ar not MemeberAccesing or Identifier"
+            )
         for arg in node.args:
             self.visit(arg, scope)
 
@@ -108,7 +113,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, scope: Scope):
         my_scope = scope.create_child()
- 
+
         if node.params is not None:
             for param in node.params:
                 my_scope.define_variable(param[0])
