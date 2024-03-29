@@ -55,7 +55,7 @@ class Scope:
             )
 
     def find_function(self, name: str, index=None):
-        local_funcs = self.local_funcs if index is None else islice(self.locals, index)
+        local_funcs = self.local_funcs if index is None else islice(self.local_funcs, index)
         try:
             return next(x for x in local_funcs if x.name == name)
         except StopIteration:
@@ -65,11 +65,17 @@ class Scope:
                 else None
             )
 
-    def is_defined(self, name: str):
+    def is_var_defined(self, name: str):
         return self.find_variable(name) is not None
+    
+    def is_func_defined(self,name:str):
+        return self.find_function(name) is not None
+    
+    def is_local_var(self, name: str):
+        return any(True for x in self.local_vars if x.name == name)
 
-    def is_local(self, name: str):
-        return any(True for x in self.locals if x.name == name)
+    def is_local_func(self, name: str):
+        return any(True for x in self.local_funcs if x.name == name)
 
     def delete_variable(self, name: str):
         try:
