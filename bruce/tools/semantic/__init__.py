@@ -394,7 +394,7 @@ class Proto:
 
         if cond:
             self.parents.append(parent)
-            
+
     def get_method(self, name: str):
         target = None
         for attr in self.method_specs:
