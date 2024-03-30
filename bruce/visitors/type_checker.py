@@ -1,7 +1,7 @@
 from ..tools.semantic import SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
-from ..tools.graph import topological_order
+from .type_builder import topological_order
 from ..tools import visitor
 from ..types import (
     BOOLEAN_TYPE,
