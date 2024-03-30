@@ -1,9 +1,9 @@
+import dill as pickle
+
 from .token import Token
 from .regex.automata import State
 from .regex import Regex
 from .grammar import Terminal, EOF
-
-import dill as pickle
 
 
 class Lexer:
