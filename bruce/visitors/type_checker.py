@@ -155,7 +155,7 @@ class TypeChecker:
                         arg_type = self.visit(arg, ctx, scope.create_child())
                         if not arg_type.conforms_to(method.params[param]):
                             self.errors.append(
-                                f"Cannot convert {arg_type.name} to {param.type.name}"
+                                f"Cannot convert {arg_type.name} to {method.params[param].name}"
                             )
             return method.type
         except SemanticError as se:
