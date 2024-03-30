@@ -406,10 +406,7 @@ class Evaluator:
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
         if (
-            target_value[1] is Type
-            and target_value[1].conforms_to(node_type)
-            or target_value[1] is Proto
-            and target_value[1].implements(node_type)
+            allow_type(target_value[1], node_type)
         ):
             return target_value[0], node_type
         raise Exception(
