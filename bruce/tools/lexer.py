@@ -3,12 +3,34 @@ from .regex.automata import State
 from .regex import Regex
 from .grammar import Terminal, EOF
 
+import dill as pickle
 
 class Lexer:
     def __init__(self, table, eof):
         self.eof = eof
-        self.regexs = self._build_regexs(table)
+        try:
+            self.regexs = self._build_regexs_deserialize(table)
+        except FileNotFoundError:
+            self._build_regexs_serialize(table)
+            self.regexs = self._build_regexs_deserialize(table)
         self.automaton = self._build_automaton()
+        
+    def _build_regexs_serialize(self, table):
+        for n, (token_type, regex) in enumerate(table):
+            r = Regex(regex)
+            with open(f"bruce/serialize_objects/regex_{n}.pkl", "wb") as f:
+                pickle.dump(r.automaton, f)
+    
+    def _build_regexs_deserialize(self, table):
+        regexs = []
+        for n, (token_type, regex) in enumerate(table):
+            with open(f"bruce/serialize_objects/regex_{n}.pkl", "rb") as f:
+                automata = pickle.load(f)
+            start_state, states = State.from_nfa(automata, get_states=True)
+            for state in automata.finals:
+                states[state].tag = (token_type, n)
+            regexs.append(start_state)
+        return regexs
 
     def _build_regexs(self, table):
         regexs = []
