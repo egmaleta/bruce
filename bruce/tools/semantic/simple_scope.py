@@ -1,38 +1,86 @@
+from collections import OrderedDict
+from typing import Union, Any
+
+from . import Variable, Constant, Function, Type, Proto, SemanticError
+
+
 class Scope:
-    def __init__(self, parent: "Scope" | None = None):
+    def __init__(self, parent: Union["Scope", None] = None, *, is_function_scope=False):
         self.parent = parent
-        self.variables: dict[str, Variable] = {}
-        self.functions: dict[str, Function] = {}
 
-    def create_child(self):
-        return Scope(self)
+        self.local_vars: OrderedDict[str, Variable] = OrderedDict()
+        self.local_funcs: OrderedDict[str, Function] = OrderedDict()
 
-    def get_variable(self, name: str):
-        v = self.variables.get(name)
-        if v is not None:
-            return v
+        self.is_function_scope = is_function_scope
+
+    def create_child(self, *, is_function_scope=False):
+        return Scope(self, is_function_scope=is_function_scope)
+
+    def define_variable(
+        self,
+        name: str,
+        type: Union[Type, Proto, None] = None,
+        value: tuple[Any, Type] = None,
+    ):
+        if name in self.local_vars:
+            raise SemanticError(f"Variable '{name}' already defined in scope.")
+
+        var = Variable(name, type, value, owner_scope=self)
+        self.local_vars[name] = var
+
+        return var
+
+    def define_constant(
+        self, name: str, type: Union[Type, Proto], value: tuple[Any, Type]
+    ):
+        if name in self.local_vars:
+            raise SemanticError(f"Constant '{name}' already defined in scope.")
+
+        const = Constant(name, type, value)
+        self.local_vars[name] = const
+
+        return const
+
+    def define_function(
+        self,
+        name: str,
+        params: list[tuple[str, Union[Type, Proto, None]]],
+        type: Union[Type, Proto, None] = None,
+    ):
+        if name in self.local_funcs:
+            raise SemanticError(f"Function '{name}' already defined in scope.")
+
+        f = Function(name, params, type)
+        self.local_funcs[name] = f
+
+        return f
+
+    def find_variable(self, name: str):
+        if name in self.local_vars:
+            return self.local_vars[name]
 
         if self.parent is not None:
-            return self.parent.get_variable(name)
+            return self.parent.find_variable(name)
 
-    def has_variable(self, name: str):
-        return self.get_variable(name) is not None
+        return None
 
-    def create_variable(self, name: str, type: Type | None):
-        if self.has_variable(name):
-            raise SemanticError(f"variable '{name}' is already defined")
+    def find_function(self, name: str):
+        if name in self.local_funcs:
+            return self.local_funcs[name]
 
-        v = Variable(name, type)
-        self.variables[name] = v
-        return v
+        if self.parent is not None:
+            return self.parent.find_function(name)
 
-    def mutate_variable(self, name: str, value: Any):
-        v = self.get_variable(name)
-        if v is None:
-            raise SemanticError(f"variable '{name}' hasn't been defined")
+        return None
 
-        if v.is_mutable():
-            v.value = value
-            return True
+    def is_var_defined(self, name: str):
+        return self.find_variable(name) is not None
 
-        return False
+    def is_func_defined(self, name: str):
+        return self.find_function(name) is not None
+
+    def get_top_scope(self):
+        if self.parent is None:
+            return self
+
+        return self.parent.get_top_scope()
