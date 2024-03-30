@@ -258,22 +258,8 @@ class TypeInferer:
         lt = self.visit(node.left, ctx, scope)
         rt = self.visit(node.right, ctx, scope)
 
-        if node.operator not in ("==", "!="):
-            if (lt == t.NUMBER_TYPE or lt == t.STRING_TYPE) and (
-                rt is None or isinstance(rt, t.UnionType)
-            ):
-                self._infer(node.right, scope, lt)
-            elif (rt == t.NUMBER_TYPE or rt == t.STRING_TYPE) and (
-                lt is None or isinstance(lt, t.UnionType)
-            ):
-                self._infer(node.left, scope, rt)
-            else:
-                ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
-                self._infer(node.left, scope, ut)
-                self._infer(node.right, scope, ut)
-        else:
-            # NOT FOR NOW
-            pass
+        self._infer(node.left, scope, t.NUMBER_TYPE)
+        self._infer(node.right, scope, t.NUMBER_TYPE)
 
         return t.BOOLEAN_TYPE
 
