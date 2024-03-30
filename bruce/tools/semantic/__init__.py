@@ -227,7 +227,7 @@ class Type:
         return self.parent is not None and self.parent.conforms_to(other)
 
     def implements(self, proto: "Proto"):
-        for spec in proto.all_method_specs():  
+        for spec in proto.all_method_specs():
             try:
                 method = self.get_method(spec.name)
             except SemanticError:
