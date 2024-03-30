@@ -97,3 +97,7 @@ class Scope:
             return self
 
         return self.parent.get_top_scope()
+
+    def clear(self):
+        self.children = []
+        self.index = 0
