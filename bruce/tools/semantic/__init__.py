@@ -262,7 +262,7 @@ class Type:
                     if (
                         (
                             mt_is_type
-                            and spt_is_type
+                            and st_is_type
                             and not method.type.conforms_to(spec.type)
                         )
                         or (
@@ -394,6 +394,23 @@ class Proto:
 
         if cond:
             self.parents.append(parent)
+            
+    def get_method(self, name: str):
+        target = None
+        for attr in self.method_specs:
+            if attr.name == name:
+                target = attr
+                break
+
+        if target is not None:
+            return target
+
+        if self.parent is None:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
+        try:
+            return self.parent.get_method(name)
+        except SemanticError:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
     def add_method_spec(
         self,
