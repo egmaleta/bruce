@@ -1,4 +1,4 @@
-from ..tools.semantic import SemanticError, Type
+from ..tools.semantic import SemanticError, Type, allow_type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .type_builder import topological_order
@@ -64,7 +64,7 @@ class TypeChecker:
                             node_arg, ctx, scope_params.create_child()
                         )
                         parent_arg_type = parent_type.params[parent_arg]
-                        if not arg_type.conforms_to(parent_arg_type):
+                        if not allow_type(arg_type, parent_arg_type):
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
                             )
