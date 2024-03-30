@@ -61,6 +61,9 @@ class Evaluator:
                 self.visit(member, ctx, scope)
                 self.current_method = None
 
+        if node.parent_args:
+            self.current_type.set_parent_args(node.parent_args)
+
         self.current_type = None
 
     @visitor.when(FunctionNode)
@@ -147,9 +150,36 @@ class Evaluator:
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
-        instance = ctx.get_type(node.type).clone()
         global_scope = scope.get_top_scope()
-        args_exprs = [self.visit(arg, ctx, global_scope) for arg in node.args]
+
+        dyn_type = ctx.get_type(node.type)
+
+        arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+        instance = dyn_type.clone()
+
+        while True:
+            child_scope = global_scope.create_child()
+
+            for name, value in zip(instance.params, arg_values):
+                child_scope.define_variable(name, None, value)
+
+            # init instance attrs
+            for attr in instance.attributes:
+                attr.set_value(self.visit(attr.init_expr, ctx, child_scope))
+
+            if instance.parent == OBJECT_TYPE:
+                break
+
+            parent_args = (
+                instance.parent_args
+                if instance.parent_args is not None
+                else [IdentifierNode(name) for name in instance.params]
+            )
+
+            arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
+            instance = instance.parent
+
+        return (instance, dyn_type)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):

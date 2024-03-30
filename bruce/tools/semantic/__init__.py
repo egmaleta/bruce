@@ -132,6 +132,7 @@ class Type:
         self.methods: list[Method] = []
 
         self.parent: Type | None = None
+        self.parent_args: list[ExprNode] | None = None
 
     def set_params(self, params: list[tuple[str, Union["Type", "Proto", None]]]):
         if len(self.params) > 0:
@@ -284,6 +285,9 @@ class Type:
         if self.parent is not None:
             raise SemanticError(f"Parent type is already set for type '{self.name}'.")
         self.parent = parent
+
+    def set_parent_args(self, args: list[ExprNode]):
+        self.parent_args = args
 
     def all_attributes(self, clean=True):
         plain = (
