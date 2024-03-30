@@ -1,4 +1,4 @@
-from ..tools.semantic import SemanticError, Type, allow_type
+from ..tools.semantic import Function, SemanticError, Type, allow_type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .type_builder import topological_order
@@ -141,6 +141,27 @@ class TypeChecker:
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         try:
+            # Case: id (...)
+            if isinstance(node.target, IdentifierNode):
+                method = self.visit(node.target, ctx, scope.create_child())
+                if method is not Function:
+                    self.errors.append(f'Cannot invoke type "{method.name}"')
+                    return ERROR_TYPE
+                else:
+                    if len(node.args) != len(method.params):
+                        self.errors.append(
+                            f"Method {node.target} expects {len(method.params)} arguments but {len(node.args)} were given"
+                        )
+                    else:
+                        for arg, param in zip(node.args, method.params):
+                            arg_type = self.visit(arg, ctx, scope.create_child())
+                            if not allow_type(arg_type, method.params[param]):
+                                self.errors.append(
+                                    f"Cannot convert {arg_type.name} to {method.params[param].name}"
+                                )
+                    return method.type
+            
+            
             method = self.visit(node.target, ctx, scope.create_child())
             if method == ERROR_TYPE:
                 return ERROR_TYPE
