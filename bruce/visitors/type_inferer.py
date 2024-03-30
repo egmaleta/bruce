@@ -451,7 +451,7 @@ class TypeInferer:
                 break
 
         for type in ctx.types.values():
-            for name, ptype in type.params:
+            for name, ptype in type.params.items():
                 if ptype is None:
                     self.errors.append(
                         f"Couldn't infer type of constructor param '{name}' of type '{type.name}'."
@@ -474,7 +474,7 @@ class TypeInferer:
                         f"Couldn't infer return type of method '{type.name}.{method.name}'."
                     )
 
-        for f in scope.local_funcs:
+        for f in scope.local_funcs.values():
             for name, type in f.params.items():
                 if type is None:
                     self.errors.append(
@@ -485,3 +485,5 @@ class TypeInferer:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
                 )
+        
+        return node
