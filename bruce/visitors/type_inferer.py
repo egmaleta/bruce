@@ -86,15 +86,15 @@ class TypeInferer:
     @visitor.when(ast.VectorNode)
     def visit(self, node: ast.VectorNode, ctx: Context, scope: Scope):
         item_types = []
-        for expr in node.items:
-            expr_t = self.visit(expr, ctx, scope)
-            if expr_t is not None:
-                item_types.append(expr_t)
+        for item in node.items:
+            item_t = self.visit(item, ctx, scope)
+            if item_t is not None:
+                item_types.append(item_t)
 
         if len(item_types) > 0:
-            ut = t.UnionType(*item_types)
-            for expr in node.items:
-                self._infer(expr, scope, ut)
+            ut = t.union_type(*item_types)
+            for item in node.items:
+                self._infer(item, scope, ut)
 
             return t.VectorType(ut)
 
