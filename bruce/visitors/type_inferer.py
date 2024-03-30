@@ -448,9 +448,10 @@ class TypeInferer:
 
             for method in type.methods:
                 for name, ptype in method.params.items():
-                    self.errors.append(
-                        f"Couldn't infer type of param '{name}' of method '{type.name}.{method.name}'."
-                    )
+                    if ptype is None:
+                        self.errors.append(
+                            f"Couldn't infer type of param '{name}' of method '{type.name}.{method.name}'."
+                        )
 
                 if method.type is None:
                     self.errors.append(
@@ -468,5 +469,5 @@ class TypeInferer:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
                 )
-        
+
         return node
