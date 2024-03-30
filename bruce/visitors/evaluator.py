@@ -27,7 +27,8 @@ def hulk_range(min, max):
     min, max = min[0], max[0]
 
     if max <= min:
-        raise ValueError(f"Range error: 'max' value must be greater than 'min' value.")
+        raise ValueError(
+            f"Range error: 'max' value must be greater than 'min' value.")
 
     return (
         VectorTypeInstance(NUMBER_TYPE, [(n, NUMBER_TYPE) for n in range(min, max)]),
@@ -142,7 +143,7 @@ class Evaluator:
             self.current_method.set_body(node.body)
         else:
             f = scope.find_function(node.id)
-            f.set_body(node.id)
+            f.set_body(node.body)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
@@ -205,7 +206,8 @@ class Evaluator:
             child_scope.define_variable(name, None, value)
 
         if names.INSTANCE_NAME not in method.params:
-            child_scope.define_variable(names.INSTANCE_NAME, None, (inst, inst_type))
+            child_scope.define_variable(
+                names.INSTANCE_NAME, None, (inst, inst_type))
 
         return self.visit(method.body, ctx, child_scope)
 
@@ -214,12 +216,20 @@ class Evaluator:
         child = scope.create_child()
         value, value_type = self.visit(node.value, ctx, child)
         child.define_variable(node.id, node.type, (value, value_type))
-        return self.visit(node.expr, ctx, child)
+        return self.visit(node.body, ctx, child)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
         value, value_type = self.visit(node.value, ctx, scope.create_child())
-        scope.find_variable(node.id).set_value(value)
+        if isinstance(node.target, IdentifierNode):
+            scope.find_variable(node.target.value).set_value(
+                (value, value_type))
+        elif isinstance(node.target, MemberAccessingNode):
+            target = node.target.target
+            inst, inst_type = self.visit(target, ctx, scope)
+            attr = inst.get_attribute(node.target.member_id)
+            attr.set_value((value, value_type))
+
         return value, value_type
 
     @visitor.when(TypeInstancingNode)
@@ -250,7 +260,8 @@ class Evaluator:
                 else [IdentifierNode(name) for name in instance.params]
             )
 
-            arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
+            arg_values = [self.visit(arg, ctx, child_scope)
+                          for arg in parent_args]
             instance = instance.parent
 
         return (instance, dyn_type)
@@ -269,11 +280,15 @@ class Evaluator:
             node.condition, ctx, scope.create_child()
         )
         if not condition:
-            fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
+            fb_expr, fb_type = self.visit(
+                node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
         else:
             while condition:
-                body, body_type = self.visit(node.body, ctx, scope.create_child())
+                body, body_type = self.visit(
+                    node.body, ctx, scope.create_child())
+                condition, condition_type = self.visit(
+                    node.condition, ctx, scope.create_child())
             return body, body_type
 
     @visitor.when(ArithOpNode)
@@ -379,10 +394,7 @@ class Evaluator:
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
         if (
-            target_value[1] is Type
-            and target_value[1].conforms_to(node_type)
-            or target_value[1] is Proto
-            and target_value[1].implements(node_type)
+            allow_type(target_value[1], node_type)
         ):
             return target_value[0], node_type
         raise Exception(
@@ -391,9 +403,9 @@ class Evaluator:
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
-        vector_value = self.visit(node.target, ctx, scope)
-        index = self.visit(node.index, ctx, scope)
-        return vector_value[index]
+        vector_value, vector_type = self.visit(node.target, ctx, scope)
+        index, index_type = self.visit(node.index, ctx, scope)
+        return vector_value[index], vector_type[index]
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
@@ -405,11 +417,14 @@ class Evaluator:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        return True if node.value == "true" else False
+        return (node.value == "true", BOOLEAN_TYPE)
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
-        return (float(node.value), NUMBER_TYPE)
+        try:
+            return (int(node.value), NUMBER_TYPE)
+        except ValueError:
+            return (float(node.value), NUMBER_TYPE)
 
     @visitor.when(StringNode)
     def visit(self, node: StringNode, ctx: Context, scope: Scope):

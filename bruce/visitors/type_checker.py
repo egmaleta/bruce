@@ -91,14 +91,14 @@ class TypeChecker:
             self.visit(param, ctx, scope)
         body_type = self.visit(node.body, ctx, scope.create_child())
         return_type = get_safe_type(node.return_type, ctx)
-        if not body_type.conforms_to(return_type):
+        if not allow_type(body_type, return_type):
             self.errors.append(f"Cannot convert {body_type.name} in {node.return_type}")
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
         attributte_type = self.visit(node.value, ctx, scope.create_child())
         node_type = get_safe_type(node.type, ctx)
-        if not attributte_type.conforms_to(node_type):
+        if not allow_type(attributte_type, node_type):
             self.errors.append(
                 f"Cannot convert {attributte_type.name} to {node_type.name}"
             )
@@ -153,9 +153,9 @@ class TypeChecker:
                 else:
                     for arg, param in zip(node.args, method.params):
                         arg_type = self.visit(arg, ctx, scope.create_child())
-                        if not arg_type.conforms_to(method.params[param]):
+                        if not allow_type(arg_type, method.params[param]):
                             self.errors.append(
-                                f"Cannot convert {arg_type.name} to {param.type.name}"
+                                f"Cannot convert {arg_type.name} to {method.params[param].name}"
                             )
             return method.type
         except SemanticError as se:
@@ -168,7 +168,7 @@ class TypeChecker:
                 self.errors.append(f"Variable {node.id} already defined")
             value_type = self.visit(node.value, ctx, scope.create_child())
             node_type = get_safe_type(node.type, ctx)
-            if not value_type.conforms_to(node_type):
+            if not allow_type(value_type, node_type):
                 self.errors.append(
                     f"Cannot convert {value_type.name} to {node_type.name}"
                 )
@@ -185,7 +185,7 @@ class TypeChecker:
                 self.errors.append(f"Variable {node.target} not defined")
             else:
                 value_type = self.visit(node.value, ctx, scope.create_child())
-                if not value_type.conforms_to(target):
+                if not allow_type(value_type, target):
                     self.errors.append(
                         f"Cannot convert {value_type.name} to {target.type.name}"
                     )
@@ -205,7 +205,7 @@ class TypeChecker:
                 else:
                     for arg, param in zip(node.args, instance_type.params):
                         arg_type = self.visit(arg, ctx, scope.create_child())
-                        if not arg_type.conforms_to(instance_type.params[param]):
+                        if not allow_type(arg_type, instance_type.params[param]):
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} to {param.name}"
                             )
@@ -347,7 +347,7 @@ class TypeChecker:
             scope_mapped = scope.create_child()
             scope_mapped.define(node.item_id, iterable_type)
             map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
-            if not map_expr_type.conforms_to(get_safe_type(node.item_type, ctx)):
+            if not allow_type(map_expr_type, get_safe_type(node.item_type, ctx)):
                 self.errors.append(
                     f"Cannot convert {map_expr_type.name} to {node.item_type}"
                 )
@@ -369,9 +369,9 @@ class TypeChecker:
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
         try:
             target_type = self.visit(node.target, ctx, scope.create_child())
-            if not target_type.conforms_to(
-                get_safe_type(node.type, ctx)
-            ) and not get_safe_type(node.type, ctx).conforms_to(target_type):
+            if not allow_type(
+                target_type, get_safe_type(node.type, ctx)
+            ) and not allow_type(get_safe_type(node.type, ctx), target_type):
                 self.errors.append(
                     f"Cannot convert {target_type.name} to {node.type.name}"
                 )
@@ -383,9 +383,9 @@ class TypeChecker:
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         try:
             target_type = self.visit(node.target, ctx, scope.create_child())
-            if not target_type.conforms_to(
-                get_safe_type(node.type, ctx)
-            ) and not get_safe_type(node.type, ctx).conforms_to(target_type):
+            if not allow_type(
+                target_type, get_safe_type(node.type, ctx)
+            ) and not allow_type(get_safe_type(node.type, ctx), target_type):
                 self.errors.append(
                     f"Cannot cast {target_type.name} to {node.type.name}"
                 )

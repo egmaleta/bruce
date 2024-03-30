@@ -20,20 +20,21 @@ class SemanticChecker(object):  # TODO implement all the nodes
     def visit(self, node: ProgramNode, ctx: Context, scope: Scope):
         program_scope = scope.create_child()
         for declaration in node.declarations:
-            self.visit(declaration, ctx, program_scope)
+            if not isinstance(declaration, FunctionNode):
+                self.visit(declaration, ctx, program_scope)
         self.visit(node.expr, ctx, program_scope)
 
         return self.errors
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-
-        if node.value != "self" and not scope.is_var_defined(node.value):
+        if not node.value == 'self' and not scope.is_var_defined(node.value) and not scope.is_func_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")
+            
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
-        my_scope = scope.get_top_scope().create_child(is_function_scope=True)
+        my_scope = scope.create_child()
         for p in node.args:
             self.visit(p, ctx, my_scope)
 
@@ -79,7 +80,8 @@ class SemanticChecker(object):  # TODO implement all the nodes
         self.visit(node.value, ctx, scope)
 
         if not is_assignable(node.target):
-            self.errors.append(f"Expression '' does not support destructive assignment")
+            self.errors.append(
+                f"Expression '' does not support destructive assignment")
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
