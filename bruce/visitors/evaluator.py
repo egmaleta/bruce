@@ -125,7 +125,7 @@ class Evaluator:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope)
             else:
-                self.current_method = scope.find_function(member.id)
+                self.current_method = self.current_type.get_method(member.id)
                 self.visit(member, ctx, scope)
                 self.current_method = None
 

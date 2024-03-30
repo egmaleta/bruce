@@ -227,7 +227,7 @@ class Type:
         return self.parent is not None and self.parent.conforms_to(other)
 
     def implements(self, proto: "Proto"):
-        for spec in proto.all_method_specs():
+        for spec in proto.all_method_specs():  
             try:
                 method = self.get_method(spec.name)
             except SemanticError:
@@ -327,8 +327,9 @@ class Type:
 
     def clone(self):
         new_type = Type(self.name)
-        new_type.set_parent(self.parent.clone())
-        new_type.set_params(self.params)
+        if self.parent is not None:
+            new_type.set_parent(self.parent.clone())
+        new_type.set_params([(n, t) for n, t in self.params.items()])
 
         new_type.methods = self.methods
         new_type.attributes = [
