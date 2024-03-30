@@ -132,6 +132,15 @@ class UnionType(Type):
         return iter(self.types)
 
 
+def union_type(*types: Type) -> UnionType | Type:
+    ut = UnionType(*types)
+    if len(ut) == 1:
+        t, *_ = ut
+        return t
+
+    return ut
+
+
 class VectorType(Type):
     """Vector type is used only for type inference and type checking
     of vectors, mapped iterables and indexing.
