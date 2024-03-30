@@ -134,6 +134,7 @@ class TypeChecker:
                         return target.get_attribute(node.member_id).type
                     else:
                         self.errors.append(se.text)
+                    return ERROR_TYPE
         except SemanticError as se:
             self.errors.append(se.text)
 
