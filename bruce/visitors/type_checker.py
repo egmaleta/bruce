@@ -114,6 +114,9 @@ class TypeChecker:
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
         try:
+            # Case: id
+            
+            
             target = self.visit(node.target, ctx, scope.create_child())
             if target == ERROR_TYPE:
                 return target
@@ -142,9 +145,10 @@ class TypeChecker:
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         try:
             # Case: id (...)
+            
             if isinstance(node.target, IdentifierNode):
                 method = self.visit(node.target, ctx, scope.create_child())
-                if method is not Function:
+                if not isinstance(method, Function):
                     self.errors.append(f'Cannot invoke type "{method.name}"')
                     return ERROR_TYPE
                 else:
@@ -160,10 +164,17 @@ class TypeChecker:
                                     f"Cannot convert {arg_type.name} to {method.params[param].name}"
                                 )
                     return method.type
+
+            # Case: expr . id (...)
+
+            expr = self.visit(node.target.target, ctx, scope.create_child())
             
             
-            method = self.visit(node.target, ctx, scope.create_child())
-            if method == ERROR_TYPE:
+            
+            
+            
+            
+            if expr == ERROR_TYPE:
                 return ERROR_TYPE
             if not method:
                 self.errors.append(f"Method {node.target} not defined")
