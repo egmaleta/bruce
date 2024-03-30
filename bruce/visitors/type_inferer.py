@@ -332,10 +332,10 @@ class TypeInferer:
         for cond, branch in node.condition_branchs:
             self.visit(cond, ctx, scope)
 
-            bt = self.visit(branch, ctx, scope)
+            bt = self.visit(branch, ctx, scope.create_child())
             branch_types.append(bt)
 
-        ft = self.visit(node.fallback_branch, ctx, scope)
+        ft = self.visit(node.fallback_branch, ctx, scope.create_child())
         branch_types.append(ft)
 
         for cond, _ in node.condition_branchs:
@@ -344,12 +344,7 @@ class TypeInferer:
         if any(bt is None for bt in branch_types):
             return None
 
-        ut = t.UnionType(*branch_types)
-        if len(ut) == 1:
-            type, *_ = ut
-            return type
-
-        return ut
+        return t.union_type(*branch_types)
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
