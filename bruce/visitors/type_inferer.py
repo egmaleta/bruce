@@ -292,7 +292,7 @@ class TypeInferer:
         self.visit(node.left, ctx, scope)
         self.visit(node.right, ctx, scope)
 
-        ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
+        ut = t.union_type(t.NUMBER_TYPE, t.STRING_TYPE)
         self._infer(node.left, scope, ut)
         self._infer(node.right, scope, ut)
 
