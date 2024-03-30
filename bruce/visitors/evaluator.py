@@ -158,8 +158,7 @@ class Evaluator:
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
-        # evaluates only attribute accessing
-        # method handling is done in FunctionCall visitor
+        # CASE self . id
         assert isinstance(node.target, IdentifierNode)
         assert node.target.value == names.INSTANCE_NAME
 
@@ -173,6 +172,7 @@ class Evaluator:
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
+        # CASE: id (...)
         if isinstance(node.target, IdentifierNode):
             # handle builtin funcs
             if node.target.is_builtin:
@@ -190,6 +190,7 @@ class Evaluator:
 
             return self.visit(f.body, ctx, child_scope)
 
+        # CASE: expr . id (...)
         assert isinstance(node.target, MemberAccessingNode)
         target = node.target.target
         method_name = node.target.member_id
