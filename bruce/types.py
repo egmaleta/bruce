@@ -1,7 +1,15 @@
 from typing import Union
+from typing import Any
 
 from .tools.semantic import Type, Proto
-from .names import CURRENT_METHOD_NAME, NEXT_METHOD_NAME, SIZE_METHOD_NAME
+from .names import (
+    CURRENT_METHOD_NAME,
+    NEXT_METHOD_NAME,
+    SIZE_METHOD_NAME,
+    INSTANCE_NAME,
+)
+from . import ast
+from .grammar import plus, ge, eq, true_k, false_k
 
 
 class ErrorType(Type):
@@ -161,6 +169,90 @@ class VectorType(Type):
 
     def __eq__(self, other):
         return isinstance(other, VectorType) and self.item_type == other.item_type
+
+
+class VectorTypeInstance(VectorType):
+    INDEX_NAME = "index"
+
+    def __init__(self, item_type: Type | Proto, values: list[tuple[Any, Type]]):
+        super().__init__(item_type)
+
+        attr = self.define_attribute(self.INDEX_NAME, None)
+        attr.set_value((-1, NUMBER_TYPE))
+
+        names = [f"item_at_{n}" for n in range(len(values))]
+        for name, value in zip(names, values):
+            attr = self.define_attribute(name, None)
+            attr.set_value(value)
+
+        size_method = self.get_method(SIZE_METHOD_NAME)
+        size_method.set_body(ast.NumberNode(str(len(values))))
+
+        next_method = self.get_method(NEXT_METHOD_NAME)
+        next_method.set_body(
+            ast.ConditionalNode(
+                [
+                    (
+                        ast.ComparisonOpNode(
+                            ast.ArithOpNode(
+                                ast.MemberAccessingNode(
+                                    ast.IdentifierNode(INSTANCE_NAME), self.INDEX_NAME
+                                ),
+                                plus.name,
+                                ast.NumberNode("1"),
+                            ),
+                            ge.name,
+                            ast.NumberNode(str(len(values))),
+                        ),
+                        ast.BooleanNode(false_k.name),
+                    )
+                ],
+                ast.BlockNode(
+                    [
+                        ast.MutationNode(
+                            ast.MemberAccessingNode(
+                                ast.IdentifierNode(INSTANCE_NAME), self.INDEX_NAME
+                            ),
+                            ast.ArithOpNode(
+                                ast.MemberAccessingNode(
+                                    ast.IdentifierNode(INSTANCE_NAME), self.INDEX_NAME
+                                ),
+                                plus.name,
+                                ast.NumberNode("1"),
+                            ),
+                        ),
+                        ast.BooleanNode(true_k.name),
+                    ]
+                ),
+            )
+        )
+
+        current_method = self.get_method(CURRENT_METHOD_NAME)
+        current_method.set_body(
+            ast.LetExprNode(
+                "x",
+                NUMBER_TYPE.name,
+                ast.MemberAccessingNode(
+                    ast.IdentifierNode(INSTANCE_NAME), self.INDEX_NAME
+                ),
+                ast.ConditionalNode(
+                    [
+                        (
+                            ast.ComparisonOpNode(
+                                ast.IdentifierNode("x"), eq.name, ast.NumberNode(str(i))
+                            ),
+                            ast.MemberAccessingNode(
+                                ast.IdentifierNode(INSTANCE_NAME), name
+                            ),
+                        )
+                        for i, name in enumerate(names)
+                    ],
+                    ast.MemberAccessingNode(
+                        ast.IdentifierNode(INSTANCE_NAME), names[-1]
+                    ),
+                ),
+            )
+        )
 
 
 ITERABLE_PROTO = Proto("Iterable")
