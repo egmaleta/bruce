@@ -367,11 +367,11 @@ class TypeInferer:
 
         f = self.current_method if is_method else scope.find_function(node.id)
 
-        child_scope = scope.create_child(is_function_scope=True)
+        child_scope = scope.get_top_scope().create_child(is_function_scope=True)
         for name, pt in f.params.items():
             child_scope.define_variable(name, pt)
 
-        if is_method and not INSTANCE_NAME in f.params:
+        if is_method and INSTANCE_NAME not in f.params:
             child_scope.define_variable(INSTANCE_NAME, self.current_type)
 
         rt = self.visit(node.body, ctx, child_scope)
