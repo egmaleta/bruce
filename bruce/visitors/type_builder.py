@@ -123,7 +123,7 @@ class TypeBuilder(object):
         except SemanticError as se:
             self.errors.append(se.text)
 
-        if node.parent_type:
+        if node.parent_type is not None:
             try:
                 parent_type = ctx.get_type(node.parent_type)
                 self.current_type.set_parent(parent_type)

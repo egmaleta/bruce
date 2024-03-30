@@ -33,6 +33,9 @@ class ObjectType(Type):
     def inherit_params(self):
         pass
 
+    def set_parent(self, parent: Type):
+        pass
+
 
 OBJECT_TYPE = ObjectType()
 
