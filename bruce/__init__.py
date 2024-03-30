@@ -81,6 +81,7 @@ lexer = create_lexer(
         (g.number, r"(0|1-90-9*)(.0-90-9*)?"),
         (g.string, '"(\\\\"|\x00-!|#-\x7f)*"'),
         (None, "( |\n|\t)*"),
+        (None, '//(\x00-\t|\x0b-\x7f)*'),
     ],
     g.GRAMMAR.EOF,
 )
