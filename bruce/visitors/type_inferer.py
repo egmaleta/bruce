@@ -315,15 +315,15 @@ class TypeInferer:
     @visitor.when(ast.LoopNode)
     def visit(self, node: ast.LoopNode, ctx: Context, scope: Scope):
         self.visit(node.condition, ctx, scope)
-        bt = self.visit(node.body, ctx, scope)
-        ft = self.visit(node.fallback_expr, ctx, scope)
+        bt = self.visit(node.body, ctx, scope.create_child())
+        ft = self.visit(node.fallback_expr, ctx, scope.create_child())
 
         self._infer(node.condition, scope, t.BOOLEAN_TYPE)
 
         if bt is None or ft is None:
             return None
 
-        return bt if bt == ft else t.UnionType(bt, ft)
+        return t.union_type(bt, ft)
 
     @visitor.when(ast.ConditionalNode)
     def visit(self, node: ast.ConditionalNode, ctx: Context, scope: Scope):
