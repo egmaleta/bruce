@@ -2,8 +2,16 @@ from math import sqrt, exp, log, sin, cos
 from random import random
 
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type, Attribute, Function
-from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
+from ..tools.semantic import Type, Method, Proto, allow_type, Attribute
+from ..types import (
+    NUMBER_TYPE,
+    STRING_TYPE,
+    OBJECT_TYPE,
+    BOOLEAN_TYPE,
+    FUNCTION_TYPE,
+    VectorTypeInstance,
+    VectorType,
+)
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
@@ -21,7 +29,10 @@ def hulk_range(min, max):
     if max <= min:
         raise ValueError(f"Range error: 'max' value must be greater than 'min' value.")
 
-    return ([n for n in range(min, max)], [NUMBER_TYPE] * (max - min))
+    return (
+        VectorTypeInstance(NUMBER_TYPE, [(n, NUMBER_TYPE) for n in range(min, max)]),
+        VectorType(NUMBER_TYPE),
+    )
 
 
 def hulk_sqrt(value):
@@ -320,64 +331,42 @@ class Evaluator:
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
         iterable, iterable_type = self.visit(node.iterable_expr, ctx, scope)
+        assert isinstance(iterable, VectorTypeInstance)
 
         tuples = []
 
-        if isinstance(iterable, list):
-            for item in iterable:
-                child_scope = scope.create_child()
-                child_scope.define_variable(
-                    node.item_id, None, (item, iterable_type.item_type)
-                )
-                tuples.append(self.visit(node.map_expr, ctx, child_scope))
-        else:
-            # iterable is a type instance
+        top_scope = scope.get_top_scope()
 
-            top_scope = scope.get_top_scope()
+        while True:
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            cond, _ = self.visit(
+                iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
+            )
 
-            while True:
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                cond, _ = self.visit(
-                    iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
-                )
+            if not cond:
+                break
 
-                if not cond:
-                    break
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            item_value = self.visit(
+                iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                ctx,
+                child_scope,
+            )
 
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                item_value = self.visit(
-                    iterable.get_method(names.CURRENT_METHOD_NAME).body,
-                    ctx,
-                    child_scope,
-                )
+            child_scope = scope.create_child()
+            child_scope.define_variable(node.item_id, None, item_value)
+            value = self.visit(node.map_expr, ctx, child_scope)
+            tuples.append(value)
 
-                child_scope = scope.create_child()
-                child_scope.define_variable(node.item_id, None, item_value)
-
-                value = self.visit(node.map_expr, ctx, child_scope)
-                tuples.append(value)
-
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
         tuples = [self.visit(item, ctx, scope) for item in node.items]
 
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
