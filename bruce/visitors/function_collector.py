@@ -40,5 +40,5 @@ class FunctionCollector:
         for decl in node.declarations:
             if isinstance(decl, ast.FunctionNode):
                 self.visit(decl, ctx, scope)
-                
+
         return node

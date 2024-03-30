@@ -2,8 +2,16 @@ from math import sqrt, exp, log, sin, cos
 from random import random
 
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type, Attribute, Function
-from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
+from ..tools.semantic import Type, Method, Proto, allow_type, Attribute
+from ..types import (
+    NUMBER_TYPE,
+    STRING_TYPE,
+    OBJECT_TYPE,
+    BOOLEAN_TYPE,
+    FUNCTION_TYPE,
+    VectorTypeInstance,
+    VectorType,
+)
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
@@ -19,10 +27,12 @@ def hulk_range(min, max):
     min, max = min[0], max[0]
 
     if max <= min:
-        raise ValueError(
-            f"Range error: 'max' value must be greater than 'min' value.")
+        raise ValueError(f"Range error: 'max' value must be greater than 'min' value.")
 
-    return ([n for n in range(min, max)], [NUMBER_TYPE] * (max - min))
+    return (
+        VectorTypeInstance(NUMBER_TYPE, [(n, NUMBER_TYPE) for n in range(min, max)]),
+        VectorType(NUMBER_TYPE),
+    )
 
 
 def hulk_sqrt(value):
@@ -195,8 +205,7 @@ class Evaluator:
             child_scope.define_variable(name, None, value)
 
         if names.INSTANCE_NAME not in method.params:
-            child_scope.define_variable(
-                names.INSTANCE_NAME, None, (inst, inst_type))
+            child_scope.define_variable(names.INSTANCE_NAME, None, (inst, inst_type))
 
         return self.visit(method.body, ctx, child_scope)
 
@@ -211,8 +220,7 @@ class Evaluator:
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
         value, value_type = self.visit(node.value, ctx, scope.create_child())
         if isinstance(node.target, IdentifierNode):
-            scope.find_variable(node.target.value).set_value(
-                (value, value_type))
+            scope.find_variable(node.target.value).set_value((value, value_type))
         elif isinstance(node.target, MemberAccessingNode):
             target = node.target.target
             inst, inst_type = self.visit(target, ctx, scope)
@@ -249,8 +257,7 @@ class Evaluator:
                 else [IdentifierNode(name) for name in instance.params]
             )
 
-            arg_values = [self.visit(arg, ctx, child_scope)
-                          for arg in parent_args]
+            arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
             instance = instance.parent
 
         return (instance, dyn_type)
@@ -269,15 +276,14 @@ class Evaluator:
             node.condition, ctx, scope.create_child()
         )
         if not condition:
-            fb_expr, fb_type = self.visit(
-                node.fallback_expr, ctx, scope.create_child())
+            fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
         else:
             while condition:
-                body, body_type = self.visit(
-                    node.body, ctx, scope.create_child())
+                body, body_type = self.visit(node.body, ctx, scope.create_child())
                 condition, condition_type = self.visit(
-                    node.condition, ctx, scope.create_child())
+                    node.condition, ctx, scope.create_child()
+                )
             return body, body_type
 
     @visitor.when(ArithOpNode)
@@ -335,65 +341,42 @@ class Evaluator:
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
         iterable, iterable_type = self.visit(node.iterable_expr, ctx, scope)
+        assert isinstance(iterable, VectorTypeInstance)
 
         tuples = []
 
-        if isinstance(iterable, list):
-            for item in iterable:
-                child_scope = scope.create_child()
-                child_scope.define_variable(
-                    node.item_id, None, (item, iterable_type.item_type)
-                )
-                tuples.append(self.visit(node.map_expr, ctx, child_scope))
-        else:
-            # iterable is a type instance
+        top_scope = scope.get_top_scope()
 
-            top_scope = scope.get_top_scope()
+        while True:
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            cond, _ = self.visit(
+                iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
+            )
 
-            while True:
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                cond, _ = self.visit(
-                    iterable.get_method(
-                        names.NEXT_METHOD_NAME).body, ctx, child_scope
-                )
+            if not cond:
+                break
 
-                if not cond:
-                    break
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            item_value = self.visit(
+                iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                ctx,
+                child_scope,
+            )
 
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                item_value = self.visit(
-                    iterable.get_method(names.CURRENT_METHOD_NAME).body,
-                    ctx,
-                    child_scope,
-                )
+            child_scope = scope.create_child()
+            child_scope.define_variable(node.item_id, None, item_value)
+            value = self.visit(node.map_expr, ctx, child_scope)
+            tuples.append(value)
 
-                child_scope = scope.create_child()
-                child_scope.define_variable(node.item_id, None, item_value)
-
-                value = self.visit(node.map_expr, ctx, child_scope)
-                tuples.append(value)
-
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
         tuples = [self.visit(item, ctx, scope) for item in node.items]
 
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
@@ -405,9 +388,7 @@ class Evaluator:
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
-        if (
-            allow_type(target_value[1], node_type)
-        ):
+        if allow_type(target_value[1], node_type):
             return target_value[0], node_type
         raise Exception(
             f"Downcasting error: {target_value[1]} does not conform to {node_type}"
