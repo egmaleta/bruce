@@ -1,10 +1,56 @@
+from math import sqrt, exp, log, sin, cos
+from random import random
+
 from ..tools import visitor
 from ..tools.semantic import Type, Method, Proto, allow_type, Attribute, Function
 from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
-from ..names import NEXT_METHOD_NAME, CURRENT_METHOD_NAME, INSTANCE_NAME
+from .. import names
+
+
+def hulk_print(obj):
+    print(obj[0])
+    return obj
+
+
+def hulk_range(min, max):
+    min, max = min[0], max[0]
+
+    if max <= min:
+        return ([], [])
+
+    return ([n for n in range(min, max)], [NUMBER_TYPE] * (max - min))
+
+
+def hulk_sqrt(value):
+    value = value[0]
+    return (sqrt(value), NUMBER_TYPE)
+
+
+def hulk_exp(value):
+    value = value[0]
+    return (exp(value), NUMBER_TYPE)
+
+
+def hulk_log(base, value):
+    base, value = base[0], value[0]
+    return (log(value, base), NUMBER_TYPE)
+
+
+def hulk_rand(*_):
+    return (random(), NUMBER_TYPE)
+
+
+def hulk_sin(angle):
+    angle = angle[0]
+    return (sin(angle), NUMBER_TYPE)
+
+
+def hulk_cos(angle):
+    angle = angle[0]
+    return (cos(angle), NUMBER_TYPE)
 
 
 class Evaluator:
@@ -28,6 +74,17 @@ class Evaluator:
     logic_funcs = {
         "&": lambda x, y: x and y,
         "|": lambda x, y: x or y,
+    }
+
+    builtin_funcs = {
+        names.PRINT_FUNC_NAME: hulk_print,
+        names.RANGE_FUNC_NAME: hulk_range,
+        names.SQRT_FUNC_NAME: hulk_sqrt,
+        names.EXP_FUNC_NAME: hulk_exp,
+        names.LOG_FUNC_NAME: hulk_log,
+        names.RAND_FUNC_NAME: hulk_rand,
+        names.SIN_FUNC_NAME: hulk_sin,
+        names.COS_FUNC_NAME: hulk_cos,
     }
 
     def __init__(self, errors=[]) -> None:
@@ -93,7 +150,7 @@ class Evaluator:
         # evaluates only attribute accessing
         # method handling is done in FunctionCall visitor
         assert isinstance(node.target, IdentifierNode)
-        assert node.target.value == INSTANCE_NAME
+        assert node.target.value == names.INSTANCE_NAME
 
         receiver, _ = self.visit(node.target, ctx, scope)
         assert isinstance(receiver, Type)
@@ -106,6 +163,12 @@ class Evaluator:
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         if isinstance(node.target, IdentifierNode):
+            # handle builtin funcs
+            if node.target.is_builtin:
+                f = self.builtin_funcs[node.target.value]
+                arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+                return f(*arg_values)
+
             f, _ = self.visit(node.target, ctx, scope)
             arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
 
@@ -130,8 +193,8 @@ class Evaluator:
         for name, value in zip(method.params, arg_values):
             child_scope.define_variable(name, None, value)
 
-        if INSTANCE_NAME not in method.params:
-            child_scope.define_variable(INSTANCE_NAME, None, (inst, inst_type))
+        if names.INSTANCE_NAME not in method.params:
+            child_scope.define_variable(names.INSTANCE_NAME, None, (inst, inst_type))
 
         return self.visit(method.body, ctx, child_scope)
 
@@ -274,18 +337,20 @@ class Evaluator:
 
             while True:
                 child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(INSTANCE_NAME, iterable)
+                child_scope.define_variable(names.INSTANCE_NAME, iterable)
                 cond, _ = self.visit(
-                    iterable.get_method(NEXT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
                 )
 
                 if not cond:
                     break
 
                 child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(INSTANCE_NAME, iterable)
+                child_scope.define_variable(names.INSTANCE_NAME, iterable)
                 item_value = self.visit(
-                    iterable.get_method(CURRENT_METHOD_NAME).body, ctx, child_scope
+                    iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                    ctx,
+                    child_scope,
                 )
 
                 child_scope = scope.create_child()
