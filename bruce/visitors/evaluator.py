@@ -19,7 +19,7 @@ def hulk_range(min, max):
     min, max = min[0], max[0]
 
     if max <= min:
-        return ([], [])
+        raise ValueError(f"Range error: 'max' value must be greater than 'min' value.")
 
     return ([n for n in range(min, max)], [NUMBER_TYPE] * (max - min))
 
