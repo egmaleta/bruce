@@ -219,16 +219,42 @@ class Evaluator:
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        value, value_type = self.visit(node.value, ctx, scope.create_child())
-        if isinstance(node.target, IdentifierNode):
-            scope.find_variable(node.target.value).set_value((value, value_type))
-        elif isinstance(node.target, MemberAccessingNode):
-            target = node.target.target
-            inst, inst_type = self.visit(target, ctx, scope)
-            attr = inst.get_attribute(node.target.member_id)
-            attr.set_value((value, value_type))
+        visit_value = lambda: self.visit(node.value, ctx, scope)
 
-        return value, value_type
+        # CASE id := expr
+        if isinstance(node.target, IdentifierNode):
+            # self := expr is invalid
+            assert node.target.value != names.INSTANCE_NAME
+
+            value = visit_value()
+
+            var = scope.find_variable(node.target.value)
+            var.set_value(value)
+            return value
+
+        # CASE self . id := expr
+        if isinstance(node.target, MemberAccessingNode):
+            target = node.target.target
+            member = node.target.member_id
+
+            # 'self' must refer to the instance of the type owner of the current method
+            assert (
+                isinstance(target, IdentifierNode)
+                and target.value == names.INSTANCE_NAME
+                and self.current_method is not None
+                and target.value not in self.current_method.params
+                and scope.find_variable(target.value).owner_scope.is_function_scope
+            )
+
+            inst, _ = self.visit(target, ctx, scope)
+            value = visit_value()
+
+            attr = inst.get_attribute(member)
+            attr.set_value(value)
+            return value
+
+        # CASE expr [ expr ] := expr (SOON)
+        # TODO assert isinstance(node.target, IndexingNode)
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
