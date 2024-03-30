@@ -47,7 +47,7 @@ class Desugarer:
 
         return ast.LetExprNode(
             iterable_id,
-            None,
+            "Iterable",
             iterable_expr,
             ast.LoopNode(
                 ast.FunctionCallNode(
