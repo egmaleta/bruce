@@ -103,7 +103,9 @@ class TypeInferer:
     @visitor.when(ast.MappedIterableNode)
     def visit(self, node: ast.MappedIterableNode, ctx: Context, scope: Scope):
         it = get_safe_type(node.item_type, ctx)
-        iterable_t = self.visit(node, ctx, scope)
+        iterable_t = self.visit(node.iterable_expr, ctx, scope)
+
+        self._infer(node.iterable_expr, scope, t.ITERABLE_PROTO)
 
         if it is None:
             if isinstance(iterable_t, t.VectorType):
