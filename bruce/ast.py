@@ -1,16 +1,18 @@
 from .tools.semantic.ast import ASTNode, ExprNode
+from .tools.token import Token
 from dataclasses import dataclass
 
 
-@dataclass
 class ProgramNode(ASTNode):
-    declarations: list[ASTNode]
-    expr: ExprNode
+    def __init__(self, declarations: list[ASTNode], expr: ExprNode):
+        self.declarations: list[ASTNode] = declarations
+        self.expr: ExprNode = expr
 
 
-@dataclass
 class LiteralNode(ExprNode):
-    value: str
+    def __init__(self, token: Token):
+        self.value = token.lex
+        self.position = (token.lin, token.column)
 
 
 class NumberNode(LiteralNode):
@@ -18,9 +20,9 @@ class NumberNode(LiteralNode):
         return float(self.value)
 
 
-@dataclass
 class StringNode(LiteralNode):
-    def __post_init__(self):
+    def __init__(self, token: Token):
+        super().__init__(token)
         self.value = self.value[1:-1]
 
     def evaluate(self):
@@ -32,15 +34,17 @@ class BooleanNode(LiteralNode):
         return self.value == "true"
 
 
-@dataclass
 class IdentifierNode(LiteralNode):
-    is_builtin: bool = False
+    def __init__(self, value, is_builtin: bool = False):
+        super().__init__(value)
+        self.is_builtin: bool = is_builtin
 
 
-@dataclass
 class TypeInstancingNode(ExprNode):
-    type: str
-    args: list[ExprNode]
+    def __init__(self, token: Token, args: list[ExprNode]):
+        self.type: str = token.lex
+        self.args: list[ExprNode] = args
+        self.position = (token.line, token.column)
 
 
 @dataclass
@@ -48,18 +52,22 @@ class VectorNode(ExprNode):
     items: list[ExprNode]
 
 
-@dataclass
 class MappedIterableNode(ExprNode):
-    map_expr: ExprNode
-    item_id: str
-    item_type: str | None
-    iterable_expr: ExprNode
+    def __init__(self, map_expr: ExprNode, item_id: Token, item_type: Token | None, iterable_expr: ExprNode):
+        self.map_expr: ExprNode = map_expr
+        self.item_id: str = item_id.lex
+        self.item_type: str | None = item_type.lex if item_type else None
+        self.iterable_expr: ExprNode = iterable_expr
+        self.item_id_position = (item_id.line, item_id.column)
+        self.item_type_position = (item_type.line, item_type.column) if item_type else (
+            item_id.line, item_id.column)
 
 
-@dataclass
 class MemberAccessingNode(ExprNode):
-    target: ExprNode
-    member_id: str
+    def __init__(self, target: ExprNode, member_id: Token):
+        self.target: ExprNode = target
+        self.member_id: str = member_id.lex
+        self.position = (member_id.line, member_id.column)
 
 
 @dataclass
@@ -80,11 +88,12 @@ class MutationNode(ExprNode):
     value: ExprNode
 
 
-@dataclass
-class DowncastingNode(ExprNode):
-    target: ExprNode
-    type: str
 
+class DowncastingNode(ExprNode):
+    def __init__(self, target: ExprNode, type: Token):
+        self.target: ExprNode = target
+        self.type: str = type.lex
+        self.position = (type.line, type.column)
 
 @dataclass
 class UnaryOpNode(ExprNode):
@@ -99,11 +108,12 @@ class ArithNegOpNode(UnaryOpNode):
     pass
 
 
-@dataclass
 class BinaryOpNode(ExprNode):
-    left: ExprNode
-    operator: str
-    right: ExprNode
+    def __init__(self, left: ExprNode, operator: Token, right: ExprNode):
+        self.left: ExprNode = left
+        self.operator: str = operator.lex
+        self.right: ExprNode = right
+        self.position = (operator.line, operator.column)
 
 
 class LogicOpNode(BinaryOpNode):
@@ -152,12 +162,12 @@ class ConditionalNode(ExprNode):
     fallback_branch: ExprNode
 
 
-@dataclass
 class LetExprNode(ExprNode):
-    id: str
-    type: str | None
-    value: ExprNode
-    body: ExprNode
+    def __init__(self, id: Token, type: Token | None, value: ExprNode, body: ExprNode):
+        self.id = id.lex
+        self.type: str | None = type.lex
+        self.value: ExprNode = value
+        self.body: ExprNode = body
 
 
 @dataclass
@@ -182,24 +192,26 @@ class ProtocolNode(ASTNode):
     method_specs: list[MethodSpecNode]
 
 
-@dataclass
 class TypePropertyNode(ASTNode):
-    id: str
-    type: str | None
-    value: ExprNode
+    def __init__(self, id: Token, type: Token | None, value: ExprNode):
+        self.id: str = id.lex
+        self.type: str | None = type.lex
+        self.value: ExprNode = value
 
 
-@dataclass
 class TypeNode(ASTNode):
-    type: str
-    params: list[tuple[str, str | None]] | None
-    parent_type: str | None
-    parent_args: list[ExprNode] | None
-    members: list[TypePropertyNode | FunctionNode]
+    def __init__(self, type: Token, params: list[tuple[Token, Token | None]] | None, parent_type: Token | None, parent_args: list[ExprNode] | None, members: list[TypePropertyNode | FunctionNode]):
+        self.type: str = type.lex
+        self.params: list[tuple[str, str | None]] | None = [
+            (token1.lex, token2.lex) for token1, token2 in params]
+        self.parent_type: str | None = parent_type.lex
+        self.parent_args: list[ExprNode] | None = parent_args
+        self.members: list[TypePropertyNode | FunctionNode] = members
 
 
 def is_assignable(node: ASTNode):
-    is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
+    is_assignable_id = isinstance(
+        node, IdentifierNode) and (not node.is_builtin)
     return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
 
 
