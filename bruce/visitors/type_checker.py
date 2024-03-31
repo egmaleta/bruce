@@ -138,6 +138,30 @@ class TypeChecker:
             # Case: id (...)
 
             if isinstance(node.target, IdentifierNode):
+                
+                # Case: base (...)
+                
+                if node.target.value == "base":
+                    if self.current_method is None and self.current_type is None:
+                        self.errors.append(f"base() only can be invoked in a method of a class")
+                        return ERROR_TYPE
+                    elif self.current_type.parent is None:
+                        self.errors.append(f"{self.current_type.name} has no parent class and 'base()' cannot be called")
+                        return ERROR_TYPE
+                    else:
+                        method = self.current_type.parent.get_method(self.current_method.name)
+                        if method is None:
+                            self.errors.append(f"Method {self.current_method.name} not defined in type {self.current_type.parent.name}")
+                            return ERROR_TYPE
+                        if len(node.args) != len(method.params):
+                            self.errors.append(f"Method {self.current_method.name} expects {len(method.params)} arguments but {len(node.args)} were given")
+                            return ERROR_TYPE
+                        for arg, param in zip(node.args, method.params):
+                            arg_type = self.visit(arg, ctx, scope.create_child())
+                            if not allow_type(arg_type, method.params[param]):
+                                self.errors.append(f"Cannot convert {arg_type.name} to {method.params[param].name}")
+                                return ERROR_TYPE
+                        return method.type
                 method = self.visit(node.target, ctx, scope.create_child())
                 if not isinstance(method, Function):
                     self.errors.append(f'Cannot invoke type "{method.name}"')
@@ -307,7 +331,7 @@ class TypeChecker:
         try:
             left = self.visit(node.left, ctx, scope.create_child())
             right = self.visit(node.right, ctx, scope.create_child())
-            if (
+            if ( #FIXME
                 left != STRING_TYPE
                 and left != NUMBER_TYPE
                 or right != STRING_TYPE
