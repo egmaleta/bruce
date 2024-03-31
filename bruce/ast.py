@@ -47,9 +47,10 @@ class TypeInstancingNode(ExprNode):
         self.position = (token.line, token.column)
 
 
-@dataclass
 class VectorNode(ExprNode):
-    items: list[ExprNode]
+    def __init__(self, items: list[ExprNode]):
+        self.items: list[ExprNode] = items
+        self.position = (0, 0)
 
 
 class MappedIterableNode(ExprNode):
@@ -70,24 +71,25 @@ class MemberAccessingNode(ExprNode):
         self.position = (member_id.line, member_id.column)
 
 
-@dataclass
 class FunctionCallNode(ExprNode):
-    target: ExprNode
-    args: list[ExprNode]
+    def __init__(self, target: ExprNode, args: list[ExprNode]):
+        self.target: ExprNode = target
+        self.args: list[ExprNode] = args
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class IndexingNode(ExprNode):
-    target: ExprNode
-    index: ExprNode
+    def __init__(self, target: ExprNode, index: ExprNode):
+        self.target: ExprNode = target
+        self.index: ExprNode = index
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class MutationNode(ExprNode):
-    target: ExprNode
-    value: ExprNode
-
-
+    def __init__(self, target: ExprNode, value: ExprNode):
+        self.target: ExprNode = target
+        self.value: ExprNode = value
+        self.position = (target.position[0], target.position[1])
 
 class DowncastingNode(ExprNode):
     def __init__(self, target: ExprNode, type: Token):
@@ -95,9 +97,10 @@ class DowncastingNode(ExprNode):
         self.type: str = type.lex
         self.position = (type.line, type.column)
 
-@dataclass
 class UnaryOpNode(ExprNode):
-    operand: ExprNode
+    def __init__(self, operand: ExprNode):
+        self.operand: ExprNode = operand
+        self.position = (operand.position[0], operand.position[1])
 
 
 class NegOpNode(UnaryOpNode):
@@ -113,7 +116,7 @@ class BinaryOpNode(ExprNode):
         self.left: ExprNode = left
         self.operator: str = operator.lex
         self.right: ExprNode = right
-        self.position = (operator.line, operator.column)
+        self.position = (left.position[0], left.position[1])
 
 
 class LogicOpNode(BinaryOpNode):
@@ -138,28 +141,33 @@ class ConcatOpNode(BinaryOpNode):
         super().__init__(left, "@", right)
 
 
-@dataclass
 class TypeMatchingNode(ExprNode):
-    target: ExprNode
-    type: str
+    def __init__(self, target: ExprNode, type: str):
+        self.target: ExprNode = target
+        self.type: str = type
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class BlockNode(ExprNode):
-    exprs: list[ExprNode]
+    def __init__(self, exprs: list[ExprNode]):
+        self.exprs: list[ExprNode] = exprs
+        self.position = (0, 0)
 
 
-@dataclass
 class LoopNode(ExprNode):
-    condition: ExprNode
-    body: ExprNode
-    fallback_expr: ExprNode
+    def __init__(self, condition: ExprNode, body: ExprNode, fallback_expr: ExprNode):
+        self.condition: ExprNode = condition
+        self.body: ExprNode = body
+        self.fallback_expr: ExprNode = fallback_expr
+        self.position = (condition.position[0], condition.position[1])
 
 
-@dataclass
 class ConditionalNode(ExprNode):
-    condition_branchs: list[tuple[ExprNode, ExprNode]]
-    fallback_branch: ExprNode
+    def __init__(self, condition_branchs: list[tuple[ExprNode, ExprNode]], fallback_branch: ExprNode):
+        self.condition_branchs: list[tuple[ExprNode, ExprNode]] = condition_branchs
+        self.fallback_branch: ExprNode = fallback_branch
+        self.position = (condition_branchs[0][0].position[0],
+                         condition_branchs[0][0].position[1])
 
 
 class LetExprNode(ExprNode):
@@ -168,28 +176,31 @@ class LetExprNode(ExprNode):
         self.type: str | None = type.lex
         self.value: ExprNode = value
         self.body: ExprNode = body
+        self.position = (id.line, id.column)
 
 
-@dataclass
 class FunctionNode(ASTNode):
-    id: str
-    params: list[tuple[str, str | None]]
-    return_type: str | None
-    body: ExprNode
+    def __init__(self, id: str, params: list[tuple[str, str | None]], return_type: str | None, body: ExprNode):
+        self.id: str = id
+        self.params: list[tuple[str, str | None]] = params
+        self.return_type: str | None = return_type
+        self.body: ExprNode = body
+        self.position = (0, 0)
 
 
-@dataclass
 class MethodSpecNode(ASTNode):
-    id: str
-    params: list[tuple[str, str]]
-    return_type: str
+    def __init__(self, id: str, params: list[tuple[str, str]], return_type: str):
+        self.id: str = id
+        self.params: list[tuple[str, str]] = params
+        self.return_type: str = return_type
+        self.position = (0, 0)
 
-
-@dataclass
 class ProtocolNode(ASTNode):
-    type: str
-    extends: list[str]
-    method_specs: list[MethodSpecNode]
+    def __init__(self, type: str, extends: list[str], method_specs: list[MethodSpecNode]):
+        self.type: str = type
+        self.extends: list[str] = extends
+        self.method_specs: list[MethodSpecNode] = method_specs
+        self.position = (0, 0)
 
 
 class TypePropertyNode(ASTNode):
@@ -197,6 +208,7 @@ class TypePropertyNode(ASTNode):
         self.id: str = id.lex
         self.type: str | None = type.lex
         self.value: ExprNode = value
+        self.position = (id.line, id.column)
 
 
 class TypeNode(ASTNode):
@@ -207,6 +219,7 @@ class TypeNode(ASTNode):
         self.parent_type: str | None = parent_type.lex
         self.parent_args: list[ExprNode] | None = parent_args
         self.members: list[TypePropertyNode | FunctionNode] = members
+        self.position = (type.line, type.column)
 
 
 def is_assignable(node: ASTNode):
