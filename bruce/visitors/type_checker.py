@@ -1,4 +1,3 @@
-from bruce import names
 from ..tools.semantic import Function, SemanticError, Type, allow_type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
@@ -71,11 +70,13 @@ class TypeChecker:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope_params.create_child())
 
-        child_scope = scope.create_child()
-        child_scope.define_variable(names.INSTANCE_NAME, self.current_type)
+        if scope.is_var_defined("self"):
+            self.errors.append("Cannot redefine self")
+        else:
+            scope.define_variable("self", self.current_type)
         for member in node.members:
             if isinstance(member, FunctionNode):
-                self.visit(member, ctx, child_scope)
+                self.visit(member, ctx, scope.create_child())
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
@@ -108,34 +109,37 @@ class TypeChecker:
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
         try:
             # Case: id
-
-            if isinstance(node.target, IdentifierNode):
-                target_var = scope.find_variable(node.target.value)
-                if (
-                    node.target.value == names.INSTANCE_NAME
-                    and self.current_type is not None
-                    and target_var is not None
-                    and self.current_type == target_var.type
-                    and names.INSTANCE_NAME not in self.current_method.params
-                ):
-                    att = self.current_type.get_attribute(node.member_id)
-                    if att is None:
-                        self.errors.append(
-                            f"Attribute {node.member_id} does not exist in type {self.current_type}"
+            
+            
+            target = self.visit(node.target, ctx, scope.create_child())
+            if target == ERROR_TYPE:
+                return target
+            if not target:
+                self.errors.append(f"Variable {node.target} not defined")
+            else:
+                try:
+                    return target.get_method(node.member_id)
+                except SemanticError as se:
+                    if (
+                        target == self.current_type
+                        and isinstance(node.target, IdentifierNode)
+                        and node.target.value == "self"
+                        and (
+                            "self" not in [pn for pn in self.current_type.params.keys()]
                         )
+                    ):
+                        return target.get_attribute(node.member_id).type
                     else:
-                        return att.type
-                else:
-                    self.errors.append(f"Cannot access attribute {node.member_id}")
+                        self.errors.append(se.text)
+                    return ERROR_TYPE
         except SemanticError as se:
             self.errors.append(se.text)
-        return ERROR_TYPE
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         try:
             # Case: id (...)
-
+            
             if isinstance(node.target, IdentifierNode):
                 method = self.visit(node.target, ctx, scope.create_child())
                 if not isinstance(method, Function):
@@ -158,17 +162,20 @@ class TypeChecker:
             # Case: expr . id (...)
 
             expr = self.visit(node.target.target, ctx, scope.create_child())
+            
+            
+            
+            
+            
+            
             if expr == ERROR_TYPE:
                 return ERROR_TYPE
-            method = expr.get_method(node.target.member_id)
-            if method is None:
-                self.errors.append(
-                    f"Method {node.target} not defined in type {expr.name}"
-                )
+            if not method:
+                self.errors.append(f"Method {node.target} not defined")
             else:
                 if len(node.args) != len(method.params):
                     self.errors.append(
-                        f"Method {node.target.member_id} expects {len(method.params)} arguments but {len(node.args)} were given"
+                        f"Method {node.target} expects {len(method.params)} arguments but {len(node.args)} were given"
                     )
                 else:
                     for arg, param in zip(node.args, method.params):
@@ -180,20 +187,20 @@ class TypeChecker:
             return method.type
         except SemanticError as se:
             self.errors.append(se.text)
-        return ERROR_TYPE
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
         try:
-            value_type = self.visit(node.value, ctx, scope)
+            if scope.is_var_defined(node.id):
+                self.errors.append(f"Variable {node.id} already defined")
+            value_type = self.visit(node.value, ctx, scope.create_child())
             node_type = get_safe_type(node.type, ctx)
             if not allow_type(value_type, node_type):
                 self.errors.append(
                     f"Cannot convert {value_type.name} to {node_type.name}"
                 )
-            child_scope = scope.create_child()
-            child_scope.define_variable(node.id, node_type)
-            return self.visit(node.body, ctx, child_scope)
+            scope.define_variable(node.id, node_type)
+            return self.visit(node.body, ctx, scope.create_child())
         except SemanticError as se:
             self.errors.append(se.text)
 
