@@ -11,13 +11,13 @@ def main(path):
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) != 2:
+            print("Usage: python main.py <file.hulk>")
+            sys.exit(1)
+        elif sys.argv[1][-5:] != ".hulk":
+            print(f"{sys.argv[1]} is not a valid file")
+            sys.exit(1)
         main(sys.argv[1])
-    except IndexError:
-        print("Usage: python main.py <path>")
-        sys.exit(1)
     except FileNotFoundError:
         print("File not found")
-        sys.exit(1)
-    except Exception as e:
-        print(e)
         sys.exit(1)
