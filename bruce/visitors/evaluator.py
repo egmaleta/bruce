@@ -209,7 +209,11 @@ class Evaluator:
         if names.INSTANCE_NAME not in method.params:
             child_scope.define_variable(names.INSTANCE_NAME, None, (inst, inst_type))
 
-        return self.visit(method.body, ctx, child_scope)
+        last = self.current_method
+        self.current_method = method
+        v, t = self.visit(method.body, ctx, child_scope)
+        self.current_method = last
+        return v, t
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):

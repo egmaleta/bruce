@@ -80,6 +80,7 @@ class TypeChecker:
         child_scope.define_variable(names.INSTANCE_NAME, self.current_type)
         for member in node.members:
             if isinstance(member, FunctionNode):
+                self.current_method = self.current_type.get_method(member.id)
                 self.visit(member, ctx, child_scope)
 
     @visitor.when(FunctionNode)
