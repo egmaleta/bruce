@@ -31,10 +31,11 @@ class Graph:
 
 def topological_order(types: list[TypeNode]):
     def dfs(node, graph: Graph):
+        global backward_edge
         visited[node] = True
         for neighbor in graph.edges[node]:
             if visited[neighbor]:
-                backward_edge = True
+                backward_edges[neighbor] = True
             if neighbor and not visited[neighbor]:
                 dfs(neighbor, graph)
         order.append(node)
@@ -45,11 +46,12 @@ def topological_order(types: list[TypeNode]):
     visited = {}
     indexs_before = {}
     indexs_after = []
-    backward_edge = False
+    backward_edges = {}
 
     for i, t in enumerate(graph.types):
         visited[t.type] = False
         indexs_before[t.type] = i
+        backward_edges[t.type] = False
 
     order = []
 
@@ -59,6 +61,8 @@ def topological_order(types: list[TypeNode]):
 
     order = order[::-1]
     indexs_after = indexs_after[::-1]
+    
+    backward_edge = any(backward_edges.values())
 
     return [types[i] for i in indexs_after] if not backward_edge else []
 
@@ -107,6 +111,11 @@ class TypeBuilder(object):
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
+        types = [types for types in node.declarations if isinstance(types, TypeNode)]
+        types = topological_order(types)
+        if len(types) == 0:
+            self.errors.append("Circular inheritance detected")
+            return self.errors
         for declaration in node.declarations:
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
