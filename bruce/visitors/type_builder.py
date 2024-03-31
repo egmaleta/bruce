@@ -168,7 +168,7 @@ class TypeBuilder(object):
             self.errors.append(se.text)
 
         for method_spec in node.method_specs:
-            self.visit(method_spec)
+            self.visit(method_spec, ctx)
 
     @visitor.when(MethodSpecNode)
     def visit(self, node: MethodSpecNode, ctx: Context):

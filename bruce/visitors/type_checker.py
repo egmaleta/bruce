@@ -1,10 +1,11 @@
 from bruce import names
-from ..tools.semantic import Function, SemanticError, Type, allow_type
+from ..tools.semantic import Function, SemanticError, Type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .type_builder import topological_order
 from ..tools import visitor
 from ..types import (
+    allow_type,
     BOOLEAN_TYPE,
     ITERABLE_PROTO,
     NUMBER_TYPE,
@@ -84,9 +85,10 @@ class TypeChecker:
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)
+        child_scope = scope.create_child()
         for param in node.params:
-            self.visit(param, ctx, scope)
-        body_type = self.visit(node.body, ctx, scope.create_child())
+            child_scope.define_variable(param[0], get_safe_type(param[1], ctx))
+        body_type = self.visit(node.body, ctx, child_scope)
         return_type = get_safe_type(node.return_type, ctx)
         if not allow_type(body_type, return_type):
             self.errors.append(f"Cannot convert {body_type.name} in {node.return_type}")
@@ -129,8 +131,7 @@ class TypeChecker:
                         )
                     else:
                         return att.type
-                else:
-                    self.errors.append(f"Cannot access attribute {node.member_id}")
+            self.errors.append(f"Cannot access attribute {node.member_id}")
         except SemanticError as se:
             self.errors.append(se.text)
         return ERROR_TYPE
@@ -224,7 +225,7 @@ class TypeChecker:
             if instance_type.params:
                 if len(node.args) != len(instance_type.params):
                     self.errors.append(
-                        f"Type {node.type} expects {len(type.params)} arguments but {len(node.args)} were given"
+                        f"Type {node.type} expects {len(instance_type.params)} arguments but {len(node.args)} were given"
                     )
                 else:
                     for arg, param in zip(node.args, instance_type.params):
@@ -297,7 +298,7 @@ class TypeChecker:
         try:
             left = self.visit(node.left, ctx, scope.create_child())
             right = self.visit(node.right, ctx, scope.create_child())
-            if left != NUMBER_TYPE or right != NUMBER_TYPE:
+            if left != right:  # TODO right op
                 self.errors.append(
                     f"Operation '{node.operator}' is not defined between {left.name} and {right.name}"
                 )
@@ -410,9 +411,7 @@ class TypeChecker:
             if not allow_type(
                 target_type, get_safe_type(node.type, ctx)
             ) and not allow_type(get_safe_type(node.type, ctx), target_type):
-                self.errors.append(
-                    f"Cannot cast {target_type.name} to {node.type.name}"
-                )
+                self.errors.append(f"Cannot cast {target_type.name} to {node.type}")
             return get_safe_type(node.type, ctx)
         except SemanticError as se:
             self.errors.append(se.text)
