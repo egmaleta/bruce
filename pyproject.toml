@@ -12,10 +12,11 @@ license = "MIT"
 repository = "https://github.com/egmaleta/bruce"
 
 [tool.poetry.dependencies]
-python = "3.11.8"
+python = "^3.11"
+dill = "0.3.8"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.2.0"
+black = "24.2.0"
 
 [tool.black]
 line-length = 88
