@@ -130,7 +130,7 @@ class Evaluator:
                 self.visit(member, ctx, scope)
                 self.current_method = None
 
-        if node.parent_args:
+        if node.parent_args is not None:
             self.current_type.set_parent_args(node.parent_args)
 
         self.current_type = None
@@ -177,6 +177,40 @@ class Evaluator:
         if isinstance(node.target, IdentifierNode):
             # handle builtin funcs
             if node.target.is_builtin:
+                # handle base func
+                if node.target.value == names.BASE_FUNC_NAME:
+                    assert self.current_method is not None
+
+                    var = scope.find_variable(names.INSTANCE_NAME)
+                    assert var.owner_scope.is_function_scope
+
+                    inst, inst_type = var.value
+                    assert (
+                        inst_type.parent is not None and inst_type.parent != OBJECT_TYPE
+                    )
+
+                    method = inst.parent.get_method(self.current_method.name)
+
+                    arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+
+                    child_scope = scope.get_top_scope().create_child(
+                        is_function_scope=True
+                    )
+                    for name, value in zip(method.params, arg_values):
+                        child_scope.define_variable(name, None, value)
+
+                    if names.INSTANCE_NAME not in method.params:
+                        child_scope.define_variable(
+                            names.INSTANCE_NAME, None, (inst.parent, inst_type.parent)
+                        )
+
+                    last = self.current_method
+                    self.current_method = method
+                    v, t = self.visit(method.body, ctx, child_scope)
+                    self.current_method = last
+
+                    return v, t
+
                 f = self.builtin_funcs[node.target.value]
                 arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
                 return f(*arg_values)
@@ -269,6 +303,7 @@ class Evaluator:
 
         arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
         instance = dyn_type.clone()
+        first_instance = instance
 
         while True:
             child_scope = global_scope.create_child()
@@ -292,7 +327,7 @@ class Evaluator:
             arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
             instance = instance.parent
 
-        return (instance, dyn_type)
+        return (first_instance, dyn_type)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):

@@ -36,6 +36,9 @@ class SemanticChecker:
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
         if isinstance(node.target, IdentifierNode):
+            if node.target.value == names.BASE_FUNC_NAME:
+                return
+
             f = scope.find_function(node.target.value)
             if f is None:
                 self.errors.append(f"Function {node.target.value} is not defined")
