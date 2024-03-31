@@ -7,6 +7,11 @@ from ..ast import *
 
 
 class SemanticChecker:
+    @staticmethod
+    def is_assignable(node: ASTNode):
+        is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
+        return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
+
     def __init__(self):
         self.errors: list[str] = []
 
@@ -16,11 +21,10 @@ class SemanticChecker:
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope: Scope):
-        program_scope = scope.create_child()
         for declaration in node.declarations:
-            if not isinstance(declaration, FunctionNode):
-                self.visit(declaration, ctx, program_scope)
-        self.visit(node.expr, ctx, program_scope)
+            self.visit(declaration, ctx, scope)
+
+        self.visit(node.expr, ctx, scope)
 
         return self.errors
 
@@ -68,7 +72,7 @@ class SemanticChecker:
     @visitor.when(BlockNode)
     def visit(self, node: BlockNode, ctx: Context, scope: Scope):
         for expr in node.exprs:
-            self.visit(expr, ctx, scope)
+            self.visit(expr, ctx, scope.create_child())
 
     @visitor.when(BinaryOpNode)
     def visit(self, node: BinaryOpNode, ctx: Context, scope: Scope):
@@ -80,31 +84,30 @@ class SemanticChecker:
         self.visit(node.target, ctx, scope)
         self.visit(node.value, ctx, scope)
 
-        if not is_assignable(node.target):
+        if not self.is_assignable(node.target):
             self.errors.append(f"Expression '' does not support destructive assignment")
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
+        self.visit(node.value, ctx, scope)
+
         my_scope = scope.create_child()
         my_scope.define_variable(node.id)
-        self.visit(node.value, ctx, my_scope)
         self.visit(node.body, ctx, my_scope)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
-        for branch in node.condition_branchs:
-            self.visit(branch[0], ctx, scope.create_child())
-            self.visit(branch[1], ctx, scope.create_child())
+        for cond, body in node.condition_branchs:
+            self.visit(cond, ctx, scope)
+            self.visit(body, ctx, scope.create_child())
 
         self.visit(node.fallback_branch, ctx, scope.create_child())
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-
-        self.visit(node.condition, ctx, my_scope)
-        self.visit(node.body, ctx, my_scope)
-        self.visit(node.fallback_expr, ctx, my_scope.create_child())
+        self.visit(node.condition, ctx, scope)
+        self.visit(node.body, ctx, scope.create_child())
+        self.visit(node.fallback_expr, ctx, scope.create_child())
 
     @visitor.when(UnaryOpNode)
     def visit(self, node: UnaryOpNode, ctx: Context, scope: Scope):
@@ -140,17 +143,29 @@ class SemanticChecker:
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
+        type = None
+
         try:
-            ctx.get_type(node.type)
+            type = ctx.get_type(node.type)
         except SemanticError:
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
-
-        my_scope = scope.create_child()
+        
+        try:
+            ctx.get_protocol(node.type)
+        except:
+            pass
+        else:
+            self.errors.append(f"Protocols, such as {node.type}, cannot be instantiated")
 
         for arg in node.args:
-            self.visit(arg, ctx, my_scope)
+            self.visit(arg, ctx, scope)
+
+        if type is not None and len(node.args) != len(type.params):
+            self.errors.append(
+                f"The number of arguments don't match the number of params of {type.name}"
+            )
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
@@ -160,6 +175,14 @@ class SemanticChecker:
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
+
+        try:
+            ctx.get_protocol(node.type)
+        except SemanticError:
+            self.errors.append(
+                f"Protocol {node.type} does not exist in the current context"
+            )
+
         self.visit(node.target, ctx, scope)
 
     @visitor.when(VectorNode)
@@ -169,7 +192,7 @@ class SemanticChecker:
 
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
-        self.visit(ExprNode, ctx, scope)
+        self.visit(node.iterable_expr, ctx, scope)
 
         my_scope = scope.create_child()
         my_scope.define_variable(node.item_id)
@@ -187,6 +210,14 @@ class SemanticChecker:
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
+
+        try:
+            ctx.get_protocol(node.type)
+        except SemanticError:
+            self.errors.append(
+                f"Protocol {node.type} does not exist in the current context"
+            )
+
         self.visit(node.target, ctx, scope)
 
     @visitor.when(MethodSpecNode)
