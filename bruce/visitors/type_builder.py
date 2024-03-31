@@ -31,8 +31,11 @@ class Graph:
 
 def topological_order(types: list[TypeNode]):
     def dfs(node, graph: Graph):
+        global backward_edge
         visited[node] = True
         for neighbor in graph.edges[node]:
+            if visited[neighbor]:
+                backward_edges[neighbor] = True
             if neighbor and not visited[neighbor]:
                 dfs(neighbor, graph)
         order.append(node)
@@ -43,22 +46,23 @@ def topological_order(types: list[TypeNode]):
     visited = {}
     indexs_before = {}
     indexs_after = []
-    backward_edge = False
+    backward_edges = {}
 
     for i, t in enumerate(graph.types):
         visited[t.type] = False
         indexs_before[t.type] = i
+        backward_edges[t.type] = False
 
     order = []
 
     for t in graph.types:
         if not visited[t.type]:
             dfs(t.type, graph)
-        else:
-            backward_edge = True
 
     order = order[::-1]
     indexs_after = indexs_after[::-1]
+    
+    backward_edge = any(backward_edges.values())
 
     return [types[i] for i in indexs_after] if not backward_edge else []
 
@@ -107,6 +111,11 @@ class TypeBuilder(object):
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
+        types = [types for types in node.declarations if isinstance(types, TypeNode)]
+        types = topological_order(types)
+        if len(types) == 0:
+            self.errors.append("Circular inheritance detected")
+            return self.errors
         for declaration in node.declarations:
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
@@ -123,7 +132,7 @@ class TypeBuilder(object):
         except SemanticError as se:
             self.errors.append(se.text)
 
-        if node.parent_type:
+        if node.parent_type is not None:
             try:
                 parent_type = ctx.get_type(node.parent_type)
                 self.current_type.set_parent(parent_type)
@@ -168,7 +177,7 @@ class TypeBuilder(object):
             self.errors.append(se.text)
 
         for method_spec in node.method_specs:
-            self.visit(method_spec)
+            self.visit(method_spec, ctx)
 
     @visitor.when(MethodSpecNode)
     def visit(self, node: MethodSpecNode, ctx: Context):

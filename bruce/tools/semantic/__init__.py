@@ -204,6 +204,15 @@ class Type:
     ):
         try:
             self.get_method(name)
+            is_local = True
+            for method in self.methods:
+                if method.name == name:
+                    is_local = False
+                    break
+            if is_local:
+                raise SemanticError(
+                    f"Method '{name}' is already defined in type '{self.name}'."
+                )
         except SemanticError:
             method = Method(name, params, type)
             self.methods.append(method)
@@ -262,7 +271,7 @@ class Type:
                     if (
                         (
                             mt_is_type
-                            and spt_is_type
+                            and st_is_type
                             and not method.type.conforms_to(spec.type)
                         )
                         or (
@@ -327,8 +336,9 @@ class Type:
 
     def clone(self):
         new_type = Type(self.name)
-        new_type.set_parent(self.parent.clone())
-        new_type.set_params(self.params)
+        if self.parent is not None:
+            new_type.set_parent(self.parent.clone())
+        new_type.set_params([(n, t) for n, t in self.params.items()])
 
         new_type.methods = self.methods
         new_type.attributes = [
@@ -395,6 +405,23 @@ class Proto:
         if cond:
             self.parents.append(parent)
 
+    def get_method(self, name: str):
+        target = None
+        for attr in self.method_specs:
+            if attr.name == name:
+                target = attr
+                break
+
+        if target is not None:
+            return target
+
+        if self.parent is None:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
+        try:
+            return self.parent.get_method(name)
+        except SemanticError:
+            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
+
     def add_method_spec(
         self,
         name: str,
@@ -409,16 +436,10 @@ class Proto:
         return list(self._all_method_specs())
 
     def extends(self, other):
-        return other in self._ancestors()
+        return other in self._ancestors() if other != self else True
 
     def __eq__(self, other):
         return isinstance(other, Proto) and self.name == other.name
 
     def __hash__(self):
         return hash(self.name)
-
-
-def allow_type(type: Type, type_or_proto: Union[Type, Proto]):
-    if isinstance(type_or_proto, Type):
-        return type.conforms_to(type_or_proto)
-    return type.implements(type_or_proto)

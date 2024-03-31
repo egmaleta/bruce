@@ -2,8 +2,17 @@ from math import sqrt, exp, log, sin, cos
 from random import random
 
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type, Attribute, Function
-from ..types import NUMBER_TYPE, STRING_TYPE, OBJECT_TYPE, BOOLEAN_TYPE, FUNCTION_TYPE
+from ..tools.semantic import Type, Method, Proto, Attribute
+from ..types import allow_type
+from ..types import (
+    NUMBER_TYPE,
+    STRING_TYPE,
+    OBJECT_TYPE,
+    BOOLEAN_TYPE,
+    FUNCTION_TYPE,
+    VectorTypeInstance,
+    VectorType,
+)
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..ast import *
@@ -21,7 +30,10 @@ def hulk_range(min, max):
     if max <= min:
         raise ValueError(f"Range error: 'max' value must be greater than 'min' value.")
 
-    return ([n for n in range(min, max)], [NUMBER_TYPE] * (max - min))
+    return (
+        VectorTypeInstance(NUMBER_TYPE, [(n, NUMBER_TYPE) for n in range(min, max)]),
+        VectorType(NUMBER_TYPE),
+    )
 
 
 def hulk_sqrt(value):
@@ -114,7 +126,7 @@ class Evaluator:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope)
             else:
-                self.current_method = scope.find_function(member.id)
+                self.current_method = self.current_type.get_method(member.id)
                 self.visit(member, ctx, scope)
                 self.current_method = None
 
@@ -131,7 +143,7 @@ class Evaluator:
             self.current_method.set_body(node.body)
         else:
             f = scope.find_function(node.id)
-            f.set_body(node.id)
+            f.set_body(node.body)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
@@ -147,8 +159,7 @@ class Evaluator:
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
-        # evaluates only attribute accessing
-        # method handling is done in FunctionCall visitor
+        # CASE self . id
         assert isinstance(node.target, IdentifierNode)
         assert node.target.value == names.INSTANCE_NAME
 
@@ -162,9 +173,44 @@ class Evaluator:
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
+        # CASE: id (...)
         if isinstance(node.target, IdentifierNode):
             # handle builtin funcs
             if node.target.is_builtin:
+                # handle base func
+                if node.target.value == names.BASE_FUNC_NAME:
+                    assert self.current_method is not None
+
+                    var = scope.find_variable(names.INSTANCE_NAME)
+                    assert var.owner_scope.is_function_scope
+
+                    inst, inst_type = var.value
+                    assert (
+                        inst_type.parent is not None and inst_type.parent != OBJECT_TYPE
+                    )
+
+                    method = inst.parent.get_method(self.current_method.name)
+
+                    arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+
+                    child_scope = scope.get_top_scope().create_child(
+                        is_function_scope=True
+                    )
+                    for name, value in zip(method.params, arg_values):
+                        child_scope.define_variable(name, None, value)
+
+                    if names.INSTANCE_NAME not in method.params:
+                        child_scope.define_variable(
+                            names.INSTANCE_NAME, None, (inst, inst_type)
+                        )
+
+                    last = self.current_method
+                    self.current_method = method
+                    v, t = self.visit(method.body, ctx, child_scope)
+                    self.current_method = last
+
+                    return v, t
+
                 f = self.builtin_funcs[node.target.value]
                 arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
                 return f(*arg_values)
@@ -179,6 +225,7 @@ class Evaluator:
 
             return self.visit(f.body, ctx, child_scope)
 
+        # CASE: expr . id (...)
         assert isinstance(node.target, MemberAccessingNode)
         target = node.target.target
         method_name = node.target.member_id
@@ -196,20 +243,57 @@ class Evaluator:
         if names.INSTANCE_NAME not in method.params:
             child_scope.define_variable(names.INSTANCE_NAME, None, (inst, inst_type))
 
-        return self.visit(method.body, ctx, child_scope)
+        last = self.current_method
+        self.current_method = method
+        v, t = self.visit(method.body, ctx, child_scope)
+        self.current_method = last
+        return v, t
 
     @visitor.when(LetExprNode)
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
         child = scope.create_child()
         value, value_type = self.visit(node.value, ctx, child)
         child.define_variable(node.id, node.type, (value, value_type))
-        return self.visit(node.expr, ctx, child)
+        return self.visit(node.body, ctx, child)
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        value, value_type = self.visit(node.value, ctx, scope.create_child())
-        scope.find_variable(node.id).set_value(value)
-        return value, value_type
+        visit_value = lambda: self.visit(node.value, ctx, scope)
+
+        # CASE id := expr
+        if isinstance(node.target, IdentifierNode):
+            # self := expr is invalid
+            assert node.target.value != names.INSTANCE_NAME
+
+            value = visit_value()
+
+            var = scope.find_variable(node.target.value)
+            var.set_value(value)
+            return value
+
+        # CASE self . id := expr
+        if isinstance(node.target, MemberAccessingNode):
+            target = node.target.target
+            member = node.target.member_id
+
+            # 'self' must refer to the instance of the type owner of the current method
+            assert (
+                isinstance(target, IdentifierNode)
+                and target.value == names.INSTANCE_NAME
+                and self.current_method is not None
+                and target.value not in self.current_method.params
+                and scope.find_variable(target.value).owner_scope.is_function_scope
+            )
+
+            inst, _ = self.visit(target, ctx, scope)
+            value = visit_value()
+
+            attr = inst.get_attribute(member)
+            attr.set_value(value)
+            return value
+
+        # CASE expr [ expr ] := expr (SOON)
+        # TODO assert isinstance(node.target, IndexingNode)
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -254,23 +338,34 @@ class Evaluator:
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        condition, condition_type = self.visit(
-            node.condition, ctx, scope.create_child()
-        )
+        condition, _ = self.visit(node.condition, ctx, scope)
         if not condition:
             fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
-        else:
-            while condition:
-                body, body_type = self.visit(node.body, ctx, scope.create_child())
-            return body, body_type
+
+        body, body_type = None, None  # will be set at least one time
+        while condition:
+            body, body_type = self.visit(node.body, ctx, scope.create_child())
+
+            condition = self.visit(node.condition, ctx, scope)[0]
+
+        return body, body_type
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
+
+        op = node.operator
+        if op == "/":
+            try:
+                l, r = int(left_value), int(right_value)
+                return (l // r, NUMBER_TYPE)
+            except:
+                pass
+
         return (
-            Evaluator.artih_op_funcs[node.operator](left_value, right_value),
+            Evaluator.artih_op_funcs[op](left_value, right_value),
             NUMBER_TYPE,
         )
 
@@ -320,64 +415,42 @@ class Evaluator:
     @visitor.when(MappedIterableNode)
     def visit(self, node: MappedIterableNode, ctx: Context, scope: Scope):
         iterable, iterable_type = self.visit(node.iterable_expr, ctx, scope)
+        assert isinstance(iterable, VectorTypeInstance)
 
         tuples = []
 
-        if isinstance(iterable, list):
-            for item in iterable:
-                child_scope = scope.create_child()
-                child_scope.define_variable(
-                    node.item_id, None, (item, iterable_type.item_type)
-                )
-                tuples.append(self.visit(node.map_expr, ctx, child_scope))
-        else:
-            # iterable is a type instance
+        top_scope = scope.get_top_scope()
 
-            top_scope = scope.get_top_scope()
+        while True:
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            cond, _ = self.visit(
+                iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
+            )
 
-            while True:
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                cond, _ = self.visit(
-                    iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
-                )
+            if not cond:
+                break
 
-                if not cond:
-                    break
+            child_scope = top_scope.create_child(is_function_scope=True)
+            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            item_value = self.visit(
+                iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                ctx,
+                child_scope,
+            )
 
-                child_scope = top_scope.create_child(is_function_scope=True)
-                child_scope.define_variable(names.INSTANCE_NAME, iterable)
-                item_value = self.visit(
-                    iterable.get_method(names.CURRENT_METHOD_NAME).body,
-                    ctx,
-                    child_scope,
-                )
+            child_scope = scope.create_child()
+            child_scope.define_variable(node.item_id, None, item_value)
+            value = self.visit(node.map_expr, ctx, child_scope)
+            tuples.append(value)
 
-                child_scope = scope.create_child()
-                child_scope.define_variable(node.item_id, None, item_value)
-
-                value = self.visit(node.map_expr, ctx, child_scope)
-                tuples.append(value)
-
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
         tuples = [self.visit(item, ctx, scope) for item in node.items]
 
-        values = []
-        types = []
-        for v, t in tuples:
-            values.append(v)
-            types.append(t)
-
-        return (values, types)
+        return (VectorTypeInstance(OBJECT_TYPE, tuples), VectorType(OBJECT_TYPE))
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
@@ -389,12 +462,7 @@ class Evaluator:
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
-        if (
-            target_value[1] is Type
-            and target_value[1].conforms_to(node_type)
-            or target_value[1] is Proto
-            and target_value[1].implements(node_type)
-        ):
+        if allow_type(target_value[1], node_type):
             return target_value[0], node_type
         raise Exception(
             f"Downcasting error: {target_value[1]} does not conform to {node_type}"
@@ -402,9 +470,9 @@ class Evaluator:
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
-        vector_value = self.visit(node.target, ctx, scope)
-        index = self.visit(node.index, ctx, scope)
-        return vector_value[index]
+        vector_value, vector_type = self.visit(node.target, ctx, scope)
+        index, index_type = self.visit(node.index, ctx, scope)
+        return vector_value[index], vector_type[index]
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
@@ -416,11 +484,14 @@ class Evaluator:
 
     @visitor.when(BooleanNode)
     def visit(self, node: BooleanNode, ctx: Context, scope: Scope):
-        return True if node.value == "true" else False
+        return (node.value == "true", BOOLEAN_TYPE)
 
     @visitor.when(NumberNode)
     def visit(self, node: NumberNode, ctx: Context, scope: Scope):
-        return (float(node.value), NUMBER_TYPE)
+        try:
+            return (int(node.value), NUMBER_TYPE)
+        except ValueError:
+            return (float(node.value), NUMBER_TYPE)
 
     @visitor.when(StringNode)
     def visit(self, node: StringNode, ctx: Context, scope: Scope):

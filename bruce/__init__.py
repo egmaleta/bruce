@@ -7,6 +7,16 @@ from . import grammar as g
 from . import types as t
 from . import names as n
 
+from .grammar import GRAMMAR
+from .tools.parser import create_parser, evaluate_parse
+from .visitors.desugarer import Desugarer
+from .visitors.type_builder import TypeCollector, TypeBuilder
+from .visitors.function_collector import FunctionCollector
+from .visitors.checker import SemanticChecker
+from .visitors.type_inferer import TypeInferer
+from .visitors.type_checker import TypeChecker
+from .visitors.evaluator import Evaluator
+
 
 lexer = create_lexer(
     [
@@ -81,6 +91,7 @@ lexer = create_lexer(
         (g.number, r"(0|1-90-9*)(.0-90-9*)?"),
         (g.string, '"(\\\\"|\x00-!|#-\x7f)*"'),
         (None, "( |\n|\t)*"),
+        (None, "//(\x00-\t|\x0b-\x7f)*"),
     ],
     g.GRAMMAR.EOF,
 )
@@ -108,3 +119,40 @@ scope.define_function(
 scope.define_function(n.RAND_FUNC_NAME, [], t.NUMBER_TYPE)
 scope.define_function(n.SIN_FUNC_NAME, [("angle", t.NUMBER_TYPE)], t.NUMBER_TYPE)
 scope.define_function(n.COS_FUNC_NAME, [("angle", t.NUMBER_TYPE)], t.NUMBER_TYPE)
+
+
+def pipeline(program: str):
+    tokens = lexer(program)
+    parser = create_parser(GRAMMAR)
+    left_parse = parser(tokens)
+    ast = evaluate_parse(left_parse, tokens)
+    des = Desugarer()
+    ast = des.visit(ast)
+
+    tc = TypeCollector()
+    errors = tc.visit(ast, context)
+    if len(errors) > 0:
+        print(f"Type Collector: \n{errors}")
+        return
+    tb = TypeBuilder(errors)
+    errors += tb.visit(ast, context)
+    if len(errors) > 0:
+        print(f"Type Builder: \n{errors}")
+        return
+    fc = FunctionCollector()
+    errors += fc.visit(ast, context, scope)
+    if len(errors) > 0:
+        print(f"Function Collector: \n {errors}")
+        return
+    sc = SemanticChecker()
+    errors += sc.visit(ast, context, scope)
+    if len(errors) > 0:
+        print(f"Semantic Checker: \n {errors}")
+        return
+    tc = TypeChecker(errors)
+    tc.visit(ast, context, scope)
+    if len(errors) > 0:
+        print(f"Type Checker: \n{errors}")
+        return
+    ev = Evaluator()
+    ev.visit(ast, context, scope)
