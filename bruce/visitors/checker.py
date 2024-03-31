@@ -115,27 +115,32 @@ class SemanticChecker:
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
+        type = ctx.get_type(node.type)
 
-        if node.params is not None:
-            for param in node.params:
-                my_scope.define_variable(param[0])
+        child_scope = scope.create_child()
+        for name in type.params:
+            child_scope.define_variable(name)
+
+        for member in node.members:
+            if isinstance(member, TypePropertyNode):
+                self.visit(member.value, ctx, child_scope)
 
         if node.parent_args is not None:
             for expr in node.parent_args:
-                self.visit(expr, ctx, my_scope)
+                self.visit(expr, ctx, child_scope)
 
         for member in node.members:
-            if isinstance(member, Attribute):
-                self.visit(member, ctx, my_scope)
+            if isinstance(member, FunctionNode):
+                child_scope = scope.create_child(is_function_scope=True)
 
-        function_scope = scope.get_top_scope()
-        function_scope.define_variable(
-            names.INSTANCE_NAME, get_safe_type(node.type, ctx)
-        )
-        for member in node.members:
-            if isinstance(member, Function):
-                self.visit(member, ctx, function_scope)
+                method = type.get_method(member.id)
+                for name in method.params:
+                    child_scope.define_variable(name)
+
+                if names.INSTANCE_NAME not in method.params:
+                    child_scope.define_variable(names.INSTANCE_NAME)
+
+                self.visit(member.body, ctx, child_scope)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
@@ -151,13 +156,15 @@ class SemanticChecker:
             self.errors.append(
                 f"Type {node.type} does not exist in the current context"
             )
-        
+
         try:
             ctx.get_protocol(node.type)
         except:
             pass
         else:
-            self.errors.append(f"Protocols, such as {node.type}, cannot be instantiated")
+            self.errors.append(
+                f"Protocols, such as {node.type}, cannot be instantiated"
+            )
 
         for arg in node.args:
             self.visit(arg, ctx, scope)
