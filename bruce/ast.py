@@ -10,9 +10,9 @@ class ProgramNode(ASTNode):
 
 
 class LiteralNode(ExprNode):
-    def __init__(self, token: Token):
-        self.value = token.lex
-        self.position = (token.lin, token.column)
+    def __init__(self, token: str|Token):
+        self.value = token if isinstance(token, str) else token.lex
+        self.position = (0, 0)
 
 
 class NumberNode(LiteralNode):
@@ -41,10 +41,10 @@ class IdentifierNode(LiteralNode):
 
 
 class TypeInstancingNode(ExprNode):
-    def __init__(self, token: Token, args: list[ExprNode]):
-        self.type: str = token.lex
+    def __init__(self, token: str, args: list[ExprNode]):
+        self.type: str = token
         self.args: list[ExprNode] = args
-        self.position = (token.line, token.column)
+        self.position = (0, 0)
 
 
 class VectorNode(ExprNode):
@@ -54,21 +54,30 @@ class VectorNode(ExprNode):
 
 
 class MappedIterableNode(ExprNode):
-    def __init__(self, map_expr: ExprNode, item_id: Token, item_type: Token | None, iterable_expr: ExprNode):
+    def __init__(
+        self,
+        map_expr: ExprNode,
+        item_id: Token,
+        item_type: Token | None,
+        iterable_expr: ExprNode,
+    ):
         self.map_expr: ExprNode = map_expr
         self.item_id: str = item_id.lex
         self.item_type: str | None = item_type.lex if item_type else None
         self.iterable_expr: ExprNode = iterable_expr
         self.item_id_position = (item_id.line, item_id.column)
-        self.item_type_position = (item_type.line, item_type.column) if item_type else (
-            item_id.line, item_id.column)
+        self.item_type_position = (
+            (item_type.line, item_type.column)
+            if item_type
+            else (item_id.line, item_id.column)
+        )
 
 
 class MemberAccessingNode(ExprNode):
-    def __init__(self, target: ExprNode, member_id: Token):
+    def __init__(self, target: ExprNode, member_id: str):
         self.target: ExprNode = target
-        self.member_id: str = member_id.lex
-        self.position = (member_id.line, member_id.column)
+        self.member_id: str = member_id
+        self.position = (target.position[0], target.position[1])
 
 
 class FunctionCallNode(ExprNode):
@@ -91,11 +100,13 @@ class MutationNode(ExprNode):
         self.value: ExprNode = value
         self.position = (target.position[0], target.position[1])
 
+
 class DowncastingNode(ExprNode):
-    def __init__(self, target: ExprNode, type: Token):
+    def __init__(self, target: ExprNode, type: str):
         self.target: ExprNode = target
-        self.type: str = type.lex
-        self.position = (type.line, type.column)
+        self.type: str = type
+        self.position = (target.position[0], target.position[1])
+
 
 class UnaryOpNode(ExprNode):
     def __init__(self, operand: ExprNode):
@@ -112,9 +123,9 @@ class ArithNegOpNode(UnaryOpNode):
 
 
 class BinaryOpNode(ExprNode):
-    def __init__(self, left: ExprNode, operator: Token, right: ExprNode):
+    def __init__(self, left: ExprNode, operator: str, right: ExprNode):
         self.left: ExprNode = left
-        self.operator: str = operator.lex
+        self.operator: str = operator
         self.right: ExprNode = right
         self.position = (left.position[0], left.position[1])
 
@@ -163,24 +174,36 @@ class LoopNode(ExprNode):
 
 
 class ConditionalNode(ExprNode):
-    def __init__(self, condition_branchs: list[tuple[ExprNode, ExprNode]], fallback_branch: ExprNode):
+    def __init__(
+        self,
+        condition_branchs: list[tuple[ExprNode, ExprNode]],
+        fallback_branch: ExprNode,
+    ):
         self.condition_branchs: list[tuple[ExprNode, ExprNode]] = condition_branchs
         self.fallback_branch: ExprNode = fallback_branch
-        self.position = (condition_branchs[0][0].position[0],
-                         condition_branchs[0][0].position[1])
+        self.position = (
+            condition_branchs[0][0].position[0],
+            condition_branchs[0][0].position[1],
+        )
 
 
 class LetExprNode(ExprNode):
-    def __init__(self, id: Token, type: Token | None, value: ExprNode, body: ExprNode):
-        self.id = id.lex
-        self.type: str | None = type.lex
+    def __init__(self, id: str, type: Token | None, value: ExprNode, body: ExprNode):
+        self.id = id
+        self.type: str | None = type if type is not None else None
         self.value: ExprNode = value
         self.body: ExprNode = body
-        self.position = (id.line, id.column)
+        self.position = (0, 0)
 
 
 class FunctionNode(ASTNode):
-    def __init__(self, id: str, params: list[tuple[str, str | None]], return_type: str | None, body: ExprNode):
+    def __init__(
+        self,
+        id: str,
+        params: list[tuple[str, str | None]],
+        return_type: str | None,
+        body: ExprNode,
+    ):
         self.id: str = id
         self.params: list[tuple[str, str | None]] = params
         self.return_type: str | None = return_type
@@ -195,8 +218,11 @@ class MethodSpecNode(ASTNode):
         self.return_type: str = return_type
         self.position = (0, 0)
 
+
 class ProtocolNode(ASTNode):
-    def __init__(self, type: str, extends: list[str], method_specs: list[MethodSpecNode]):
+    def __init__(
+        self, type: str, extends: list[str], method_specs: list[MethodSpecNode]
+    ):
         self.type: str = type
         self.extends: list[str] = extends
         self.method_specs: list[MethodSpecNode] = method_specs
@@ -212,11 +238,19 @@ class TypePropertyNode(ASTNode):
 
 
 class TypeNode(ASTNode):
-    def __init__(self, type: Token, params: list[tuple[Token, Token | None]] | None, parent_type: Token | None, parent_args: list[ExprNode] | None, members: list[TypePropertyNode | FunctionNode]):
+    def __init__(
+        self,
+        type: Token,
+        params: list[tuple[Token, Token | None]] | None,
+        parent_type: Token | None,
+        parent_args: list[ExprNode] | None,
+        members: list[TypePropertyNode | FunctionNode],
+    ):
         self.type: str = type.lex
         self.params: list[tuple[str, str | None]] | None = [
-            (token1.lex, token2.lex) for token1, token2 in params]
-        self.parent_type: str | None = parent_type.lex
+            (token1.lex, token2.lex) for token1, token2 in params
+        ]
+        self.parent_type: str | None = parent_type.lex if parent_type else None
         self.parent_args: list[ExprNode] | None = parent_args
         self.members: list[TypePropertyNode | FunctionNode] = members
         self.position = (type.line, type.column)
