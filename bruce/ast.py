@@ -198,11 +198,6 @@ class TypeNode(ASTNode):
     members: list[TypePropertyNode | FunctionNode]
 
 
-def is_assignable(node: ASTNode):
-    is_assignable_id = isinstance(node, IdentifierNode) and (not node.is_builtin)
-    return is_assignable_id or isinstance(node, (IndexingNode, MemberAccessingNode))
-
-
 # SYNTACTIC SUGAR
 
 
