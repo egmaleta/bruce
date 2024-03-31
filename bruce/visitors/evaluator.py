@@ -299,19 +299,18 @@ class Evaluator:
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        condition, condition_type = self.visit(
-            node.condition, ctx, scope.create_child()
-        )
+        condition, _ = self.visit(node.condition, ctx, scope)
         if not condition:
             fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
-        else:
-            while condition:
-                body, body_type = self.visit(node.body, ctx, scope.create_child())
-                condition, condition_type = self.visit(
-                    node.condition, ctx, scope.create_child()
-                )
-            return body, body_type
+
+        body, body_type = None  # will be set at least one time
+        while condition:
+            body, body_type = self.visit(node.body, ctx, scope.create_child())
+
+            condition = self.visit(node.condition, ctx, scope)[0]
+
+        return body, body_type
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
