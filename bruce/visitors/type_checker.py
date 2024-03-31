@@ -76,7 +76,7 @@ class TypeChecker:
             if isinstance(member, TypePropertyNode):
                 self.visit(member, ctx, scope_params.create_child())
 
-        child_scope = scope.create_child()
+        child_scope = scope.get_top_scope()
         child_scope.define_variable(names.INSTANCE_NAME, self.current_type)
         for member in node.members:
             if isinstance(member, FunctionNode):

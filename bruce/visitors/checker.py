@@ -1,9 +1,10 @@
+from bruce import names
 from ..tools.semantic.scope import Scope
 from ..tools import visitor
 from ..ast import *
 
-from ..tools.semantic import SemanticError
-from ..tools.semantic.context import Context
+from ..tools.semantic import Attribute, Function, SemanticError
+from ..tools.semantic.context import Context, get_safe_type
 
 
 class SemanticChecker(object):  # TODO implement all the nodes
@@ -29,7 +30,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
         if (
-            #not node.value == "self"
+            # not node.value == "self"
             not scope.is_var_defined(node.value)
             and not scope.is_func_defined(node.value)
         ):
@@ -125,7 +126,16 @@ class SemanticChecker(object):  # TODO implement all the nodes
                 self.visit(expr, ctx, my_scope)
 
         for member in node.members:
-            self.visit(member, ctx, my_scope)
+            if isinstance(member, Attribute):
+                self.visit(member, ctx, my_scope)
+
+        function_scope = scope.get_top_scope()
+        function_scope.define_variable(
+            names.INSTANCE_NAME, get_safe_type(node.type, ctx)
+        )
+        for member in node.members:
+            if isinstance(member, Function):
+                self.visit(member, ctx, function_scope)
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):

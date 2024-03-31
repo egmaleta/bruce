@@ -41,4 +41,4 @@ class FunctionCollector:
             if isinstance(decl, ast.FunctionNode):
                 self.visit(decl, ctx, scope)
 
-        return node
+        return self.errors
