@@ -317,8 +317,17 @@ class Evaluator:
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
+
+        op = node.operator
+        if op == "/":
+            try:
+                l, r = int(left_value), int(right_value)
+                return (l // r, NUMBER_TYPE)
+            except:
+                pass
+
         return (
-            Evaluator.artih_op_funcs[node.operator](left_value, right_value),
+            Evaluator.artih_op_funcs[op](left_value, right_value),
             NUMBER_TYPE,
         )
 
