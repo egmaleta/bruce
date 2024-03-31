@@ -7,9 +7,12 @@ from .names import (
     NEXT_METHOD_NAME,
     SIZE_METHOD_NAME,
     INSTANCE_NAME,
+    AT_METHOD_NAME,
+    SETAT_METHOD_NAME,
 )
 from . import ast
-from .grammar import plus, ge, eq, true_k, false_k
+from .grammar import plus, ge, eq, true_k, false_k, mod
+
 
 def allow_type(type: Union[Type, Proto], type_or_proto: Union[Type, Proto]):
     if isinstance(type, Proto) and type_or_proto == OBJECT_TYPE:
@@ -22,6 +25,7 @@ def allow_type(type: Union[Type, Proto], type_or_proto: Union[Type, Proto]):
         return type.conforms_to(type_or_proto)
     else:
         return False
+
 
 class ErrorType(Type):
     def __init__(self):
@@ -169,12 +173,23 @@ class VectorType(Type):
 
     It cannot be typed because its name is lowercase."""
 
+    ARG_INDEX_NAME = "i"
+    ARG_VALUE_NAME = "v"
+
     def __init__(self, item_type: Union[Type, Proto]):
         super().__init__(f"vector_of_{item_type.name}")
         self.item_type = item_type
         self.define_method(NEXT_METHOD_NAME, [], BOOLEAN_TYPE)
         self.define_method(CURRENT_METHOD_NAME, [], item_type)
         self.define_method(SIZE_METHOD_NAME, [], NUMBER_TYPE)
+        self.define_method(
+            AT_METHOD_NAME, [(self.ARG_INDEX_NAME, NUMBER_TYPE)], item_type
+        )
+        self.define_method(
+            SETAT_METHOD_NAME,
+            [(self.ARG_INDEX_NAME, NUMBER_TYPE), (self.ARG_VALUE_NAME, item_type)],
+            item_type,
+        )
         self.set_parent(OBJECT_TYPE)
 
     @property
@@ -264,6 +279,69 @@ class VectorTypeInstance(VectorType):
                     ast.MemberAccessingNode(
                         ast.IdentifierNode(INSTANCE_NAME), names[-1]
                     ),
+                ),
+            )
+        )
+
+        at_method = self.get_method(AT_METHOD_NAME)
+        at_method.set_body(
+            ast.LetExprNode(
+                self.ARG_INDEX_NAME,
+                NUMBER_TYPE.name,
+                ast.ArithOpNode(
+                    ast.IdentifierNode(self.ARG_INDEX_NAME),
+                    mod.name,
+                    ast.NumberNode(str(len(values))),
+                ),
+                ast.ConditionalNode(
+                    [
+                        (
+                            ast.ComparisonOpNode(
+                                ast.IdentifierNode(self.ARG_INDEX_NAME),
+                                eq.name,
+                                ast.NumberNode(str(i)),
+                            ),
+                            ast.MemberAccessingNode(
+                                ast.IdentifierNode(INSTANCE_NAME), name
+                            ),
+                        )
+                        for i, name in enumerate(names)
+                    ],
+                    ast.MemberAccessingNode(
+                        ast.IdentifierNode(INSTANCE_NAME), names[-1]
+                    ),
+                ),
+            )
+        )
+
+        setat_method = self.get_method(SETAT_METHOD_NAME)
+        setat_method.set_body(
+            ast.LetExprNode(
+                self.ARG_INDEX_NAME,
+                NUMBER_TYPE.name,
+                ast.ArithOpNode(
+                    ast.IdentifierNode(self.ARG_INDEX_NAME),
+                    mod.name,
+                    ast.NumberNode(str(len(values))),
+                ),
+                ast.ConditionalNode(
+                    [
+                        (
+                            ast.ComparisonOpNode(
+                                ast.IdentifierNode(self.ARG_INDEX_NAME),
+                                eq.name,
+                                ast.NumberNode(str(i)),
+                            ),
+                            ast.MutationNode(
+                                ast.MemberAccessingNode(
+                                    ast.IdentifierNode(INSTANCE_NAME), name
+                                ),
+                                ast.IdentifierNode(self.ARG_VALUE_NAME),
+                            ),
+                        )
+                        for i, name in enumerate(names)
+                    ],
+                    ast.IdentifierNode(self.ARG_VALUE_NAME),
                 ),
             )
         )
