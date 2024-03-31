@@ -427,16 +427,10 @@ class Proto:
         return list(self._all_method_specs())
 
     def extends(self, other):
-        return other in self._ancestors()
+        return other in self._ancestors() if other != self else True
 
     def __eq__(self, other):
         return isinstance(other, Proto) and self.name == other.name
 
     def __hash__(self):
         return hash(self.name)
-
-
-def allow_type(type: Type, type_or_proto: Union[Type, Proto]):
-    if isinstance(type_or_proto, Type):
-        return type.conforms_to(type_or_proto)
-    return type.implements(type_or_proto)
