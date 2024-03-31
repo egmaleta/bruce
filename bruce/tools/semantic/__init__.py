@@ -204,6 +204,15 @@ class Type:
     ):
         try:
             self.get_method(name)
+            is_local = True
+            for method in self.methods:
+                if method.name == name:
+                    is_local = False
+                    break
+            if is_local:
+                raise SemanticError(
+                    f"Method '{name}' is already defined in type '{self.name}'."
+                )
         except SemanticError:
             method = Method(name, params, type)
             self.methods.append(method)
