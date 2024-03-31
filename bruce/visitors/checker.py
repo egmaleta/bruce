@@ -39,34 +39,32 @@ class SemanticChecker:
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
-        my_scope = scope.create_child()
-        for p in node.args:
-            self.visit(p, ctx, my_scope)
+        self.visit(node.target, ctx, scope)
 
-        self.visit(node.target, ctx, my_scope)
-        if not (
-            isinstance(node.target, MemberAccessingNode)
-            or isinstance(node.target, IdentifierNode)
-        ):
+        for arg in node.args:
+            self.visit(arg, ctx, scope)
+
+        if isinstance(node.target, IdentifierNode):
+            f = scope.find_function(node.target.value)
+            if f is None:
+                self.errors.append(f"Function {node.target.value} is not defined")
+            else:
+                if len(node.args) != len(f.params):
+                    self.errors.append(
+                        f"The number of arguments don't match the number of params of {f.name}"
+                    )
+
+        elif not (isinstance(node.target, MemberAccessingNode)):
             self.errors.append(
                 f"Cannot call a Function with targets that ar not MemeberAccesing or Identifier"
             )
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
-        if not scope.is_func_defined(node.id):
-            scope.define_function(node.id, node.params)
-        else:
-            self.errors.append(
-                f"Function {node.id} alredy defined. Cannot define more than one function with the same name"
-            )
+        func_scope = scope.create_child(is_function_scope=True)
+        for name, _ in node.params:
+            func_scope.define_variable(name)
 
-        func_scope = scope.create_child()
-
-        for param in node.params:
-            func_scope.define_variable(param[0])
-
-        # body es un BlockNode o  una expresion
         self.visit(node.body, ctx, func_scope)
 
     @visitor.when(BlockNode)
