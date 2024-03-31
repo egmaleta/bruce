@@ -30,17 +30,11 @@ class TypeChecker:
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope):
-        types_node = [
-            member for member in node.declarations if isinstance(member, TypeNode)
-        ]
-        order = topological_order(types_node)
-        if len(order) != len(types_node):
-            self.errors.append("Circular inheritance")
-        else:
-            for declaration in order:
+        for declaration in node.declarations:
+            if isinstance(declaration, TypeNode):
                 self.visit(declaration, ctx, scope.create_child())
-            self.current_type = None
-            self.visit(node.expr, ctx, scope.create_child())
+        self.current_type = None
+        self.visit(node.expr, ctx, scope.create_child())
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
@@ -233,7 +227,7 @@ class TypeChecker:
                         arg_type = self.visit(arg, ctx, scope.create_child())
                         if not allow_type(arg_type, instance_type.params[param]):
                             self.errors.append(
-                                f"Cannot convert {arg_type.name} to {param.name}"
+                                f"Cannot convert {arg_type.name} to {instance_type.params[param].name}"
                             )
         except SemanticError as se:
             self.errors.append(se.text)
