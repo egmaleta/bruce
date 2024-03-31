@@ -1,23 +1,20 @@
-from bruce import names
-from ..tools.semantic.scope import Scope
-from ..tools import visitor
-from ..ast import *
-
 from ..tools.semantic import Attribute, Function, SemanticError
 from ..tools.semantic.context import Context, get_safe_type
+from ..tools.semantic.scope import Scope
+from ..tools import visitor
+from .. import names
+from ..ast import *
 
 
-class SemanticChecker(object):  # TODO implement all the nodes
+class SemanticChecker:
     def __init__(self):
-        self.errors = []
+        self.errors: list[str] = []
 
     @visitor.on("node")
-    def visit(self, node, ctx: Context, scope: Scope):
+    def visit(self, node, ctx, scope):
         pass
 
-    @visitor.when(
-        ProgramNode
-    )  # falta ver que no esten def cosas con el mismo nombre y eso
+    @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope: Scope):
         program_scope = scope.create_child()
         for declaration in node.declarations:
