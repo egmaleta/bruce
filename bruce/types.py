@@ -202,6 +202,7 @@ class VectorType(Type):
 
 class VectorTypeInstance(VectorType):
     INDEX_NAME = "index"
+    DEFAULT_NAME = "default"
 
     def __init__(self, item_type: Type | Proto, values: list[tuple[Any, Type]]):
         super().__init__(item_type)
@@ -213,6 +214,9 @@ class VectorTypeInstance(VectorType):
         for name, value in zip(names, values):
             attr = self.define_attribute(name, None)
             attr.set_value(value)
+
+        attr = self.define_attribute(self.DEFAULT_NAME, None)
+        attr.set_value((None, OBJECT_TYPE))
 
         size_method = self.get_method(SIZE_METHOD_NAME)
         size_method.set_body(ast.NumberNode(str(len(values))))
@@ -254,12 +258,14 @@ class VectorTypeInstance(VectorType):
                     ]
                 ),
             )
+            if len(names) != 0
+            else ast.BooleanNode(false_k.name)
         )
 
         current_method = self.get_method(CURRENT_METHOD_NAME)
         current_method.set_body(
             ast.LetExprNode(
-                "x",
+                self.ARG_INDEX_NAME,
                 NUMBER_TYPE.name,
                 ast.MemberAccessingNode(
                     ast.IdentifierNode(INSTANCE_NAME), self.INDEX_NAME
@@ -268,7 +274,9 @@ class VectorTypeInstance(VectorType):
                     [
                         (
                             ast.ComparisonOpNode(
-                                ast.IdentifierNode("x"), eq.name, ast.NumberNode(str(i))
+                                ast.IdentifierNode(self.ARG_INDEX_NAME),
+                                eq.name,
+                                ast.NumberNode(str(i)),
                             ),
                             ast.MemberAccessingNode(
                                 ast.IdentifierNode(INSTANCE_NAME), name
@@ -280,6 +288,10 @@ class VectorTypeInstance(VectorType):
                         ast.IdentifierNode(INSTANCE_NAME), names[-1]
                     ),
                 ),
+            )
+            if len(names) != 0
+            else ast.MemberAccessingNode(
+                ast.IdentifierNode(INSTANCE_NAME), self.DEFAULT_NAME
             )
         )
 
@@ -311,6 +323,10 @@ class VectorTypeInstance(VectorType):
                         ast.IdentifierNode(INSTANCE_NAME), names[-1]
                     ),
                 ),
+            )
+            if len(names) != 0
+            else ast.MemberAccessingNode(
+                ast.IdentifierNode(INSTANCE_NAME), self.DEFAULT_NAME
             )
         )
 
@@ -344,6 +360,8 @@ class VectorTypeInstance(VectorType):
                     ast.IdentifierNode(self.ARG_VALUE_NAME),
                 ),
             )
+            if len(names) != 0
+            else ast.IdentifierNode(self.ARG_VALUE_NAME)
         )
 
 
