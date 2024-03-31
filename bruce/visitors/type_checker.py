@@ -2,7 +2,6 @@ from bruce import names
 from ..tools.semantic import Function, SemanticError, Type, allow_type
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
-from .type_builder import topological_order
 from ..tools import visitor
 from ..types import (
     BOOLEAN_TYPE,
@@ -29,17 +28,11 @@ class TypeChecker:
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context, scope):
-        types_node = [
-            member for member in node.declarations if isinstance(member, TypeNode)
-        ]
-        order = topological_order(types_node)
-        if len(order) != len(types_node):
-            self.errors.append("Circular inheritance")
-        else:
-            for declaration in order:
+        for declaration in node.declarations:
+            if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx, scope.create_child())
-            self.current_type = None
-            self.visit(node.expr, ctx, scope.create_child())
+        self.current_type = None
+        self.visit(node.expr, ctx, scope.create_child())
 
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
