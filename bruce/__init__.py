@@ -149,6 +149,11 @@ def pipeline(program: str):
     if len(errors) > 0:
         print(f"Semantic Checker: \n {errors}")
         return
+    inf = TypeInferer()
+    errors += inf.visit(ast, context, scope)
+    if len(errors) > 0:
+        print(f"Type Inferer: \n {errors}")
+        return
     tc = TypeChecker(errors)
     tc.visit(ast, context, scope)
     if len(errors) > 0:
