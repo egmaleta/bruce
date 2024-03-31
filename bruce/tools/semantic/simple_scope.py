@@ -81,11 +81,6 @@ class Scope:
 
     def get_top_scope(self):
         if self.parent is None:
-            scope = Scope()
-            for var in self.local_vars.values():
-                scope.local_vars[var.name] = var
-            for func in self.local_funcs.values():
-                scope.local_funcs[func.name] = func
-            return scope
+            return self
 
         return self.parent.get_top_scope()
