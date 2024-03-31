@@ -29,7 +29,7 @@ class SemanticChecker(object):  # TODO implement all the nodes
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
         if (
-            #not node.value == "self"
+            # not node.value == "self"
             not scope.is_var_defined(node.value)
             and not scope.is_func_defined(node.value)
         ):
