@@ -125,8 +125,10 @@ class TypeInferer:
 
     @visitor.when(ast.MemberAccessingNode)
     def visit(self, node: ast.MemberAccessingNode, ctx: Context, scope: Scope):
+        # CASE expr . id
         self.visit(node.target, ctx, scope)
 
+        # only valid case is when expr = self
         if (
             self.current_method is not None
             and isinstance(node.target, ast.IdentifierNode)
@@ -138,29 +140,9 @@ class TypeInferer:
             try:
                 return self.current_type.get_attribute(node.member_id).type
             except SemanticError:
-                return t.FUNCTION_TYPE
-
-        canditate_types = []
-
-        if node.member_id == SIZE_METHOD_NAME:
-            canditate_types.append(t.VectorType(t.OBJECT_TYPE))
-
-        for type in ctx.types.values():
-            try:
-                type.get_method(node.member_id)
-            except SemanticError:
                 pass
-            else:
-                canditate_types.append(type)
 
-        for proto in ctx.protocols.values():
-            if any(ms.name == node.member_id for ms in proto.all_method_specs()):
-                canditate_types.append(proto)
-
-        ut = t.UnionType(*canditate_types)
-        self._infer(node.target, scope, ut)
-
-        return t.FUNCTION_TYPE
+        return None
 
     @visitor.when(ast.FunctionCallNode)
     def visit(self, node: ast.FunctionCallNode, ctx: Context, scope: Scope):
@@ -230,6 +212,10 @@ class TypeInferer:
                             self._infer(arg, scope, pt)
 
                     return method.type
+
+            else:
+                # infer type of target based of method name
+                pass
 
         return None
 
