@@ -2,7 +2,8 @@ from math import sqrt, exp, log, sin, cos
 from random import random
 
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type, Attribute
+from ..tools.semantic import Type, Method, Proto, Attribute
+from ..types import allow_type
 from ..types import (
     NUMBER_TYPE,
     STRING_TYPE,
