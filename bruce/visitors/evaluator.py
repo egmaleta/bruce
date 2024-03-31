@@ -304,7 +304,7 @@ class Evaluator:
             fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
 
-        body, body_type = None  # will be set at least one time
+        body, body_type = None,None  # will be set at least one time
         while condition:
             body, body_type = self.visit(node.body, ctx, scope.create_child())
 
