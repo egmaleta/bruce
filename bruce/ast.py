@@ -1,16 +1,18 @@
 from .tools.semantic.ast import ASTNode, ExprNode
+from .tools.token import Token
 from dataclasses import dataclass
 
 
-@dataclass
 class ProgramNode(ASTNode):
-    declarations: list[ASTNode]
-    expr: ExprNode
+    def __init__(self, declarations: list[ASTNode], expr: ExprNode):
+        self.declarations: list[ASTNode] = declarations
+        self.expr: ExprNode = expr
 
 
-@dataclass
 class LiteralNode(ExprNode):
-    value: str
+    def __init__(self, token: Token):
+        self.value = token.lex
+        self.position = (token.lin, token.column)
 
 
 class NumberNode(LiteralNode):
@@ -18,9 +20,9 @@ class NumberNode(LiteralNode):
         return float(self.value)
 
 
-@dataclass
 class StringNode(LiteralNode):
-    def __post_init__(self):
+    def __init__(self, token: Token):
+        super().__init__(token)
         self.value = self.value[1:-1]
 
     def evaluate(self):
@@ -32,63 +34,73 @@ class BooleanNode(LiteralNode):
         return self.value == "true"
 
 
-@dataclass
 class IdentifierNode(LiteralNode):
-    is_builtin: bool = False
+    def __init__(self, value, is_builtin: bool = False):
+        super().__init__(value)
+        self.is_builtin: bool = is_builtin
 
 
-@dataclass
 class TypeInstancingNode(ExprNode):
-    type: str
-    args: list[ExprNode]
+    def __init__(self, token: Token, args: list[ExprNode]):
+        self.type: str = token.lex
+        self.args: list[ExprNode] = args
+        self.position = (token.line, token.column)
 
 
-@dataclass
 class VectorNode(ExprNode):
-    items: list[ExprNode]
+    def __init__(self, items: list[ExprNode]):
+        self.items: list[ExprNode] = items
+        self.position = (0, 0)
 
 
-@dataclass
 class MappedIterableNode(ExprNode):
-    map_expr: ExprNode
-    item_id: str
-    item_type: str | None
-    iterable_expr: ExprNode
+    def __init__(self, map_expr: ExprNode, item_id: Token, item_type: Token | None, iterable_expr: ExprNode):
+        self.map_expr: ExprNode = map_expr
+        self.item_id: str = item_id.lex
+        self.item_type: str | None = item_type.lex if item_type else None
+        self.iterable_expr: ExprNode = iterable_expr
+        self.item_id_position = (item_id.line, item_id.column)
+        self.item_type_position = (item_type.line, item_type.column) if item_type else (
+            item_id.line, item_id.column)
 
 
-@dataclass
 class MemberAccessingNode(ExprNode):
-    target: ExprNode
-    member_id: str
+    def __init__(self, target: ExprNode, member_id: Token):
+        self.target: ExprNode = target
+        self.member_id: str = member_id.lex
+        self.position = (member_id.line, member_id.column)
 
 
-@dataclass
 class FunctionCallNode(ExprNode):
-    target: ExprNode
-    args: list[ExprNode]
+    def __init__(self, target: ExprNode, args: list[ExprNode]):
+        self.target: ExprNode = target
+        self.args: list[ExprNode] = args
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class IndexingNode(ExprNode):
-    target: ExprNode
-    index: ExprNode
+    def __init__(self, target: ExprNode, index: ExprNode):
+        self.target: ExprNode = target
+        self.index: ExprNode = index
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class MutationNode(ExprNode):
-    target: ExprNode
-    value: ExprNode
+    def __init__(self, target: ExprNode, value: ExprNode):
+        self.target: ExprNode = target
+        self.value: ExprNode = value
+        self.position = (target.position[0], target.position[1])
 
-
-@dataclass
 class DowncastingNode(ExprNode):
-    target: ExprNode
-    type: str
+    def __init__(self, target: ExprNode, type: Token):
+        self.target: ExprNode = target
+        self.type: str = type.lex
+        self.position = (type.line, type.column)
 
-
-@dataclass
 class UnaryOpNode(ExprNode):
-    operand: ExprNode
+    def __init__(self, operand: ExprNode):
+        self.operand: ExprNode = operand
+        self.position = (operand.position[0], operand.position[1])
 
 
 class NegOpNode(UnaryOpNode):
@@ -99,11 +111,12 @@ class ArithNegOpNode(UnaryOpNode):
     pass
 
 
-@dataclass
 class BinaryOpNode(ExprNode):
-    left: ExprNode
-    operator: str
-    right: ExprNode
+    def __init__(self, left: ExprNode, operator: Token, right: ExprNode):
+        self.left: ExprNode = left
+        self.operator: str = operator.lex
+        self.right: ExprNode = right
+        self.position = (left.position[0], left.position[1])
 
 
 class LogicOpNode(BinaryOpNode):
@@ -128,74 +141,85 @@ class ConcatOpNode(BinaryOpNode):
         super().__init__(left, "@", right)
 
 
-@dataclass
 class TypeMatchingNode(ExprNode):
-    target: ExprNode
-    type: str
+    def __init__(self, target: ExprNode, type: str):
+        self.target: ExprNode = target
+        self.type: str = type
+        self.position = (target.position[0], target.position[1])
 
 
-@dataclass
 class BlockNode(ExprNode):
-    exprs: list[ExprNode]
+    def __init__(self, exprs: list[ExprNode]):
+        self.exprs: list[ExprNode] = exprs
+        self.position = (0, 0)
 
 
-@dataclass
 class LoopNode(ExprNode):
-    condition: ExprNode
-    body: ExprNode
-    fallback_expr: ExprNode
+    def __init__(self, condition: ExprNode, body: ExprNode, fallback_expr: ExprNode):
+        self.condition: ExprNode = condition
+        self.body: ExprNode = body
+        self.fallback_expr: ExprNode = fallback_expr
+        self.position = (condition.position[0], condition.position[1])
 
 
-@dataclass
 class ConditionalNode(ExprNode):
-    condition_branchs: list[tuple[ExprNode, ExprNode]]
-    fallback_branch: ExprNode
+    def __init__(self, condition_branchs: list[tuple[ExprNode, ExprNode]], fallback_branch: ExprNode):
+        self.condition_branchs: list[tuple[ExprNode, ExprNode]] = condition_branchs
+        self.fallback_branch: ExprNode = fallback_branch
+        self.position = (condition_branchs[0][0].position[0],
+                         condition_branchs[0][0].position[1])
 
 
-@dataclass
 class LetExprNode(ExprNode):
-    id: str
-    type: str | None
-    value: ExprNode
-    body: ExprNode
+    def __init__(self, id: Token, type: Token | None, value: ExprNode, body: ExprNode):
+        self.id = id.lex
+        self.type: str | None = type.lex
+        self.value: ExprNode = value
+        self.body: ExprNode = body
+        self.position = (id.line, id.column)
 
 
-@dataclass
 class FunctionNode(ASTNode):
-    id: str
-    params: list[tuple[str, str | None]]
-    return_type: str | None
-    body: ExprNode
+    def __init__(self, id: str, params: list[tuple[str, str | None]], return_type: str | None, body: ExprNode):
+        self.id: str = id
+        self.params: list[tuple[str, str | None]] = params
+        self.return_type: str | None = return_type
+        self.body: ExprNode = body
+        self.position = (0, 0)
 
 
-@dataclass
 class MethodSpecNode(ASTNode):
-    id: str
-    params: list[tuple[str, str]]
-    return_type: str
+    def __init__(self, id: str, params: list[tuple[str, str]], return_type: str):
+        self.id: str = id
+        self.params: list[tuple[str, str]] = params
+        self.return_type: str = return_type
+        self.position = (0, 0)
 
-
-@dataclass
 class ProtocolNode(ASTNode):
-    type: str
-    extends: list[str]
-    method_specs: list[MethodSpecNode]
+    def __init__(self, type: str, extends: list[str], method_specs: list[MethodSpecNode]):
+        self.type: str = type
+        self.extends: list[str] = extends
+        self.method_specs: list[MethodSpecNode] = method_specs
+        self.position = (0, 0)
 
 
-@dataclass
 class TypePropertyNode(ASTNode):
-    id: str
-    type: str | None
-    value: ExprNode
+    def __init__(self, id: Token, type: Token | None, value: ExprNode):
+        self.id: str = id.lex
+        self.type: str | None = type.lex
+        self.value: ExprNode = value
+        self.position = (id.line, id.column)
 
 
-@dataclass
 class TypeNode(ASTNode):
-    type: str
-    params: list[tuple[str, str | None]] | None
-    parent_type: str | None
-    parent_args: list[ExprNode] | None
-    members: list[TypePropertyNode | FunctionNode]
+    def __init__(self, type: Token, params: list[tuple[Token, Token | None]] | None, parent_type: Token | None, parent_args: list[ExprNode] | None, members: list[TypePropertyNode | FunctionNode]):
+        self.type: str = type.lex
+        self.params: list[tuple[str, str | None]] | None = [
+            (token1.lex, token2.lex) for token1, token2 in params]
+        self.parent_type: str | None = parent_type.lex
+        self.parent_args: list[ExprNode] | None = parent_args
+        self.members: list[TypePropertyNode | FunctionNode] = members
+        self.position = (type.line, type.column)
 
 
 # SYNTACTIC SUGAR

@@ -308,7 +308,7 @@ def evaluate(
             assert inherited[i] is None
             # Insert your code here ...
             token = next(tokens)
-            synteticed[i] = token.lex
+            synteticed[i] = token
         else:
             next_production = next(left_parse)
             assert symbol == next_production.left
