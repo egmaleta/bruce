@@ -73,16 +73,9 @@ class TypeCollector(object):
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
-        types_node = [
-            member for member in node.declarations if isinstance(member, TypeNode)
-        ]
-        order = topological_order(types_node)
-        if len(order) != len(types_node):
-            self.errors.append("Circular inheritance")
-        else:
-            for child in order:
-                if not isinstance(child, FunctionNode):
-                    self.visit(child, ctx)
+        for child in node.declarations:
+            if not isinstance(child, FunctionNode):
+                self.visit(child, ctx)
 
         return self.errors
 
