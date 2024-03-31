@@ -33,6 +33,8 @@ def topological_order(types: list[TypeNode]):
     def dfs(node, graph: Graph):
         visited[node] = True
         for neighbor in graph.edges[node]:
+            if visited[neighbor]:
+                backward_edge = True
             if neighbor and not visited[neighbor]:
                 dfs(neighbor, graph)
         order.append(node)
@@ -54,8 +56,6 @@ def topological_order(types: list[TypeNode]):
     for t in graph.types:
         if not visited[t.type]:
             dfs(t.type, graph)
-        else:
-            backward_edge = True
 
     order = order[::-1]
     indexs_after = indexs_after[::-1]

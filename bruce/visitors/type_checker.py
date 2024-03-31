@@ -45,8 +45,8 @@ class TypeChecker:
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
         self.current_type: Type = get_safe_type(node.type, ctx)
         scope_params = scope.create_child()
-        for param in node.params:
-            scope_params.define_variable(param[0], get_safe_type(param[1], ctx))
+        for n, t in self.current_type.params.items():
+            scope_params.define_variable(n, t)
         # This is to know if the args of the parents are ok
         if node.parent_type:
             if node.params:
@@ -70,9 +70,6 @@ class TypeChecker:
                             self.errors.append(
                                 f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
                             )
-            else:
-                parent_type = get_safe_type(node.parent_type, ctx)
-                self.current_type.set_parent(parent_type.params)
 
         for member in node.members:
             if isinstance(member, TypePropertyNode):
