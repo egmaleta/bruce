@@ -384,10 +384,10 @@ class TypeChecker:
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
         try:
-            types = [self.visit(expr, ctx, scope.create_child()) for expr in node.items]
-            if len(set(types)) != 1:
+            types = [self.visit(expr, ctx, scope) for expr in node.items]
+            if len(set(types)) > 1:
                 self.errors.append(f"Vector elements must have the same type")
-            return VectorType(types[0])
+            return VectorType(types[0]) if len(types) > 0 else VectorType(ERROR_TYPE)
         except SemanticError as se:
             self.errors.append(se.text)
 
