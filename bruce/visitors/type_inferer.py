@@ -6,7 +6,7 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import SIZE_METHOD_NAME, INSTANCE_NAME, CURRENT_METHOD_NAME, BASE_FUNC_NAME
+from .. import names as n
 
 
 class TypeInferer:
@@ -58,7 +58,7 @@ class TypeInferer:
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
         if (
             self.current_method is not None
-            and node.value == INSTANCE_NAME
+            and node.value == n.INSTANCE_NAME
             and node.value not in self.current_method.params
             and scope.find_variable(node.value).owner_scope.is_function_scope
         ):
@@ -113,7 +113,7 @@ class TypeInferer:
             elif isinstance(iterable_t, Type) and iterable_t.implements(
                 t.ITERABLE_PROTO
             ):
-                it = iterable_t.get_method(CURRENT_METHOD_NAME).type
+                it = iterable_t.get_method(n.CURRENT_METHOD_NAME).type
             elif iterable_t == t.ITERABLE_PROTO:
                 it = t.OBJECT_TYPE
 
@@ -132,7 +132,7 @@ class TypeInferer:
         if (
             self.current_method is not None
             and isinstance(node.target, ast.IdentifierNode)
-            and node.target.value == INSTANCE_NAME
+            and node.target.value == n.INSTANCE_NAME
             and node.target.value not in self.current_method.params
             and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
@@ -153,13 +153,15 @@ class TypeInferer:
             for arg in node.args:
                 self.visit(arg, ctx, scope)
 
-            if func_name == BASE_FUNC_NAME:
+            if func_name == n.BASE_FUNC_NAME:
                 if (
                     self.current_method is not None
                     and self.current_type is not None
                     and self.current_type.parent != t.OBJECT_TYPE
-                    and INSTANCE_NAME not in self.current_method.params
-                    and scope.find_variable(INSTANCE_NAME).owner_scope.is_function_scope
+                    and n.INSTANCE_NAME not in self.current_method.params
+                    and scope.find_variable(
+                        n.INSTANCE_NAME
+                    ).owner_scope.is_function_scope
                 ):
                     try:
                         method = self.current_type.parent.get_method(
@@ -201,6 +203,28 @@ class TypeInferer:
             if isinstance(target, ast.MemberAccessingNode):
                 return None
 
+            # infer target type
+            canditate_types = []
+
+            if member_id in (n.SIZE_METHOD_NAME, n.AT_METHOD_NAME, n.SETAT_METHOD_NAME):
+                canditate_types.append(t.VectorType(t.OBJECT_TYPE))
+
+            for type in ctx.types.values():
+                try:
+                    type.get_method(member_id)
+                except SemanticError:
+                    pass
+                else:
+                    canditate_types.append(type)
+
+            for proto in ctx.protocols.values():
+                if any(ms.name == member_id for ms in proto.all_method_specs()):
+                    canditate_types.append(proto)
+
+            ut = t.union_type(*canditate_types)
+            self._infer(target, scope, ut)
+
+            # infer arg types
             if type is not None:
                 try:
                     method = type.get_method(member_id)
@@ -212,10 +236,6 @@ class TypeInferer:
                             self._infer(arg, scope, pt)
 
                     return method.type
-
-            else:
-                # infer type of target based of method name
-                pass
 
         return None
 
@@ -371,8 +391,8 @@ class TypeInferer:
         for name, pt in f.params.items():
             child_scope.define_variable(name, pt)
 
-        if is_method and INSTANCE_NAME not in f.params:
-            child_scope.define_variable(INSTANCE_NAME, self.current_type)
+        if is_method and n.INSTANCE_NAME not in f.params:
+            child_scope.define_variable(n.INSTANCE_NAME, self.current_type)
 
         rt = self.visit(node.body, ctx, child_scope)
 
