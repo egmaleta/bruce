@@ -219,16 +219,42 @@ class Evaluator:
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
-        value, value_type = self.visit(node.value, ctx, scope.create_child())
-        if isinstance(node.target, IdentifierNode):
-            scope.find_variable(node.target.value).set_value((value, value_type))
-        elif isinstance(node.target, MemberAccessingNode):
-            target = node.target.target
-            inst, inst_type = self.visit(target, ctx, scope)
-            attr = inst.get_attribute(node.target.member_id)
-            attr.set_value((value, value_type))
+        visit_value = lambda: self.visit(node.value, ctx, scope)
 
-        return value, value_type
+        # CASE id := expr
+        if isinstance(node.target, IdentifierNode):
+            # self := expr is invalid
+            assert node.target.value != names.INSTANCE_NAME
+
+            value = visit_value()
+
+            var = scope.find_variable(node.target.value)
+            var.set_value(value)
+            return value
+
+        # CASE self . id := expr
+        if isinstance(node.target, MemberAccessingNode):
+            target = node.target.target
+            member = node.target.member_id
+
+            # 'self' must refer to the instance of the type owner of the current method
+            assert (
+                isinstance(target, IdentifierNode)
+                and target.value == names.INSTANCE_NAME
+                and self.current_method is not None
+                and target.value not in self.current_method.params
+                and scope.find_variable(target.value).owner_scope.is_function_scope
+            )
+
+            inst, _ = self.visit(target, ctx, scope)
+            value = visit_value()
+
+            attr = inst.get_attribute(member)
+            attr.set_value(value)
+            return value
+
+        # CASE expr [ expr ] := expr (SOON)
+        # TODO assert isinstance(node.target, IndexingNode)
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
@@ -273,26 +299,34 @@ class Evaluator:
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
-        condition, condition_type = self.visit(
-            node.condition, ctx, scope.create_child()
-        )
+        condition, _ = self.visit(node.condition, ctx, scope)
         if not condition:
             fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
-        else:
-            while condition:
-                body, body_type = self.visit(node.body, ctx, scope.create_child())
-                condition, condition_type = self.visit(
-                    node.condition, ctx, scope.create_child()
-                )
-            return body, body_type
+
+        body, body_type = None  # will be set at least one time
+        while condition:
+            body, body_type = self.visit(node.body, ctx, scope.create_child())
+
+            condition = self.visit(node.condition, ctx, scope)[0]
+
+        return body, body_type
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
         left_value, left_type = self.visit(node.left, ctx, scope)
         right_value, right_type = self.visit(node.right, ctx, scope)
+
+        op = node.operator
+        if op == "/":
+            try:
+                l, r = int(left_value), int(right_value)
+                return (l // r, NUMBER_TYPE)
+            except:
+                pass
+
         return (
-            Evaluator.artih_op_funcs[node.operator](left_value, right_value),
+            Evaluator.artih_op_funcs[op](left_value, right_value),
             NUMBER_TYPE,
         )
 
