@@ -30,20 +30,11 @@ class SemanticChecker:
 
     @visitor.when(IdentifierNode)
     def visit(self, node: IdentifierNode, ctx: Context, scope: Scope):
-        if (
-            # not node.value == "self"
-            not scope.is_var_defined(node.value)
-            and not scope.is_func_defined(node.value)
-        ):
+        if not scope.is_var_defined(node.value):
             self.errors.append(f"Variable {node.value} not defined")
 
     @visitor.when(FunctionCallNode)
     def visit(self, node: FunctionCallNode, ctx: Context, scope: Scope):
-        self.visit(node.target, ctx, scope)
-
-        for arg in node.args:
-            self.visit(arg, ctx, scope)
-
         if isinstance(node.target, IdentifierNode):
             f = scope.find_function(node.target.value)
             if f is None:
@@ -54,10 +45,16 @@ class SemanticChecker:
                         f"The number of arguments don't match the number of params of {f.name}"
                     )
 
-        elif not (isinstance(node.target, MemberAccessingNode)):
-            self.errors.append(
-                f"Cannot call a Function with targets that ar not MemeberAccesing or Identifier"
-            )
+        else:
+            self.visit(node.target, ctx, scope)
+
+            if not isinstance(node.target, MemberAccessingNode):
+                self.errors.append(
+                    f"Cannot call a Function with targets that are not MemberAccesing or Identifier"
+                )
+
+        for arg in node.args:
+            self.visit(arg, ctx, scope)
 
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
