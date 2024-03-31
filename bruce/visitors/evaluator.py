@@ -2,7 +2,8 @@ from math import sqrt, exp, log, sin, cos
 from random import random
 
 from ..tools import visitor
-from ..tools.semantic import Type, Method, Proto, allow_type, Attribute
+from ..tools.semantic import Type, Method, Proto, Attribute
+from ..types import allow_type
 from ..types import (
     NUMBER_TYPE,
     STRING_TYPE,
@@ -304,7 +305,7 @@ class Evaluator:
             fb_expr, fb_type = self.visit(node.fallback_expr, ctx, scope.create_child())
             return fb_expr, fb_type
 
-        body, body_type = None  # will be set at least one time
+        body, body_type = None,None  # will be set at least one time
         while condition:
             body, body_type = self.visit(node.body, ctx, scope.create_child())
 

@@ -13,6 +13,17 @@ from .names import (
 from . import ast
 from .grammar import plus, ge, eq, true_k, false_k, mod
 
+def allow_type(type: Union[Type, Proto], type_or_proto: Union[Type, Proto]):
+    if isinstance(type, Proto) and type_or_proto == OBJECT_TYPE:
+        return True
+    elif isinstance(type, Proto) and isinstance(type_or_proto, Proto):
+        return type.extends(type_or_proto)
+    elif isinstance(type, Type) and isinstance(type_or_proto, Proto):
+        return type.implements(type_or_proto)
+    elif isinstance(type, Type) and isinstance(type_or_proto, Type):
+        return type.conforms_to(type_or_proto)
+    else:
+        return False
 
 class ErrorType(Type):
     def __init__(self):
