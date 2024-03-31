@@ -143,6 +143,7 @@ def pipeline(program: str):
     errors += fc.visit(ast, context, scope)
     if len(errors) > 0:
         print(f"Function Collector: \n {errors}")
+        return
     sc = SemanticChecker()
     errors += sc.visit(ast, context, scope)
     if len(errors) > 0:
