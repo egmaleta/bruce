@@ -130,7 +130,7 @@ class Evaluator:
                 self.visit(member, ctx, scope)
                 self.current_method = None
 
-        if node.parent_args:
+        if node.parent_args is not None:
             self.current_type.set_parent_args(node.parent_args)
 
         self.current_type = None
@@ -201,7 +201,7 @@ class Evaluator:
 
                     if names.INSTANCE_NAME not in method.params:
                         child_scope.define_variable(
-                            names.INSTANCE_NAME, None, (inst, inst_type)
+                            names.INSTANCE_NAME, None, (inst.parent, inst_type.parent)
                         )
 
                     last = self.current_method
@@ -303,6 +303,7 @@ class Evaluator:
 
         arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
         instance = dyn_type.clone()
+        first_instance = instance
 
         while True:
             child_scope = global_scope.create_child()
@@ -326,7 +327,7 @@ class Evaluator:
             arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
             instance = instance.parent
 
-        return (instance, dyn_type)
+        return (first_instance, dyn_type)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):

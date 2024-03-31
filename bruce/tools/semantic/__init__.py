@@ -346,6 +346,8 @@ class Type:
             for attr in self.attributes
         ]
 
+        new_type.set_parent_args(self.parent_args)
+
         return new_type
 
 
