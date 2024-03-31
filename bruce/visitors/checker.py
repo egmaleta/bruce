@@ -1,4 +1,4 @@
-from ..tools.semantic import Attribute, Function, SemanticError
+from ..tools.semantic import SemanticError, Proto
 from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from ..tools import visitor
@@ -146,47 +146,30 @@ class SemanticChecker:
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
-        type = None
-
         try:
-            type = ctx.get_type(node.type)
-        except SemanticError:
-            self.errors.append(
-                f"Type {node.type} does not exist in the current context"
-            )
-
-        try:
-            ctx.get_protocol(node.type)
-        except:
-            pass
+            type = get_safe_type(node.type, ctx)
+        except SemanticError as se:
+            self.errors.append(se.text)
         else:
-            self.errors.append(
-                f"Protocols, such as {node.type}, cannot be instantiated"
-            )
+            if isinstance(type, Proto):
+                self.errors.append(
+                    f"Protocols, such as {node.type}, cannot be instantiated"
+                )
+            else:
+                if len(node.args) != len(type.params):
+                    self.errors.append(
+                        f"The number of arguments don't match the number of params of {type.name}"
+                    )
 
         for arg in node.args:
             self.visit(arg, ctx, scope)
 
-        if type is not None and len(node.args) != len(type.params):
-            self.errors.append(
-                f"The number of arguments don't match the number of params of {type.name}"
-            )
-
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
         try:
-            ctx.get_type(node.type)
-        except SemanticError:
-            self.errors.append(
-                f"Type {node.type} does not exist in the current context"
-            )
-
-        try:
-            ctx.get_protocol(node.type)
-        except SemanticError:
-            self.errors.append(
-                f"Protocol {node.type} does not exist in the current context"
-            )
+            get_safe_type(node.type, ctx)
+        except SemanticError as se:
+            self.errors.append(se.text)
 
         self.visit(node.target, ctx, scope)
 
@@ -210,18 +193,9 @@ class SemanticChecker:
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
         try:
-            ctx.get_type(node.type)
-        except SemanticError:
-            self.errors.append(
-                f"Type {node.type} does not exist in the current context"
-            )
-
-        try:
-            ctx.get_protocol(node.type)
-        except SemanticError:
-            self.errors.append(
-                f"Protocol {node.type} does not exist in the current context"
-            )
+            get_safe_type(node.type, ctx)
+        except SemanticError as se:
+            self.errors.append(se.text)
 
         self.visit(node.target, ctx, scope)
 
