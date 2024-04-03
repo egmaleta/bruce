@@ -435,7 +435,7 @@ class Proto:
         type: Union["Type", "Proto"],
     ):
         spec = MethodSpec(name, params, type)
-        if spec not in self._all_method_specs():
+        if spec not in self.method_specs:
             self.method_specs.append(spec)
 
     def all_method_specs(self):
