@@ -111,11 +111,14 @@ class TypeBuilder(object):
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
-        types = [types for types in node.declarations if isinstance(types, TypeNode)]
-        types = topological_order(types)
-        if len(types) == 0:
-            self.errors.append("Circular inheritance detected")
-            return self.errors
+        # check circular deps
+        tnodes = [tn for tn in node.declarations if isinstance(tn, TypeNode)]
+        if len(tnodes) > 0:
+            tnodes = topological_order(tnodes)
+            if len(tnodes) == 0:
+                self.errors.append("Circular inheritance detected")
+                return self.errors
+
         for declaration in node.declarations:
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
