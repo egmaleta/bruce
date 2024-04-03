@@ -39,7 +39,7 @@ class TypeChecker:
     @visitor.when(TypeNode)
     def visit(self, node: TypeNode, ctx: Context, scope: Scope):
         self.current_type: Type = get_safe_type(node.type, ctx)
-        scope_params = scope.create_child()
+        scope_params = scope.get_top_scope().create_child()
         for n, t in self.current_type.params.items():
             scope_params.define_variable(n, t)
         # This is to know if the args of the parents are ok
@@ -63,7 +63,7 @@ class TypeChecker:
                         parent_arg_type = parent_type.params[parent_arg]
                         if not allow_type(arg_type, parent_arg_type):
                             self.errors.append(
-                                f"Cannot convert {arg_type.name} into {parent_arg.type.name}"
+                                f"Cannot convert {arg_type.name} into {parent_arg_type.name}"
                             )
 
         for member in node.members:
@@ -75,9 +75,9 @@ class TypeChecker:
             if isinstance(member, FunctionNode):
                 child_scope = global_scope.create_child()
                 child_scope.define_variable(names.INSTANCE_NAME, self.current_type)
-                self.current_method = self.current_type.get_method(member.id)
                 self.visit(member, ctx, child_scope)
-
+                self.current_method = None
+                
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)
@@ -92,7 +92,7 @@ class TypeChecker:
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
         attributte_type = self.visit(node.value, ctx, scope.create_child())
-        node_type = get_safe_type(node.type, ctx)
+        node_type = self.current_type.get_attribute(node.id).type
         if not allow_type(attributte_type, node_type):
             self.errors.append(
                 f"Cannot convert {attributte_type.name} to {node_type.name}"
