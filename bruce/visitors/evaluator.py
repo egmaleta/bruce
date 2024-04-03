@@ -166,7 +166,7 @@ class Evaluator:
         receiver, _ = self.visit(node.target, ctx, scope)
         assert isinstance(receiver, Type)
 
-        attr = receiver.get_attribute(node.member_id)
+        attr = receiver.get_attribute(node.member_id, True)
         assert isinstance(attr, Attribute)
 
         return attr.value
