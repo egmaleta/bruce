@@ -417,10 +417,14 @@ class Proto:
         if target is not None:
             return target
 
-        if self.parent is None:
-            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
         try:
-            return self.parent.get_method(name)
+            method = None
+            for parent in self.parents:
+                method = parent.get_method(name)
+            if method is None:
+                raise SemanticError()
+            else:
+                return method
         except SemanticError:
             raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
