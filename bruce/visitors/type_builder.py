@@ -61,7 +61,7 @@ def topological_order(types: list[TypeNode]):
 
     order = order[::-1]
     indexs_after = indexs_after[::-1]
-    
+
     backward_edge = any(backward_edges.values())
 
     return [types[i] for i in indexs_after] if not backward_edge else []
@@ -175,6 +175,9 @@ class TypeBuilder(object):
             self.current_type = ctx.get_protocol(node.type)
         except SemanticError as se:
             self.errors.append(se.text)
+
+        for parent in node.extends:
+            self.current_type.add_parent(get_safe_type(parent, ctx))
 
         for method_spec in node.method_specs:
             self.visit(method_spec, ctx)
