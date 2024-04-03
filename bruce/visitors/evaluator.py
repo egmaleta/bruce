@@ -464,7 +464,7 @@ class Evaluator:
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
         if allow_type(target_value[1], node_type):
-            return target_value[0], node_type
+            return target_value[0], target_value[1]
         raise Exception(
             f"Downcasting error: {target_value[1]} does not conform to {node_type}"
         )
