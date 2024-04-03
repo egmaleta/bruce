@@ -77,7 +77,7 @@ class TypeChecker:
                 child_scope.define_variable(names.INSTANCE_NAME, self.current_type)
                 self.visit(member, ctx, child_scope)
                 self.current_method = None
-                
+
     @visitor.when(FunctionNode)
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)

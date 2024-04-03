@@ -155,7 +155,7 @@ class Type:
         if name in self.params and self.params[name] is None:
             self.params[name] = type
 
-    def get_attribute(self, name: str, ejecution_f = False):
+    def get_attribute(self, name: str, ejecution_f=False):
         target = None
         for attr in self.attributes:
             if attr.name == name:
@@ -164,7 +164,7 @@ class Type:
 
         if target is not None:
             return target
-        
+
         if ejecution_f and self.parent is not None:
             return self.parent.get_attribute(name, ejecution_f)
 

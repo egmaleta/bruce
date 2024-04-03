@@ -375,7 +375,7 @@ class TypeInferer:
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
         vt = self.visit(node.value, ctx, scope)
         at = get_safe_type(node.type, ctx)
-        
+
         node.type = vt.name if vt is not None else vt
 
         child_scope = scope.create_child()
@@ -469,7 +469,7 @@ class TypeInferer:
             for decl in node.declarations:
                 if not isinstance(decl, ast.ProtocolNode):
                     self.visit(decl, ctx, scope)
-                    
+
             self.visit(node.expr, ctx, scope)
 
             if self.occurs == False:
