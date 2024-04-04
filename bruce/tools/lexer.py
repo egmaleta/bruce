@@ -104,7 +104,6 @@ class Lexer:
             tokens.append(Token(lex, ttype, line, column))
             column += len(lex)
         return tokens
-        
 
 
 def create_lexer(table: list[tuple[Terminal, str]], eof: EOF):

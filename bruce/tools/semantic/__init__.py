@@ -410,7 +410,7 @@ class MethodSpec:
 
         if self.name != other.name:
             return False
-        
+
         return True
 
     def __hash__(self):
@@ -494,7 +494,9 @@ class Proto:
                         raise SemanticError(
                             f"Method '{name}' is already defined in protocol '{parent.name}'."
                         )
-            raise SemanticError(f"Method '{name}' is already defined in protocol '{self.name}'.")
+            raise SemanticError(
+                f"Method '{name}' is already defined in protocol '{self.name}'."
+            )
 
     def all_method_specs(self):
         return list(self._all_method_specs())

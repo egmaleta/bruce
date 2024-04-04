@@ -249,7 +249,9 @@ def create_parser(
                 try:
                     M[top, a][0]
                 except KeyError:
-                    raise UnexpectedToken(current_token.lex, None, current_token.position[0])
+                    raise UnexpectedToken(
+                        current_token.lex, None, current_token.position[0]
+                    )
                 else:
                     p = M[top, a][0]
                 output.append(p)
