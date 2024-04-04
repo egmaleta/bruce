@@ -111,6 +111,21 @@ class Function:
 
         return f"{self._label} {self.name}({params}): {typename};"
 
+    def __eq__(self, value: "Function") -> bool:
+        if value.name != self.name:
+            return False
+
+        if len(value.params) != len(self.params):
+            return False
+
+        for key in self.params.keys():
+            if key not in value.params:
+                return False
+            if self.params[key] != value.params[key]:
+                return False
+
+        return True
+
 
 class Method(Function):
     def __init__(
@@ -205,22 +220,43 @@ class Type:
         params: list[tuple[str, Union["Type", "Proto", None]]],
         type: Union["Type", "Proto", None] = None,
     ):
+        def create_method(name, params, type):
+            method = Method(name, params, type)
+            self.methods.append(method)
+            return method
+
         try:
-            self.get_method(name)
+            parent_method = self.get_method(name)
             is_local = True
             for method in self.methods:
                 if method.name == name:
                     is_local = False
                     break
-            if is_local:
-                raise SemanticError(
-                    f"Method '{name}' is already defined in type '{self.name}'."
-                )
+
         except SemanticError:
-            method = Method(name, params, type)
-            self.methods.append(method)
-            return method
+            return create_method(name, params, type)
         else:
+
+            if len(parent_method.params) != len(params):
+                raise SemanticError(
+                    f"Method '{name}' has a different number of parameters than the parent method."
+                )
+
+            for (pname, ptype), (ppname, pptype) in zip(
+                params, parent_method.params.items()
+            ):
+                if pname != ppname or ptype != pptype:
+                    raise SemanticError(
+                        f"Method '{name}' has a different parameter list than the parent method."
+                    )
+
+            if parent_method.type != type:
+                raise SemanticError(
+                    f"Method '{name}' has a different return type than the parent method."
+                )
+
+            if is_local:
+                return create_method(name, params, type)
             raise SemanticError(
                 f"Method '{name}' is already defined in type '{self.name}'."
             )
@@ -366,7 +402,22 @@ class MethodSpec:
         self.type = type
 
     def __eq__(self, other):
-        return self.name == other.name
+        if not isinstance(other, MethodSpec):
+            return False
+
+        if self.name != other.name:
+            return False
+
+        if len(self.params) != len(other.params):
+            return False
+
+        for key in self.params.keys():
+            if key not in other.params:
+                return False
+            if self.params[key] != other.params[key]:
+                return False
+
+        return True
 
     def __hash__(self):
         return hash(self.name)
