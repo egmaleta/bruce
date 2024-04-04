@@ -268,7 +268,9 @@ def create_parser(
 
             if not stack:
                 if cursor < len(tokens) - 1:
-                    raise UnexpectedToken(current_token.lex, None, current_token.position[0])
+                    raise UnexpectedToken(
+                        current_token.lex, None, current_token.position[0]
+                    )
                 break
 
         return output
