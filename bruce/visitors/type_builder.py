@@ -180,7 +180,10 @@ class TypeBuilder(object):
             self.errors.append(se.text)
 
         for parent in node.extends:
-            self.current_type.add_parent(get_safe_type(parent, ctx))
+            if not isinstance(get_safe_type(parent, ctx), Proto):
+                self.errors.append(f"Cannot extends from type {parent}")
+            else:
+                self.current_type.add_parent(get_safe_type(parent, ctx))
 
         for method_spec in node.method_specs:
             self.visit(method_spec, ctx)
