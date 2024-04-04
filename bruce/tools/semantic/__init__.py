@@ -112,6 +112,9 @@ class Function:
         return f"{self._label} {self.name}({params}): {typename};"
 
     def __eq__(self, value: "Function") -> bool:
+        if not isinstance(value, Function):
+            return False
+
         if value.name != self.name:
             return False
 
@@ -407,16 +410,7 @@ class MethodSpec:
 
         if self.name != other.name:
             return False
-
-        if len(self.params) != len(other.params):
-            return False
-
-        for key in self.params.keys():
-            if key not in other.params:
-                return False
-            if self.params[key] != other.params[key]:
-                return False
-
+        
         return True
 
     def __hash__(self):
@@ -493,6 +487,14 @@ class Proto:
         spec = MethodSpec(name, params, type)
         if spec not in self._all_method_specs():
             self.method_specs.append(spec)
+        else:
+            for parent in self.parents:
+                for p_spec in parent.method_specs:
+                    if p_spec == spec:
+                        raise SemanticError(
+                            f"Method '{name}' is already defined in protocol '{parent.name}'."
+                        )
+            raise SemanticError(f"Method '{name}' is already defined in protocol '{self.name}'.")
 
     def all_method_specs(self):
         return list(self._all_method_specs())
