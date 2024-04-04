@@ -374,14 +374,39 @@ class TypeInferer:
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
         vt = self.visit(node.value, ctx, scope)
-        at = get_safe_type(node.type, ctx)
 
-        node.type = vt.name if vt is not None else vt
+        # NASTY PATCH
+        at = None
+        if isinstance(node.type, Type):
+            at = node.type
+        else:
+            at = get_safe_type(node.type, ctx)
 
         child_scope = scope.create_child()
         child_scope.define_variable(node.id, at if at is not None else vt)
 
-        return self.visit(node.body, ctx, child_scope)
+        lt = self.visit(node.body, ctx, child_scope)
+
+        # keep type of 'at' stored at node
+        # similar to _infer method
+        var = child_scope.find_variable(node.id)
+        if var.type is not None:
+            if at is None:
+                node.type = var.type
+                self.occurs = True
+            elif isinstance(at, t.UnionType):
+                itsc = at & var.type
+                l = len(itsc)
+                if 0 < l < len(at):
+                    self.occurs = True
+
+                    if l == 1:
+                        type, *_ = itsc
+                        node.type = type
+                    else:
+                        node.type = itsc
+
+        return lt
 
     @visitor.when(ast.FunctionNode)
     def visit(self, node: ast.FunctionNode, ctx: Context, scope: Scope):
