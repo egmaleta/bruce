@@ -239,7 +239,6 @@ def create_parser(
             p = M[G.start_symbol, token_types[cursor]][0]
         output = [p]
         stack = [*reversed(p.right)]
-        errors = []
 
         while True:
             top = stack.pop()
@@ -250,7 +249,7 @@ def create_parser(
                 try:
                     M[top, a][0]
                 except KeyError:
-                    raise UnexpectedToken(current_token.lex, None, cursor)
+                    raise UnexpectedToken(current_token.lex, None, current_token.position[0])
                 else:
                     p = M[top, a][0]
                 output.append(p)
@@ -266,6 +265,8 @@ def create_parser(
                     raise UnexpectedToken(current_token.lex, top)
 
             if not stack:
+                if cursor < len(tokens) - 1:
+                    raise BadEOFError()
                 break
 
         return output
