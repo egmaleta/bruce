@@ -14,6 +14,8 @@ class TypeInferer:
         self.errors: list[str] = []
         self.occurs = False
 
+        self.all_let_exprs: list[ast.LetExprNode] = []
+
         # set before read
         self.current_type: Type = None
         self.current_method: Method = None
@@ -373,6 +375,8 @@ class TypeInferer:
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
+        self.all_let_exprs.append(node)
+
         vt = self.visit(node.value, ctx, scope)
 
         # NASTY PATCH
@@ -490,6 +494,7 @@ class TypeInferer:
     def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
         while True:
             self.occurs = False
+            self.all_let_exprs = []
 
             for decl in node.declarations:
                 if not isinstance(decl, ast.ProtocolNode):
@@ -535,6 +540,12 @@ class TypeInferer:
             if f.type is None:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
+                )
+
+        for expr in self.all_let_exprs:
+            if expr.type is None:
+                self.errors.append(
+                    f"Couldn't infer type of variable bound to name '{expr.id}'"
                 )
 
         return self.errors
