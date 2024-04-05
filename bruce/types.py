@@ -209,6 +209,9 @@ class VectorType(Type):
     def __eq__(self, other):
         return isinstance(other, VectorType) and self.item_type == other.item_type
 
+    def __hash__(self):
+        return hash(self.name)
+
 
 class VectorTypeInstance(VectorType):
     INDEX_NAME = "index"
