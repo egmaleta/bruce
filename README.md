@@ -21,3 +21,13 @@ Finally, install the project dependencies and scripts by running:
 ```bash
 poetry install
 ```
+
+## Usage
+
+To use the project only run the project's main Python file with the desired file as an argument:
+
+```shell
+python main.py "file.hulk"
+```
+
+Make sure you have the directory `bruce/serialize_objects` because the lexer will try to look up in that folder all the regexs generated previously or create them.
