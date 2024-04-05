@@ -82,12 +82,13 @@ class TypeChecker:
     def visit(self, node: FunctionNode, ctx: Context, scope: Scope):
         self.current_method = self.current_type.get_method(node.id)
         child_scope = scope.create_child()
-        for param in node.params:
-            child_scope.define_variable(param[0], get_safe_type(param[1], ctx))
+        for param in self.current_method.params:
+            child_scope.define_variable(param, self.current_method.params[param])
         body_type = self.visit(node.body, ctx, child_scope)
-        return_type = get_safe_type(node.return_type, ctx)
-        if not allow_type(body_type, return_type):
-            self.errors.append(f"Cannot convert {body_type.name} in {node.return_type}")
+        if not allow_type(body_type, self.current_method.type):
+            self.errors.append(
+                f"Cannot convert {body_type.name} in {self.current_method.type.name}"
+            )
 
     @visitor.when(TypePropertyNode)
     def visit(self, node: TypePropertyNode, ctx: Context, scope: Scope):
@@ -223,7 +224,11 @@ class TypeChecker:
     def visit(self, node: LetExprNode, ctx: Context, scope: Scope):
         try:
             value_type = self.visit(node.value, ctx, scope)
-            node_type = get_safe_type(node.type, ctx)
+            node_type = (
+                get_safe_type(node.type, ctx)
+                if isinstance(node.type, str)
+                else node.type
+            )
             if not allow_type(value_type, node_type):
                 self.errors.append(
                     f"Cannot convert {value_type.name} to {node_type.name}"
@@ -236,6 +241,9 @@ class TypeChecker:
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
+        if isinstance(node.target, IdentifierNode) and node.target.value == "self":
+            self.errors.append(f"self is not a valid assignment target")
+            return ERROR_TYPE
         try:
             target = self.visit(node.target, ctx, scope.create_child())
             if not target:
@@ -244,11 +252,12 @@ class TypeChecker:
                 value_type = self.visit(node.value, ctx, scope.create_child())
                 if not allow_type(value_type, target):
                     self.errors.append(
-                        f"Cannot convert {value_type.name} to {target.type.name}"
+                        f"Cannot convert {value_type.name} to {target.name}"
                     )
                 return value_type
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(TypeInstancingNode)
     def visit(self, node: TypeInstancingNode, ctx: Context, scope: Scope):
