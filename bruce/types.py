@@ -136,14 +136,14 @@ class UnionType(Type):
     def conforms_to(self, other: "Type"):
         if not isinstance(other, UnionType):
             return any(t.conforms_to(other) for t in self.types)
-        
+
         if len(self.types) != len(other.types):
             return False
-        
+
         for t1, t2 in zip(self.types, other.types):
             if t1 != t2:
                 return False
-            
+
         return True
 
     def __eq__(self, other):
