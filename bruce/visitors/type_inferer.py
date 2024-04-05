@@ -14,7 +14,7 @@ class TypeInferer:
         self.errors: list[str] = []
         self.occurs = False
 
-        self.all_let_exprs: list[ast.LetExprNode] = []
+        self.exprs_with_decl: list[Union[ast.LetExprNode, ast.MappedIterableNode]] = []
 
         # set before read
         self.current_type: Type = None
@@ -104,7 +104,15 @@ class TypeInferer:
 
     @visitor.when(ast.MappedIterableNode)
     def visit(self, node: ast.MappedIterableNode, ctx: Context, scope: Scope):
-        it = get_safe_type(node.item_type, ctx)
+        self.exprs_with_decl.append(node)
+
+        # NASTY PATCH
+        it = None
+        if isinstance(node.item_type, Type):
+            it = node.item_type
+        else:
+            it = get_safe_type(node.item_type, ctx)
+
         iterable_t = self.visit(node.iterable_expr, ctx, scope)
 
         self._infer(node.iterable_expr, scope, t.ITERABLE_PROTO)
@@ -118,6 +126,10 @@ class TypeInferer:
                 it = iterable_t.get_method(n.CURRENT_METHOD_NAME).type
             elif iterable_t == t.ITERABLE_PROTO:
                 it = t.OBJECT_TYPE
+
+            if it is not None:
+                node.item_type = it
+                self.occurs = True
 
         child_scope = scope.create_child()
         child_scope.define_variable(node.item_id, it)
@@ -375,7 +387,7 @@ class TypeInferer:
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
-        self.all_let_exprs.append(node)
+        self.exprs_with_decl.append(node)
 
         vt = self.visit(node.value, ctx, scope)
 
@@ -494,7 +506,7 @@ class TypeInferer:
     def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
         while True:
             self.occurs = False
-            self.all_let_exprs = []
+            self.exprs_with_decl = []
 
             for decl in node.declarations:
                 if not isinstance(decl, ast.ProtocolNode):
@@ -542,10 +554,14 @@ class TypeInferer:
                     f"Couldn't infer return type of function '{f.name}'."
                 )
 
-        for expr in self.all_let_exprs:
-            if expr.type is None:
+        for expr in self.exprs_with_decl:
+            if isinstance(expr, ast.LetExprNode) and expr.type is None:
                 self.errors.append(
                     f"Couldn't infer type of variable bound to name '{expr.id}'"
+                )
+            elif isinstance(expr, ast.MappedIterableNode) and expr.item_type is None:
+                self.errors.append(
+                    f"Couldn't infer type of variable bound to name '{expr.item_id}'"
                 )
 
         return self.errors
