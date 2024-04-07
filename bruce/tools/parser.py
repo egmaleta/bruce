@@ -26,15 +26,15 @@ class UnexpectedToken(ParsingError):
     Unexpected token error.
     """
 
-    def __init__(self, token, token_expected=None, line=None):
+    def __init__(self, token, token_expected=None, line=None, column = None):
         if token_expected:
             ParsingError.__init__(
                 self,
-                f"Unexpected token: {token} at {line}",
+                f"Unexpected token: {token} at line: {line}, column: {column}   ",
                 f"expected: {token_expected}",
             )
         else:
-            ParsingError.__init__(self, f"Unexpected token: {token} at {line}")
+            ParsingError.__init__(self, f"Unexpected token: {token} at line: {line}, column: {column}")
 
 
 class ContainerSet:
@@ -234,7 +234,8 @@ def create_parser(
         try:
             M[G.start_symbol, token_types[cursor]][0]
         except KeyError:
-            raise UnexpectedToken(tokens[cursor].lex)
+            t = tokens[cursor]
+            raise UnexpectedToken(t.lex,None,t.position[0],t.position[1])
         else:
             p = M[G.start_symbol, token_types[cursor]][0]
         output = [p]
@@ -250,7 +251,7 @@ def create_parser(
                     M[top, a][0]
                 except KeyError:
                     raise UnexpectedToken(
-                        current_token.lex, None, current_token.position[0]
+                        current_token.lex, None, current_token.position[0], current_token.position[1]
                     )
                 else:
                     p = M[top, a][0]
@@ -264,7 +265,7 @@ def create_parser(
                     cursor += 1
                 else:
                     # TODO: use our own errors
-                    raise UnexpectedToken(current_token.lex, top)
+                    raise UnexpectedToken(current_token.lex, top, current_token.position[0], current_token.position[1])
 
             if not stack:
                 if cursor < len(tokens) - 1:
