@@ -425,7 +425,7 @@ class TypeChecker:
                     f"Type {iterable_type.name} does not implement Iterable"
                 )
             scope_mapped = scope.create_child()
-            scope_mapped.define(node.item_id, iterable_type)
+            scope_mapped.define_variable(node.item_id, iterable_type)
             map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
             if not allow_type(map_expr_type, get_safe_type(node.item_type, ctx)):
                 self.errors.append(
