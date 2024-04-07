@@ -422,7 +422,7 @@ class TypeChecker:
                 return ERROR_TYPE
             if not iterable_type.implements(ITERABLE_PROTO):
                 self.errors.append(
-                    f"Type {iterable_type.name} does not implement Iterable"
+                    f"Type {iterable_type.name} does not implement Iterable protocol"
                 )
             scope_mapped = scope.create_child()
             node_type = get_safe_type(node.item_type) if isinstance(node.item_type, str) else node.item_type
