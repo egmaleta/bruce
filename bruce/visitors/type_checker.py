@@ -106,6 +106,7 @@ class TypeChecker:
             return types[-1]
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(MemberAccessingNode)
     def visit(self, node: MemberAccessingNode, ctx: Context, scope: Scope):
@@ -238,6 +239,7 @@ class TypeChecker:
             return self.visit(node.body, ctx, child_scope)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(MutationNode)
     def visit(self, node: MutationNode, ctx: Context, scope: Scope):
@@ -295,6 +297,7 @@ class TypeChecker:
             return UnionType(*types)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(LoopNode)
     def visit(self, node: LoopNode, ctx: Context, scope: Scope):
@@ -307,6 +310,7 @@ class TypeChecker:
             return UnionType(*types)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(ArithOpNode)
     def visit(self, node: ArithOpNode, ctx: Context, scope: Scope):
@@ -445,6 +449,7 @@ class TypeChecker:
             return VectorType(types[0]) if len(types) > 0 else VectorType(ERROR_TYPE)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(TypeMatchingNode)
     def visit(self, node: TypeMatchingNode, ctx: Context, scope: Scope):
@@ -459,6 +464,7 @@ class TypeChecker:
             return BOOLEAN_TYPE
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(DowncastingNode)
     def visit(self, node: DowncastingNode, ctx: Context, scope: Scope):
@@ -471,6 +477,7 @@ class TypeChecker:
             return get_safe_type(node.type, ctx)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(IndexingNode)
     def visit(self, node: IndexingNode, ctx: Context, scope: Scope):
