@@ -436,10 +436,6 @@ class TypeChecker:
             )
             scope_mapped.define_variable(node.item_id, node.item_type)
             map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
-            if not allow_type(map_expr_type, node_type):
-                self.errors.append(
-                    f"Cannot convert {map_expr_type.name} to {node_type.name}"
-                )
             return VectorType(map_expr_type)
         except SemanticError as se:
             self.errors.append(se.text)
