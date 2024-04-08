@@ -7,8 +7,7 @@ class Token:
     ):
         self.lex = lex
         self.token_type = token_type
-        self.line = line
-        self.column = column
+        self.position = (line, column)
 
     def __str__(self):
         return f"{self.token_type}: {self.lex}"

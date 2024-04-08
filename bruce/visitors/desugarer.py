@@ -1,7 +1,11 @@
 from ..tools import visitor
 from .. import ast
-from ..types import OBJECT_TYPE
-from ..names import INSTANCE_NAME, NEXT_METHOD_NAME, CURRENT_METHOD_NAME, BASE_FUNC_NAME
+from ..names import (
+    NEXT_METHOD_NAME,
+    CURRENT_METHOD_NAME,
+    AT_METHOD_NAME,
+    SETAT_METHOD_NAME,
+)
 
 
 def desugar_let_expr(
@@ -71,25 +75,6 @@ class Desugarer:
             ),
         )
 
-    @visitor.when(ast.IdentifierNode)
-    def visit(self, node: ast.IdentifierNode):
-        if (
-            node.is_builtin
-            and node.value == BASE_FUNC_NAME
-            and self.current_method_name is not None
-        ):
-            type = (
-                self.current_type_parent_name
-                if self.current_type_parent_name is not None
-                else OBJECT_TYPE.name
-            )
-            return ast.MemberAccessingNode(
-                ast.DowncastingNode(ast.IdentifierNode(INSTANCE_NAME), type),
-                self.current_method_name,
-            )
-
-        return node
-
     @visitor.when(ast.LiteralNode)
     def visit(self, node: ast.LiteralNode):
         return node
@@ -123,10 +108,23 @@ class Desugarer:
 
     @visitor.when(ast.IndexingNode)
     def visit(self, node: ast.IndexingNode):
-        return ast.IndexingNode(self.visit(node.target), self.visit(node.index))
+        return ast.FunctionCallNode(
+            ast.MemberAccessingNode(self.visit(node.target), AT_METHOD_NAME),
+            [self.visit(node.index)],
+        )
 
     @visitor.when(ast.MutationNode)
     def visit(self, node: ast.MutationNode):
+        if isinstance(node.target, ast.IndexingNode):
+            target = node.target.target
+            index = node.target.index
+            value = node.value
+
+            return ast.FunctionCallNode(
+                ast.MemberAccessingNode(self.visit(target), SETAT_METHOD_NAME),
+                [self.visit(index), self.visit(value)],
+            )
+
         return ast.MutationNode(self.visit(node.target), self.visit(node.value))
 
     @visitor.when(ast.DowncastingNode)

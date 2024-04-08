@@ -82,11 +82,28 @@ class Lexer:
         yield self.eof.name, self.eof
 
     def __call__(self, text):
-        return [
-            Token(lex, ttype)
-            for lex, ttype in self._tokenize(text)
-            if ttype is not None
-        ]
+        tokens = []
+        line = 1
+        column = 1
+        for lex, ttype in self._tokenize(text):
+            if ttype is None:
+                if lex[0] == "\n":
+                    line += len(lex)
+                    column = 1
+                elif lex[0] == "\r":
+                    line += len(lex)
+                    column = 1
+                elif lex[0:2] == "\r\n":
+                    line += len(lex) // 2
+                    column = 1
+                elif lex[0] == "\t":
+                    column += len(lex) * 4
+                else:
+                    column += 1
+                continue
+            tokens.append(Token(lex, ttype, line, column))
+            column += len(lex)
+        return tokens
 
 
 def create_lexer(table: list[tuple[Terminal, str]], eof: EOF):

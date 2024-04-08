@@ -31,10 +31,11 @@ class Graph:
 
 def topological_order(types: list[TypeNode]):
     def dfs(node, graph: Graph):
+        global backward_edge
         visited[node] = True
         for neighbor in graph.edges[node]:
             if visited[neighbor]:
-                backward_edge = True
+                backward_edges[neighbor] = True
             if neighbor and not visited[neighbor]:
                 dfs(neighbor, graph)
         order.append(node)
@@ -45,11 +46,12 @@ def topological_order(types: list[TypeNode]):
     visited = {}
     indexs_before = {}
     indexs_after = []
-    backward_edge = False
+    backward_edges = {}
 
     for i, t in enumerate(graph.types):
         visited[t.type] = False
         indexs_before[t.type] = i
+        backward_edges[t.type] = False
 
     order = []
 
@@ -59,6 +61,8 @@ def topological_order(types: list[TypeNode]):
 
     order = order[::-1]
     indexs_after = indexs_after[::-1]
+
+    backward_edge = any(backward_edges.values())
 
     return [types[i] for i in indexs_after] if not backward_edge else []
 
@@ -107,6 +111,14 @@ class TypeBuilder(object):
 
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode, ctx: Context):
+        # check circular deps
+        tnodes = [tn for tn in node.declarations if isinstance(tn, TypeNode)]
+        if len(tnodes) > 0:
+            tnodes = topological_order(tnodes)
+            if len(tnodes) == 0:
+                self.errors.append("Circular inheritance detected")
+                return self.errors
+
         for declaration in node.declarations:
             if not isinstance(declaration, FunctionNode):
                 self.visit(declaration, ctx)
@@ -166,6 +178,12 @@ class TypeBuilder(object):
             self.current_type = ctx.get_protocol(node.type)
         except SemanticError as se:
             self.errors.append(se.text)
+
+        for parent in node.extends:
+            if not isinstance(get_safe_type(parent, ctx), Proto):
+                self.errors.append(f"Cannot extends from type {parent}")
+            else:
+                self.current_type.add_parent(get_safe_type(parent, ctx))
 
         for method_spec in node.method_specs:
             self.visit(method_spec, ctx)

@@ -20,7 +20,18 @@ from .. import names
 
 
 def hulk_print(obj):
-    print(obj[0])
+    inst = obj[0]
+    if isinstance(inst, VectorTypeInstance):
+        print(
+            [
+                attr.value[0]
+                for attr in inst.attributes
+                if attr.name.startswith("item_at")
+            ]
+        )
+    else:
+        print(inst)
+
     return obj
 
 
@@ -130,7 +141,7 @@ class Evaluator:
                 self.visit(member, ctx, scope)
                 self.current_method = None
 
-        if node.parent_args:
+        if node.parent_args is not None:
             self.current_type.set_parent_args(node.parent_args)
 
         self.current_type = None
@@ -166,7 +177,7 @@ class Evaluator:
         receiver, _ = self.visit(node.target, ctx, scope)
         assert isinstance(receiver, Type)
 
-        attr = receiver.get_attribute(node.member_id)
+        attr = receiver.get_attribute(node.member_id, True)
         assert isinstance(attr, Attribute)
 
         return attr.value
@@ -177,6 +188,40 @@ class Evaluator:
         if isinstance(node.target, IdentifierNode):
             # handle builtin funcs
             if node.target.is_builtin:
+                # handle base func
+                if node.target.value == names.BASE_FUNC_NAME:
+                    assert self.current_method is not None
+
+                    var = scope.find_variable(names.INSTANCE_NAME)
+                    assert var.owner_scope.is_function_scope
+
+                    inst, inst_type = var.value
+                    assert (
+                        inst_type.parent is not None and inst_type.parent != OBJECT_TYPE
+                    )
+
+                    method = inst.parent.get_method(self.current_method.name)
+
+                    arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
+
+                    child_scope = scope.get_top_scope().create_child(
+                        is_function_scope=True
+                    )
+                    for name, value in zip(method.params, arg_values):
+                        child_scope.define_variable(name, None, value)
+
+                    if names.INSTANCE_NAME not in method.params:
+                        child_scope.define_variable(
+                            names.INSTANCE_NAME, None, (inst.parent, inst_type.parent)
+                        )
+
+                    last = self.current_method
+                    self.current_method = method
+                    v, t = self.visit(method.body, ctx, child_scope)
+                    self.current_method = last
+
+                    return v, t
+
                 f = self.builtin_funcs[node.target.value]
                 arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
                 return f(*arg_values)
@@ -269,6 +314,7 @@ class Evaluator:
 
         arg_values = [self.visit(arg, ctx, scope) for arg in node.args]
         instance = dyn_type.clone()
+        first_instance = instance
 
         while True:
             child_scope = global_scope.create_child()
@@ -292,7 +338,7 @@ class Evaluator:
             arg_values = [self.visit(arg, ctx, child_scope) for arg in parent_args]
             instance = instance.parent
 
-        return (instance, dyn_type)
+        return (first_instance, dyn_type)
 
     @visitor.when(ConditionalNode)
     def visit(self, node: ConditionalNode, ctx: Context, scope: Scope):
@@ -389,21 +435,33 @@ class Evaluator:
 
         while True:
             child_scope = top_scope.create_child(is_function_scope=True)
-            child_scope.define_variable(names.INSTANCE_NAME, iterable)
-            cond, _ = self.visit(
-                iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
+            child_scope.define_variable(
+                names.INSTANCE_NAME, None, (iterable, iterable_type)
             )
+            method = iterable.get_method(names.NEXT_METHOD_NAME)
+
+            last = self.current_method
+            self.current_method = method
+            cond, _ = self.visit(method.body, ctx, child_scope)
+            self.current_method = last
 
             if not cond:
                 break
 
             child_scope = top_scope.create_child(is_function_scope=True)
-            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            child_scope.define_variable(
+                names.INSTANCE_NAME, None, (iterable, iterable_type)
+            )
+            method = iterable.get_method(names.CURRENT_METHOD_NAME)
+
+            last = self.current_method
+            self.current_method = method
             item_value = self.visit(
-                iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                method.body,
                 ctx,
                 child_scope,
             )
+            self.current_method = last
 
             child_scope = scope.create_child()
             child_scope.define_variable(node.item_id, None, item_value)
@@ -429,7 +487,7 @@ class Evaluator:
         target_value = self.visit(node.target, ctx, scope)
         node_type = get_safe_type(node.type, ctx)
         if allow_type(target_value[1], node_type):
-            return target_value[0], node_type
+            return target_value[0], target_value[1]
         raise Exception(
             f"Downcasting error: {target_value[1]} does not conform to {node_type}"
         )

@@ -134,7 +134,17 @@ class UnionType(Type):
         return False
 
     def conforms_to(self, other: "Type"):
-        return any(t.conforms_to(other) for t in self.types)
+        if not isinstance(other, UnionType):
+            return any(t.conforms_to(other) for t in self.types)
+
+        if len(self.types) != len(other.types):
+            return False
+
+        for t1, t2 in zip(self.types, other.types):
+            if t1 != t2:
+                return False
+
+        return True
 
     def __eq__(self, other):
         return isinstance(other, UnionType) and self.types == other.types
@@ -198,6 +208,9 @@ class VectorType(Type):
 
     def __eq__(self, other):
         return isinstance(other, VectorType) and self.item_type == other.item_type
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class VectorTypeInstance(VectorType):

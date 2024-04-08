@@ -111,6 +111,24 @@ class Function:
 
         return f"{self._label} {self.name}({params}): {typename};"
 
+    def __eq__(self, value: "Function") -> bool:
+        if not isinstance(value, Function):
+            return False
+
+        if value.name != self.name:
+            return False
+
+        if len(value.params) != len(self.params):
+            return False
+
+        for key in self.params.keys():
+            if key not in value.params:
+                return False
+            if self.params[key] != value.params[key]:
+                return False
+
+        return True
+
 
 class Method(Function):
     def __init__(
@@ -155,7 +173,7 @@ class Type:
         if name in self.params and self.params[name] is None:
             self.params[name] = type
 
-    def get_attribute(self, name: str):
+    def get_attribute(self, name: str, ejecution_f=False):
         target = None
         for attr in self.attributes:
             if attr.name == name:
@@ -164,6 +182,9 @@ class Type:
 
         if target is not None:
             return target
+
+        if ejecution_f and self.parent is not None:
+            return self.parent.get_attribute(name, ejecution_f)
 
         raise SemanticError(f"Attribute '{name}' is not defined in type '{self.name}'.")
 
@@ -202,13 +223,43 @@ class Type:
         params: list[tuple[str, Union["Type", "Proto", None]]],
         type: Union["Type", "Proto", None] = None,
     ):
-        try:
-            self.get_method(name)
-        except SemanticError:
+        def create_method(name, params, type):
             method = Method(name, params, type)
             self.methods.append(method)
             return method
+
+        try:
+            parent_method = self.get_method(name)
+            is_local = True
+            for method in self.methods:
+                if method.name == name:
+                    is_local = False
+                    break
+
+        except SemanticError:
+            return create_method(name, params, type)
         else:
+
+            if len(parent_method.params) != len(params):
+                raise SemanticError(
+                    f"Method '{name}' has a different number of parameters than the parent method."
+                )
+
+            for (pname, ptype), (ppname, pptype) in zip(
+                params, parent_method.params.items()
+            ):
+                if pname != ppname or ptype != pptype:
+                    raise SemanticError(
+                        f"Method '{name}' has a different parameter list than the parent method."
+                    )
+
+            if parent_method.type != type:
+                raise SemanticError(
+                    f"Method '{name}' has a different return type than the parent method."
+                )
+
+            if is_local:
+                return create_method(name, params, type)
             raise SemanticError(
                 f"Method '{name}' is already defined in type '{self.name}'."
             )
@@ -337,6 +388,8 @@ class Type:
             for attr in self.attributes
         ]
 
+        new_type.set_parent_args(self.parent_args)
+
         return new_type
 
 
@@ -352,7 +405,13 @@ class MethodSpec:
         self.type = type
 
     def __eq__(self, other):
-        return self.name == other.name
+        if not isinstance(other, MethodSpec):
+            return False
+
+        if self.name != other.name:
+            return False
+
+        return True
 
     def __hash__(self):
         return hash(self.name)
@@ -406,10 +465,16 @@ class Proto:
         if target is not None:
             return target
 
-        if self.parent is None:
-            raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
         try:
-            return self.parent.get_method(name)
+            method = None
+            for parent in self.parents:
+                if method is not None:
+                    break
+                method = parent.get_method(name)
+            if method is None:
+                raise SemanticError()
+            else:
+                return method
         except SemanticError:
             raise SemanticError(f'Method "{name}" is not defined in {self.name}.')
 
@@ -422,6 +487,16 @@ class Proto:
         spec = MethodSpec(name, params, type)
         if spec not in self._all_method_specs():
             self.method_specs.append(spec)
+        else:
+            for parent in self.parents:
+                for p_spec in parent.method_specs:
+                    if p_spec == spec:
+                        raise SemanticError(
+                            f"Method '{name}' is already defined in protocol '{parent.name}'."
+                        )
+            raise SemanticError(
+                f"Method '{name}' is already defined in protocol '{self.name}'."
+            )
 
     def all_method_specs(self):
         return list(self._all_method_specs())

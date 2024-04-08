@@ -6,13 +6,15 @@ from ..tools.semantic.context import Context, get_safe_type
 from ..tools.semantic.scope import Scope
 from .. import ast
 from .. import types as t
-from ..names import SIZE_METHOD_NAME, INSTANCE_NAME, CURRENT_METHOD_NAME
+from .. import names as n
 
 
 class TypeInferer:
     def __init__(self):
         self.errors: list[str] = []
         self.occurs = False
+
+        self.exprs_with_decl: list[Union[ast.LetExprNode, ast.MappedIterableNode]] = []
 
         # set before read
         self.current_type: Type = None
@@ -58,7 +60,7 @@ class TypeInferer:
     def visit(self, node: ast.IdentifierNode, ctx: Context, scope: Scope):
         if (
             self.current_method is not None
-            and node.value == INSTANCE_NAME
+            and node.value == n.INSTANCE_NAME
             and node.value not in self.current_method.params
             and scope.find_variable(node.value).owner_scope.is_function_scope
         ):
@@ -69,7 +71,7 @@ class TypeInferer:
         if var is not None:
             return var.type
 
-        return t.FUNCTION_TYPE
+        return None
 
     @visitor.when(ast.TypeInstancingNode)
     def visit(self, node: ast.TypeInstancingNode, ctx: Context, scope: Scope):
@@ -86,15 +88,15 @@ class TypeInferer:
     @visitor.when(ast.VectorNode)
     def visit(self, node: ast.VectorNode, ctx: Context, scope: Scope):
         item_types = []
-        for expr in node.items:
-            expr_t = self.visit(expr, ctx, scope)
-            if expr_t is not None:
-                item_types.append(expr_t)
+        for item in node.items:
+            item_t = self.visit(item, ctx, scope)
+            if item_t is not None:
+                item_types.append(item_t)
 
         if len(item_types) > 0:
-            ut = t.UnionType(*item_types)
-            for expr in node.items:
-                self._infer(expr, scope, ut)
+            ut = t.union_type(*item_types)
+            for item in node.items:
+                self._infer(item, scope, ut)
 
             return t.VectorType(ut)
 
@@ -102,8 +104,18 @@ class TypeInferer:
 
     @visitor.when(ast.MappedIterableNode)
     def visit(self, node: ast.MappedIterableNode, ctx: Context, scope: Scope):
-        it = get_safe_type(node.item_type, ctx)
-        iterable_t = self.visit(node, ctx, scope)
+        self.exprs_with_decl.append(node)
+
+        # NASTY PATCH
+        it = None
+        if isinstance(node.item_type, Type):
+            it = node.item_type
+        else:
+            it = get_safe_type(node.item_type, ctx)
+
+        iterable_t = self.visit(node.iterable_expr, ctx, scope)
+
+        self._infer(node.iterable_expr, scope, t.ITERABLE_PROTO)
 
         if it is None:
             if isinstance(iterable_t, t.VectorType):
@@ -111,9 +123,13 @@ class TypeInferer:
             elif isinstance(iterable_t, Type) and iterable_t.implements(
                 t.ITERABLE_PROTO
             ):
-                it = iterable_t.get_method(CURRENT_METHOD_NAME).type
+                it = iterable_t.get_method(n.CURRENT_METHOD_NAME).type
             elif iterable_t == t.ITERABLE_PROTO:
                 it = t.OBJECT_TYPE
+
+            if it is not None:
+                node.item_type = it
+                self.occurs = True
 
         child_scope = scope.create_child()
         child_scope.define_variable(node.item_id, it)
@@ -123,12 +139,14 @@ class TypeInferer:
 
     @visitor.when(ast.MemberAccessingNode)
     def visit(self, node: ast.MemberAccessingNode, ctx: Context, scope: Scope):
+        # CASE expr . id
         self.visit(node.target, ctx, scope)
 
+        # only valid case is when expr = self
         if (
             self.current_method is not None
             and isinstance(node.target, ast.IdentifierNode)
-            and node.target.value == INSTANCE_NAME
+            and node.target.value == n.INSTANCE_NAME
             and node.target.value not in self.current_method.params
             and scope.find_variable(node.target.value).owner_scope.is_function_scope
         ):
@@ -136,67 +154,102 @@ class TypeInferer:
             try:
                 return self.current_type.get_attribute(node.member_id).type
             except SemanticError:
-                return t.FUNCTION_TYPE
-
-        canditate_types = []
-
-        if node.member_id == SIZE_METHOD_NAME:
-            canditate_types.append(t.VectorType(t.OBJECT_TYPE))
-
-        for type in ctx.types.values():
-            try:
-                type.get_method(node.member_id)
-            except SemanticError:
                 pass
-            else:
-                canditate_types.append(type)
 
-        for proto in ctx.protocols.values():
-            if any(ms.name == node.member_id for ms in proto.all_method_specs()):
-                canditate_types.append(proto)
-
-        ut = t.UnionType(*canditate_types)
-        self._infer(node.target, scope, ut)
-
-        return t.FUNCTION_TYPE
+        return None
 
     @visitor.when(ast.FunctionCallNode)
     def visit(self, node: ast.FunctionCallNode, ctx: Context, scope: Scope):
-        if isinstance(node.target, ast.MemberAccessingNode):
-            receiver = node.target.target
-            member = node.target.member_id
+        # CASE: id (...)
+        if isinstance(node.target, ast.IdentifierNode):
+            func_name = node.target.value
 
-            rt = self.visit(receiver, ctx, scope)
             for arg in node.args:
                 self.visit(arg, ctx, scope)
 
-            if rt is not None:
+            if func_name == n.BASE_FUNC_NAME:
+                if (
+                    self.current_method is not None
+                    and self.current_type is not None
+                    and self.current_type.parent != t.OBJECT_TYPE
+                    and n.INSTANCE_NAME not in self.current_method.params
+                    and scope.find_variable(
+                        n.INSTANCE_NAME
+                    ).owner_scope.is_function_scope
+                ):
+                    try:
+                        method = self.current_type.parent.get_method(
+                            self.current_method.name
+                        )
+                    except:
+                        pass
+                    else:
+                        for arg, pt in zip(node.args, method.params.values()):
+                            if pt is not None:
+                                self._infer(arg, scope, pt)
+
+                        return method.type
+
+                return None
+
+            f = scope.find_function(func_name)
+            if f is not None:
+                # infer arg types
+                for arg, pt in zip(node.args, f.params.values()):
+                    if pt is not None:
+                        self._infer(arg, scope, pt)
+
+                return f.type
+
+            return None
+
+        # CASE expr . id ()
+        if isinstance(node.target, ast.MemberAccessingNode):
+            target = node.target.target
+            member_id = node.target.member_id
+
+            type = self.visit(target, ctx, scope)
+
+            for arg in node.args:
+                self.visit(arg, ctx, scope)
+
+            # CASE expr . id . id () is invalid
+            if isinstance(target, ast.MemberAccessingNode):
+                return None
+
+            # infer target type
+            canditate_types = []
+
+            if member_id in (n.SIZE_METHOD_NAME, n.AT_METHOD_NAME, n.SETAT_METHOD_NAME):
+                canditate_types.append(t.VectorType(t.OBJECT_TYPE))
+
+            for type in ctx.types.values():
                 try:
-                    method = rt.get_method(member)
+                    type.get_method(member_id)
                 except SemanticError:
+                    pass
+                else:
+                    canditate_types.append(type)
+
+            for proto in ctx.protocols.values():
+                if any(ms.name == member_id for ms in proto.all_method_specs()):
+                    canditate_types.append(proto)
+
+            ut = t.union_type(*canditate_types)
+            self._infer(target, scope, ut)
+
+            # infer arg types
+            if type is not None:
+                try:
+                    method = type.get_method(member_id)
+                except:
                     pass
                 else:
                     for arg, pt in zip(node.args, method.params.values()):
                         if pt is not None:
                             self._infer(arg, scope, pt)
 
-                return rt
-        else:
-            tt = self.visit(node.target, ctx, scope)
-            for arg in node.args:
-                self.visit(arg, ctx, scope)
-
-            if tt != t.FUNCTION_TYPE:
-                return None
-
-            if isinstance(node.target, ast.IdentifierNode):
-                f = scope.find_function(node.target.value)
-                if f is not None:
-                    for arg, pt in zip(node.args, f.params.values()):
-                        if pt is not None:
-                            self._infer(arg, scope, pt)
-
-                    return f.type
+                    return method.type
 
         return None
 
@@ -258,22 +311,8 @@ class TypeInferer:
         lt = self.visit(node.left, ctx, scope)
         rt = self.visit(node.right, ctx, scope)
 
-        if node.operator not in ("==", "!="):
-            if (lt == t.NUMBER_TYPE or lt == t.STRING_TYPE) and (
-                rt is None or isinstance(rt, t.UnionType)
-            ):
-                self._infer(node.right, scope, lt)
-            elif (rt == t.NUMBER_TYPE or rt == t.STRING_TYPE) and (
-                lt is None or isinstance(lt, t.UnionType)
-            ):
-                self._infer(node.left, scope, rt)
-            else:
-                ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
-                self._infer(node.left, scope, ut)
-                self._infer(node.right, scope, ut)
-        else:
-            # NOT FOR NOW
-            pass
+        self._infer(node.left, scope, t.NUMBER_TYPE)
+        self._infer(node.right, scope, t.NUMBER_TYPE)
 
         return t.BOOLEAN_TYPE
 
@@ -292,7 +331,7 @@ class TypeInferer:
         self.visit(node.left, ctx, scope)
         self.visit(node.right, ctx, scope)
 
-        ut = t.UnionType(t.NUMBER_TYPE, t.STRING_TYPE)
+        ut = t.union_type(t.NUMBER_TYPE, t.STRING_TYPE)
         self._infer(node.left, scope, ut)
         self._infer(node.right, scope, ut)
 
@@ -315,15 +354,15 @@ class TypeInferer:
     @visitor.when(ast.LoopNode)
     def visit(self, node: ast.LoopNode, ctx: Context, scope: Scope):
         self.visit(node.condition, ctx, scope)
-        bt = self.visit(node.body, ctx, scope)
-        ft = self.visit(node.fallback_expr, ctx, scope)
+        bt = self.visit(node.body, ctx, scope.create_child())
+        ft = self.visit(node.fallback_expr, ctx, scope.create_child())
 
         self._infer(node.condition, scope, t.BOOLEAN_TYPE)
 
         if bt is None or ft is None:
             return None
 
-        return bt if bt == ft else t.UnionType(bt, ft)
+        return t.union_type(bt, ft)
 
     @visitor.when(ast.ConditionalNode)
     def visit(self, node: ast.ConditionalNode, ctx: Context, scope: Scope):
@@ -332,10 +371,10 @@ class TypeInferer:
         for cond, branch in node.condition_branchs:
             self.visit(cond, ctx, scope)
 
-            bt = self.visit(branch, ctx, scope)
+            bt = self.visit(branch, ctx, scope.create_child())
             branch_types.append(bt)
 
-        ft = self.visit(node.fallback_branch, ctx, scope)
+        ft = self.visit(node.fallback_branch, ctx, scope.create_child())
         branch_types.append(ft)
 
         for cond, _ in node.condition_branchs:
@@ -344,22 +383,46 @@ class TypeInferer:
         if any(bt is None for bt in branch_types):
             return None
 
-        ut = t.UnionType(*branch_types)
-        if len(ut) == 1:
-            type, *_ = ut
-            return type
-
-        return ut
+        return t.union_type(*branch_types)
 
     @visitor.when(ast.LetExprNode)
     def visit(self, node: ast.LetExprNode, ctx: Context, scope: Scope):
+        self.exprs_with_decl.append(node)
+
         vt = self.visit(node.value, ctx, scope)
-        at = get_safe_type(node.type, ctx)
+
+        # NASTY PATCH
+        at = None
+        if isinstance(node.type, Type):
+            at = node.type
+        else:
+            at = get_safe_type(node.type, ctx)
 
         child_scope = scope.create_child()
         child_scope.define_variable(node.id, at if at is not None else vt)
 
-        return self.visit(node.body, ctx, child_scope)
+        lt = self.visit(node.body, ctx, child_scope)
+
+        # keep type of 'at' stored at node
+        # similar to _infer method
+        var = child_scope.find_variable(node.id)
+        if var.type is not None:
+            if at is None:
+                node.type = var.type
+                self.occurs = True
+            elif isinstance(at, t.UnionType):
+                itsc = at & var.type
+                l = len(itsc)
+                if 0 < l < len(at):
+                    self.occurs = True
+
+                    if l == 1:
+                        type, *_ = itsc
+                        node.type = type
+                    else:
+                        node.type = itsc
+
+        return lt
 
     @visitor.when(ast.FunctionNode)
     def visit(self, node: ast.FunctionNode, ctx: Context, scope: Scope):
@@ -367,12 +430,12 @@ class TypeInferer:
 
         f = self.current_method if is_method else scope.find_function(node.id)
 
-        child_scope = scope.create_child(is_function_scope=True)
+        child_scope = scope.get_top_scope().create_child(is_function_scope=True)
         for name, pt in f.params.items():
             child_scope.define_variable(name, pt)
 
-        if is_method and not INSTANCE_NAME in f.params:
-            child_scope.define_variable(INSTANCE_NAME, self.current_type)
+        if is_method and n.INSTANCE_NAME not in f.params:
+            child_scope.define_variable(n.INSTANCE_NAME, self.current_type)
 
         rt = self.visit(node.body, ctx, child_scope)
 
@@ -403,6 +466,7 @@ class TypeInferer:
         for attr, pn in zip(type.attributes, property_nodes):
             pnt = self.visit(pn.value, ctx, child_scope)
             if attr.type is None and pnt is not None:
+                pn.type = pnt
                 attr.set_type(pnt)
                 self.occurs = True
 
@@ -442,16 +506,19 @@ class TypeInferer:
     def visit(self, node: ast.ProgramNode, ctx: Context, scope: Scope) -> Type | Proto:
         while True:
             self.occurs = False
+            self.exprs_with_decl = []
 
             for decl in node.declarations:
                 if not isinstance(decl, ast.ProtocolNode):
                     self.visit(decl, ctx, scope)
 
+            self.visit(node.expr, ctx, scope)
+
             if self.occurs == False:
                 break
 
         for type in ctx.types.values():
-            for name, ptype in type.params:
+            for name, ptype in type.params.items():
                 if ptype is None:
                     self.errors.append(
                         f"Couldn't infer type of constructor param '{name}' of type '{type.name}'."
@@ -465,16 +532,17 @@ class TypeInferer:
 
             for method in type.methods:
                 for name, ptype in method.params.items():
-                    self.errors.append(
-                        f"Couldn't infer type of param '{name}' of method '{type.name}.{method.name}'."
-                    )
+                    if ptype is None:
+                        self.errors.append(
+                            f"Couldn't infer type of param '{name}' of method '{type.name}.{method.name}'."
+                        )
 
                 if method.type is None:
                     self.errors.append(
                         f"Couldn't infer return type of method '{type.name}.{method.name}'."
                     )
 
-        for f in scope.local_funcs:
+        for f in scope.local_funcs.values():
             for name, type in f.params.items():
                 if type is None:
                     self.errors.append(
@@ -485,3 +553,15 @@ class TypeInferer:
                 self.errors.append(
                     f"Couldn't infer return type of function '{f.name}'."
                 )
+
+        for expr in self.exprs_with_decl:
+            if isinstance(expr, ast.LetExprNode) and expr.type is None:
+                self.errors.append(
+                    f"Couldn't infer type of variable bound to name '{expr.id}'"
+                )
+            elif isinstance(expr, ast.MappedIterableNode) and expr.item_type is None:
+                self.errors.append(
+                    f"Couldn't infer type of variable bound to name '{expr.item_id}'"
+                )
+
+        return self.errors
