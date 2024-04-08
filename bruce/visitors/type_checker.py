@@ -430,15 +430,19 @@ class TypeChecker:
                 )
             scope_mapped = scope.create_child()
             node_type = (
-                get_safe_type(node.item_type)
+                get_safe_type(node.item_type, ctx)
                 if isinstance(node.item_type, str)
                 else node.item_type
             )
-            scope_mapped.define_variable(node.item_id, node.item_type)
+            scope_mapped.define_variable(node.item_id, node_type)
             map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
+            elemtn_type = iterable_type.get_method("current").type
+            if not allow_type(elemtn_type, node_type):
+                self.errors.append(f"Cannot convert {elemtn_type.name} into {node_type.name}")
             return VectorType(map_expr_type)
         except SemanticError as se:
             self.errors.append(se.text)
+        return ERROR_TYPE
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, ctx: Context, scope: Scope):
