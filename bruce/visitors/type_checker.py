@@ -425,7 +425,11 @@ class TypeChecker:
                     f"Type {iterable_type.name} does not implement Iterable protocol"
                 )
             scope_mapped = scope.create_child()
-            node_type = get_safe_type(node.item_type) if isinstance(node.item_type, str) else node.item_type
+            node_type = (
+                get_safe_type(node.item_type)
+                if isinstance(node.item_type, str)
+                else node.item_type
+            )
             scope_mapped.define_variable(node.item_id, node.item_type)
             map_expr_type = self.visit(node.map_expr, ctx, scope_mapped)
             if not allow_type(map_expr_type, node_type):
