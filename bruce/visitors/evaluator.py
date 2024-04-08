@@ -20,7 +20,18 @@ from .. import names
 
 
 def hulk_print(obj):
-    print(obj[0])
+    inst = obj[0]
+    if isinstance(inst, VectorTypeInstance):
+        print(
+            [
+                attr.value[0]
+                for attr in inst.attributes
+                if attr.name.startswith("item_at")
+            ]
+        )
+    else:
+        print(inst)
+
     return obj
 
 
