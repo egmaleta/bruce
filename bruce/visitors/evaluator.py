@@ -424,21 +424,33 @@ class Evaluator:
 
         while True:
             child_scope = top_scope.create_child(is_function_scope=True)
-            child_scope.define_variable(names.INSTANCE_NAME, iterable)
-            cond, _ = self.visit(
-                iterable.get_method(names.NEXT_METHOD_NAME).body, ctx, child_scope
+            child_scope.define_variable(
+                names.INSTANCE_NAME, None, (iterable, iterable_type)
             )
+            method = iterable.get_method(names.NEXT_METHOD_NAME)
+
+            last = self.current_method
+            self.current_method = method
+            cond, _ = self.visit(method.body, ctx, child_scope)
+            self.current_method = last
 
             if not cond:
                 break
 
             child_scope = top_scope.create_child(is_function_scope=True)
-            child_scope.define_variable(names.INSTANCE_NAME, iterable)
+            child_scope.define_variable(
+                names.INSTANCE_NAME, None, (iterable, iterable_type)
+            )
+            method = iterable.get_method(names.CURRENT_METHOD_NAME)
+
+            last = self.current_method
+            self.current_method = method
             item_value = self.visit(
-                iterable.get_method(names.CURRENT_METHOD_NAME).body,
+                method.body,
                 ctx,
                 child_scope,
             )
+            self.current_method = last
 
             child_scope = scope.create_child()
             child_scope.define_variable(node.item_id, None, item_value)
